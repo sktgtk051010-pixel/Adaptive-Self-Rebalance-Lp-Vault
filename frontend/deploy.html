@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Deploy Adaptive LP Vault</title>
+<script src="ethers-5.7.2.umd.min.js"></script>
+<style>
+body{font-family:monospace;max-width:900px;margin:40px auto;padding:20px;background:#0f172a;color:#e2e8f0}
+button{background:#0ea5e9;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px;margin:8px}
+button:disabled{background:#475569;cursor:not-allowed}
+.log{background:#1e293b;padding:16px;border-radius:8px;margin:16px 0;white-space:pre-wrap;font-size:13px;max-height:500px;overflow-y:auto}
+.success{color:#4ade80}.error{color:#f87171}.info{color:#60a5fa}.warn{color:#fbbf24}
+.addr{color:#fbbf24;word-break:break-all}
+input{background:#1e293b;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:4px;width:100%;margin:4px 0}
+</style>
+</head>
+<body>
+<h1>Adaptive LP Vault - Sepolia Deployer</h1>
+<div style="margin:16px 0">
+  <p id="ethStatus">Checking ethereum provider...</p>
+</div>
+<button id="connectBtn">Connect Wallet</button>
+<button id="deployBtn" disabled>Deploy All Contracts</button>
+<div id="status">Not connected</div>
+<div class="log" id="log"></div>
+
+<script>
+const SEPOLIA_CHAIN_ID = 11155111;
+const WETH = "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14";
+const USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+const V3_FACTORY = "0x0227628f3F023bb0B980b67D528571c95c6DaC1c";
+
+const logEl = document.getElementById('log');
+function log(msg, cls='') {
+  const span = document.createElement('div');
+  if(cls) span.className = cls;
+  span.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  logEl.appendChild(span);
+  logEl.scrollTop = logEl.scrollHeight;
+  console.log(msg);
+}
+
+// Check ethereum provider on load
+window.addEventListener('load', () => {
+  const ethStatus = document.getElementById('ethStatus');
+  if (typeof window.ethereum === 'undefined') {
+    ethStatus.innerHTML = '<span class="error">❌ No wallet detected! Please install MetaMask or enable the extension.</span>';
+    log('window.ethereum is undefined', 'error');
+    // List possible providers
+    if (window.ethereum?.providers) {
+      log('Multiple providers detected: ' + window.ethereum.providers.length, 'warn');
+    }
+  } else {
+    ethStatus.innerHTML = '<span class="success">✅ Wallet provider detected!</span>';
+    log('window.ethereum found: ' + (window.ethereum.isMetaMask ? 'MetaMask' : window.ethereum.isRabby ? 'Rabby' : 'Other wallet'), 'success');
+    if (window.ethereum.providers) {
+      log('Multiple providers found: ' + window.ethereum.providers.map(p=>p.isMetaMask?'MetaMask':p.isRabby?'Rabby':'Other').join(', '), 'info');
+    }
+  }
+});
+
+let provider, signer, account;
+
+document.getElementById('connectBtn').onclick = async () => {
+  log('Connect button clicked', 'info');
+  if (!window.ethereum) {
+    log('No window.ethereum! Cannot connect.', 'error');
+    alert('请先安装 MetaMask 钱包扩展！\n\n如果已安装，请检查 Edge 扩展是否已启用。');
+    return;
+  }
+  try {
+    log('Requesting accounts...', 'info');
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    log('Accounts received: ' + JSON.stringify(accounts), 'info');
+    account = accounts[0];
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    signer = provider.getSigner();
+
+    const network = await provider.getNetwork();
+    log('Network chainId: ' + network.chainId, 'info');
+    if (network.chainId !== SEPOLIA_CHAIN_ID) {
+      log('Wrong network, switching to Sepolia...', 'warn');
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }],
+        });
+        log('Switched to Sepolia', 'success');
+      } catch(e) {
+        log('Switch failed: ' + e.message, 'error');
+        alert('请手动切换到 Sepolia 测试网');
+        return;
+      }
+    }
+
+    const balance = await provider.getBalance(account);
+    log('Balance: ' + ethers.utils.formatEther(balance) + ' ETH', 'info');
+
+    document.getElementById('status').textContent = 'Connected: ' + account;
+    document.getElementById('deployBtn').disabled = false;
+    log('Connected successfully!', 'success');
+  } catch(e) {
+    log('Connection error: ' + e.message, 'error');
+    console.error(e);
+  }
+};
+
+const FACTORY_ABI = ["function getPool(address,address,uint24) view returns(address)"];
+
+// 合约名 -> 源文件名映射（多个合约可能在同一个文件中）
+const CONTRACT_TO_FILE = {
+  'GovernanceToken': 'AdaptiveGovernance',
+  'AdaptiveGovernance': 'AdaptiveGovernance',
+  'AdaptiveRebalanceStrategy': 'AdaptiveRebalanceStrategy',
+  'TWAPOracle': 'TWAPOracle',
+  'AdaptiveLPVault': 'AdaptiveLPVault',
+  'UniswapV3Adapter': 'UniswapV3Adapter',
+  'RebalanceIncentives': 'RebalanceIncentives',
+};
+
+async function loadArtifact(name) {
+  const file = CONTRACT_TO_FILE[name] || name;
+  const r = await fetch(`../out/${file}.sol/${name}.json`);
+  if (!r.ok) throw new Error(`Failed to load ${name} from out/${file}.sol/: ${r.status}`);
+  const j = await r.json();
+  return { abi: j.abi, bytecode: j.bytecode.object };
+}
+
+document.getElementById('deployBtn').onclick = async () => {
+  document.getElementById('deployBtn').disabled = true;
+  try {
+    log('Loading artifacts...', 'info');
+    const [govTok, gov, strat, oracle, vault, v3Adapter, incentives] = await Promise.all([
+      loadArtifact('GovernanceToken'),
+      loadArtifact('AdaptiveGovernance'),
+      loadArtifact('AdaptiveRebalanceStrategy'),
+      loadArtifact('TWAPOracle'),
+      loadArtifact('AdaptiveLPVault'),
+      loadArtifact('UniswapV3Adapter'),
+      loadArtifact('RebalanceIncentives'),
+    ]);
+    log('All artifacts loaded', 'success');
+
+    const factory = new ethers.Contract(V3_FACTORY, FACTORY_ABI, signer);
+    const [token0, token1] = WETH.toLowerCase() < USDC.toLowerCase() ? [WETH, USDC] : [USDC, WETH];
+
+    // 1. GovernanceToken
+    log('1. Deploying GovernanceToken...', 'info');
+    let f = new ethers.ContractFactory(govTok.abi, govTok.bytecode, signer);
+    let c = await f.deploy(); await c.deployed();
+    const GOV_TOKEN = c.address;
+    log('GovernanceToken: ' + GOV_TOKEN, 'addr');
+
+    // 2. Governance
+    log('2. Deploying AdaptiveGovernance...', 'info');
+    f = new ethers.ContractFactory(gov.abi, gov.bytecode, signer);
+    c = await f.deploy(GOV_TOKEN); await c.deployed();
+    const GOV = c.address;
+    log('AdaptiveGovernance: ' + GOV, 'addr');
+
+    const gt = new ethers.Contract(GOV_TOKEN, ["function setMinter(address)"], signer);
+    await (await gt.setMinter(GOV)).wait();
+    log('   setMinter done', 'success');
+
+    // 3. Strategy
+    log('3. Deploying AdaptiveRebalanceStrategy...', 'info');
+    f = new ethers.ContractFactory(strat.abi, strat.bytecode, signer);
+    c = await f.deploy(GOV); await c.deployed();
+    const STRAT = c.address;
+    log('Strategy: ' + STRAT, 'addr');
+
+    // Get V3 pools
+    const pool500 = await factory.getPool(WETH, USDC, 500);
+    const pool3000 = await factory.getPool(WETH, USDC, 3000);
+    log('V3 0.05% pool: ' + pool500, 'info');
+    log('V3 0.30% pool: ' + pool3000, 'info');
+    const oraclePool = pool3000 !== ethers.constants.AddressZero ? pool3000 : pool500;
+
+    // 4. Oracle
+    log('4. Deploying TWAPOracle...', 'info');
+    f = new ethers.ContractFactory(oracle.abi, oracle.bytecode, signer);
+    c = await f.deploy(oraclePool, WETH, USDC, GOV); await c.deployed();
+    const ORACLE = c.address;
+    log('TWAPOracle: ' + ORACLE, 'addr');
+
+    // 5. Vault
+    log('5. Deploying AdaptiveLPVault...', 'info');
+    f = new ethers.ContractFactory(vault.abi, vault.bytecode, signer);
+    c = await f.deploy(USDC, WETH, ORACLE, STRAT, GOV, "Adaptive LP Vault", "ALP-VAULT"); await c.deployed();
+    const VAULT = c.address;
+    log('Vault: ' + VAULT, 'addr');
+
+    // 6. V3 Adapters
+    let v3Low = ethers.constants.AddressZero, v3High = ethers.constants.AddressZero;
+    if(pool500 !== ethers.constants.AddressZero) {
+      log('6a. Deploying V3LowFeeAdapter (0.05%)...', 'info');
+      f = new ethers.ContractFactory(v3Adapter.abi, v3Adapter.bytecode, signer);
+      c = await f.deploy(pool500, VAULT, token0, token1, 1); await c.deployed();
+      v3Low = c.address;
+      log('V3LowFeeAdapter: ' + v3Low, 'addr');
+    }
+    if(pool3000 !== ethers.constants.AddressZero) {
+      log('6b. Deploying V3HighFeeAdapter (0.30%)...', 'info');
+      f = new ethers.ContractFactory(v3Adapter.abi, v3Adapter.bytecode, signer);
+      c = await f.deploy(pool3000, VAULT, token0, token1, 2); await c.deployed();
+      v3High = c.address;
+      log('V3HighFeeAdapter: ' + v3High, 'addr');
+    }
+
+    // 7. setAdapters
+    const vaultC = new ethers.Contract(VAULT, ["function setAdapters(address,address,address)","function setIncentives(address)","function setGovernance(address)"], signer);
+    log('7. Setting adapters...', 'info');
+    await (await vaultC.setAdapters(ethers.constants.AddressZero, v3Low, v3High)).wait();
+    log('   setAdapters done', 'success');
+
+    // 8. Incentives
+    log('8. Deploying RebalanceIncentives...', 'info');
+    f = new ethers.ContractFactory(incentives.abi, incentives.bytecode, signer);
+    c = await f.deploy(VAULT, USDC, GOV); await c.deployed();
+    const INC = c.address;
+    log('Incentives: ' + INC, 'addr');
+
+    await (await vaultC.setIncentives(INC)).wait();
+    await (await vaultC.setGovernance(GOV)).wait();
+    log('   setIncentives + setGovernance done', 'success');
+
+    const govC = new ethers.Contract(GOV, ["function setVault(address)"], signer);
+    await (await govC.setVault(VAULT)).wait();
+    log('   governance.setVault done', 'success');
+
+    log('', '');
+    log('========== DEPLOYMENT COMPLETE ==========', 'success');
+    const addrs = {VAULT, ORACLE, STRAT, GOV, GOV_TOKEN, V3_LOW_ADAPTER: v3Low, V3_HIGH_ADAPTER: v3High, INCENTIVES: INC};
+    Object.entries(addrs).forEach(([k,v]) => log(k + '=' + v, 'addr'));
+
+    localStorage.setItem('deployed_addresses', JSON.stringify(addrs, null, 2));
+    log('', '');
+    log('Addresses saved to localStorage. Update frontend/app.js with these addresses.', 'info');
+
+  } catch(e) {
+    log('DEPLOY ERROR: ' + e.message, 'error');
+    console.error(e);
+  }
+  document.getElementById('deployBtn').disabled = false;
+};
+</script>
+</body>
+</html>

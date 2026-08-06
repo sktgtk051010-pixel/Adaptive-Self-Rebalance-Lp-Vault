@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive LP Vault - 自适应流动性金库</title>
+    <script src="ethers-5.7.2.umd.min.js?v=4"></script>
+    <link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+    <div id="errBox" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:10px 20px;z-index:99999;font-size:13px;text-align:center;"></div>
+
+    <nav class="navbar">
+        <div class="nav-brand">
+            <h2>🏦 Adaptive LP Vault</h2>
+            <span class="badge">Sepolia Testnet</span>
+        </div>
+        <div class="nav-actions">
+            <span id="networkBadge" class="network-badge warning">未连接</span>
+            <button id="connectBtn" class="btn btn-primary">连接钱包</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="connectPrompt" class="card connect-prompt">
+            <div class="prompt-icon">👋</div>
+            <h3>欢迎使用 Adaptive LP Vault</h3>
+            <p>自适应自再平衡 Uniswap LP 金库，自动在 V2 / V3 多费率池间分配流动性，根据市场波动率动态调仓。</p>
+            <p class="hint">点击右上角「连接钱包」开始使用</p>
+        </div>
+
+        <div class="card hidden" id="accountCard">
+            <div class="card-header">
+                <h3>📊 账户概览</h3>
+                <span id="accountAddr" class="account-addr"></span>
+            </div>
+            <div class="grid grid-4">
+                <div class="stat"><label>WETH 余额</label><span id="wethBalance" class="stat-value">-</span></div>
+                <div class="stat"><label>USDC 余额</label><span id="usdcBalance" class="stat-value">-</span></div>
+                <div class="stat"><label>金库份额 (ALP)</label><span id="vaultShares" class="stat-value">-</span></div>
+                <div class="stat"><label>持仓价值 (USDC)</label><span id="totalAssets" class="stat-value highlight">-</span></div>
+            </div>
+        </div>
+
+        <div class="tabs hidden" id="mainTabs">
+            <button class="tab active" data-tab="deposit">💰 存取款</button>
+            <button class="tab" data-tab="dashboard">📈 数据看板</button>
+            <button class="tab" data-tab="rebalance">🔄 再平衡</button>
+            <button class="tab" data-tab="governance">🗳️ 治理</button>
+        </div>
+
+        <!-- 存取款 -->
+        <div id="depositTab" class="tab-content">
+            <div class="grid grid-2">
+                <div class="card">
+                    <h3>📥 存入流动性</h3>
+                    <div class="input-group">
+                        <label>WETH 数量 <span class="balance-hint" id="wethMaxHint"></span></label>
+                        <div class="input-wrapper">
+                            <input type="number" id="depositWeth" placeholder="0.0" step="any" min="0">
+                            <button class="btn-max" onclick="setMaxWeth()">MAX</button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>USDC 数量 <span class="balance-hint" id="usdcMaxHint"></span></label>
+                        <div class="input-wrapper">
+                            <input type="number" id="depositUsdc" placeholder="0.0" step="any" min="0">
+                            <button class="btn-max" onclick="setMaxUsdc()">MAX</button>
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-row"><span>当前 TWAP 价格</span><span id="depositPrice">-</span></div>
+                        <div class="info-row"><span>预计获得份额</span><span id="estimatedShares" class="highlight">0 ALP</span></div>
+                        <div class="info-row"><span>占金库比例</span><span id="sharePct">0%</span></div>
+                    </div>
+                    <button class="btn btn-primary btn-full" onclick="deposit()">存入流动性</button>
+                    <p class="hint">💡 首次存款需要先授权 WETH 和 USDC，授权后自动执行存款</p>
+                </div>
+                <div class="card">
+                    <h3>📤 赎回流动性</h3>
+                    <div class="input-group">
+                        <label>赎回份额 (ALP) <span class="balance-hint" id="sharesMaxHint"></span></label>
+                        <div class="input-wrapper">
+                            <input type="number" id="withdrawShares" placeholder="0.0" step="any" min="0">
+                            <button class="btn-max" onclick="setMaxShares()">MAX</button>
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-row"><span>预计收到 WETH</span><span id="estimatedWeth" class="highlight">-</span></div>
+                        <div class="info-row"><span>预计收到 USDC</span><span id="estimatedUsdc" class="highlight">-</span></div>
+                        <div class="info-row"><span>赎回比例</span><span id="withdrawPct">0%</span></div>
+                    </div>
+                    <button class="btn btn-danger btn-full" onclick="withdraw()">赎回流动性</button>
+                    <p class="hint">⚠️ 赎回会触发从所有做市头寸中撤出流动性</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据看板 -->
+        <div id="dashboardTab" class="tab-content">
+            <div class="card">
+                <h3>🏦 金库总览</h3>
+                <div class="grid grid-4">
+                    <div class="stat"><label>TVL (USDC)</label><span id="tvl" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>TWAP 价格</label><span id="twapPrice" class="stat-value">-</span></div>
+                    <div class="stat"><label>再平衡次数</label><span id="rebalanceCount" class="stat-value">-</span></div>
+                    <div class="stat"><label>累计手续费</label><span id="cumulativeFees" class="stat-value highlight">-</span></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📊 资金分布</h3>
+                <div class="distribution">
+                    <div class="dist-bar">
+                        <div class="dist-segment idle" id="segIdle" style="width:25%"></div>
+                        <div class="dist-segment v2" id="segV2" style="width:10%"></div>
+                        <div class="dist-segment v3low" id="segV3Low" style="width:25%"></div>
+                        <div class="dist-segment v3high" id="segV3High" style="width:40%"></div>
+                    </div>
+                    <div class="dist-legend">
+                        <span class="legend-item"><span class="dot idle"></span>闲置 <b id="pctIdle">25%</b></span>
+                        <span class="legend-item"><span class="dot v2"></span>Uniswap V2 <b id="pctV2">10%</b></span>
+                        <span class="legend-item"><span class="dot v3low"></span>V3 0.05% <b id="pctV3Low">25%</b></span>
+                        <span class="legend-item"><span class="dot v3high"></span>V3 0.30% <b id="pctV3High">40%</b></span>
+                    </div>
+                </div>
+                <div class="dist-details" id="distDetails"><p class="hint">加载中...</p></div>
+            </div>
+            <div class="card">
+                <h3>⚙️ 策略参数</h3>
+                <div class="grid grid-3">
+                    <div class="param-item"><label>再平衡阈值</label><span id="paramThreshold">-</span></div>
+                    <div class="param-item"><label>激励比例</label><span id="paramIncentive">-</span></div>
+                    <div class="param-item"><label>最大滑点</label><span id="paramSlippage">-</span></div>
+                    <div class="param-item"><label>TWAP 窗口</label><span id="paramTwap">-</span></div>
+                    <div class="param-item"><label>窄区间</label><span id="paramTight">-</span></div>
+                    <div class="param-item"><label>宽区间</label><span id="paramWide">-</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 再平衡 -->
+        <div id="rebalanceTab" class="tab-content">
+            <div class="card">
+                <h3>🔄 手动再平衡</h3>
+                <p class="desc">任何人可触发再平衡操作。当金库资产偏离目标权重超过阈值时，合约会自动从所有做市头寸撤出资金，根据当前波动率重新计算分配比例，再投入到各池中。</p>
+                <div class="grid grid-3 mt-4">
+                    <div class="stat"><label>累计手续费 (USDC)</label><span id="rbFees" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>待领取奖励 (USDC)</label><span id="rbRewards" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>激励比例</label><span id="rbIncentiveBps" class="stat-value">-</span></div>
+                </div>
+                <div class="info-box mt-4"><div class="info-row"><span>冷却状态</span><span id="cooldownStatus">-</span></div></div>
+                <div class="btn-group mt-4">
+                    <button class="btn btn-primary" onclick="triggerRebalance()">🔄 触发再平衡</button>
+                    <button class="btn btn-secondary" onclick="claimRewards()">💰 领取奖励</button>
+                </div>
+                <p class="hint mt-4">💡 正向收益时触发者可获得 USDC 奖励（收益的一定比例）</p>
+            </div>
+        </div>
+
+        <!-- 治理 -->
+        <div id="governanceTab" class="tab-content">
+            <div class="card">
+                <h3>🗳️ 治理中心</h3>
+                <div class="grid grid-2">
+                    <div class="stat"><label>治理代币 ALP-GOV</label><span id="govBalance" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>金库地址</label><span id="vaultAddr" class="stat-value addr-text" onclick="copyVaultAddr()" style="cursor:pointer">-</span></div>
+                </div>
+                <p class="desc mt-4">治理参数包括 TWAP 窗口、再平衡阈值、激励比例、滑点保护、权重上限、区间范围等，需通过提案投票修改。</p>
+            </div>
+            <div class="card">
+                <h3>📋 当前治理参数</h3>
+                <div id="govParamsTable"><p class="hint">加载中...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="txModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-spinner"></div>
+            <h3 id="txTitle">处理中...</h3>
+            <p id="txMessage">请在钱包中确认交易</p>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+    window.onerror = function(m,u,l,c,e){
+        var b=document.getElementById('errBox');
+        b.textContent='⚠️ 错误: '+m+' (行'+l+')'; b.style.display='block';
+        setTimeout(function(){b.style.display='none'},10000);
+        console.error('JS Error:',m,e);
+    };
+    window.addEventListener('unhandledrejection',function(e){
+        var b=document.getElementById('errBox');
+        var msg=e.reason&&e.reason.message?e.reason.message:String(e.reason);
+        b.textContent='⚠️ 请求失败: '+msg.substring(0,200); b.style.display='block';
+        setTimeout(function(){b.style.display='none'},8000);
+        console.error('Promise rejection:',e.reason);
+    });
+    </script>
+    <script src="app.js?v=4"></script>
+</body>
+</html>
