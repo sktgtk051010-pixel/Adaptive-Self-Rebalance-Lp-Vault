@@ -65,7 +65,7 @@ contract ForkTest is Test {
             "Adaptive LP Vault", "ALP-VAULT"
         );
 
-        incentives = new RebalanceIncentives(address(vault), USDC_MAINNET);
+        incentives = new RebalanceIncentives(address(vault), USDC_MAINNET, address(governance));
 
         // V2 适配器 - 使用真实V2 Router
         v2Adapter = new UniswapV2Adapter(V2_ROUTER, address(vault), USDC_MAINNET, WETH_MAINNET);

@@ -1,17 +1,17 @@
 // ============================================================
-// Adaptive LP Vault Frontend v3
+// Adaptive LP Vault Frontend v4 (FIXED BigNumber overflow, ALP 6 decimals)
 // ============================================================
 const SEPOLIA_CHAIN_ID = 11155111;
 
 const ADDRESSES = {
-    vault: '0x8b7b69F71C9180ED361D87DfE474C74D27D42a3c',
+    vault: '0x203E3ea414B550552783054B7525890bb08A52B7',
     weth: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
     usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
-    oracle: '0x4659f77979bA3df083bD4BD91acB7275F78EF7ab',
-    strategy: '0x35Cbad54F00E47cE43Cde2d6462cFd8967d2fDDD',
-    governance: '0x0fFAc18bCCC96Cd6b0c8cB7d1D40a657d207eC6c',
-    incentives: '0x4Bda8D9B39cDB0Ef17A9781C3Cc6646A2b735EFD',
-    govToken: '0x6C7eB107B9969F455F0890fd36140aB21bC1747C',
+    oracle: '0xD0D2421D3d9a0a0C23ea0e597f1a54F8A7C1Ae25',
+    strategy: '0x9331E43dbA088bEe53198d70c63AFE64d2c29d99',
+    governance: '0x51841b1B6feE4f5d333900C7Ce66a2FE7512349B',
+    incentives: '0x341382cE4BBA956BACB28802BddA951039d2Ab1E',
+    govToken: '0xc7D690c0a921307e3f5939F0811E3875D0f0808A',
 };
 
 // 从localStorage读取deploy.html部署的新地址（如果有）
@@ -37,7 +37,7 @@ const ERC20_ABI = [
 ];
 const VAULT_ABI = [
     'function deposit(uint256 wethAmount, uint256 usdcAmount, uint256 minShares)',
-    'function withdraw(uint256 shares, uint256 minWeth, uint256 minUsdc)',
+    'function withdrawDual(uint256 shares, uint256 minWeth, uint256 minUsdc) returns (uint256, uint256)',
     'function totalAssets() view returns (uint256)',
     'function balanceOf(address) view returns (uint256)',
     'function totalSupply() view returns (uint256)',
@@ -130,7 +130,6 @@ async function connectWallet() {
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: '0xaa36a7' }],
                 });
-                // 切换后等一下让网络生效
                 await new Promise(r => setTimeout(r, 1000));
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 signer = provider.getSigner();
@@ -142,7 +141,6 @@ async function connectWallet() {
             }
         }
 
-        // === 先更新UI（这部分不依赖合约，一定能成功）===
         $('networkBadge').textContent = 'Sepolia';
         $('networkBadge').className = 'network-badge success';
         btn.textContent = account.slice(0,6) + '...' + account.slice(-4);
@@ -158,7 +156,6 @@ async function connectWallet() {
 
         showToast('钱包连接成功', 'success');
 
-        // === 初始化合约（独立try-catch，失败不影响UI）===
         try {
             C = {
                 vault: new ethers.Contract(ADDRESSES.vault, VAULT_ABI, signer),
@@ -174,14 +171,11 @@ async function connectWallet() {
             showToast('合约初始化失败: ' + e.message, 'error');
         }
 
-        // === 加载数据（每个独立，互不影响）===
         loadAllData();
 
-        // 监听变化
         window.ethereum.on('accountsChanged', function() { window.location.reload(); });
         window.ethereum.on('chainChanged', function() { window.location.reload(); });
 
-        // 自动刷新
         if (refreshTimer) clearInterval(refreshTimer);
         refreshTimer = setInterval(function() { if (account) loadAllData(true); }, 15000);
 
@@ -203,7 +197,7 @@ function switchTab(tabId) {
 }
 
 // ============================================================
-// 数据加载（每个函数完全独立，一个失败不影响其他）
+// 数据加载
 // ============================================================
 function loadAllData(silent) {
     if (!account) return;
@@ -231,7 +225,7 @@ async function loadTokenBalances() {
         var wethBal = await C.weth.balanceOf(account);
         var usdcBal = await C.usdc.balanceOf(account);
         var wethStr = parseFloat(ethers.utils.formatEther(wethBal)).toFixed(4);
-        var usdcStr = (usdcBal / 1e6).toFixed(2);
+        var usdcStr = parseFloat(ethers.utils.formatUnits(usdcBal,6)).toFixed(2);
         setText('wethBalance', wethStr + ' WETH');
         setText('usdcBalance', usdcStr + ' USDC');
         setText('wethMaxHint', '余额: ' + wethStr);
@@ -248,47 +242,81 @@ async function loadTWAPPrice() {
         var result = await C.oracle.getTWAPPrice();
         if (result && result[0] && result[0].gt(0)) {
             twapPrice = calcPrice(result[0]);
-            var p = '$' + twapPrice.toFixed(2);
-            setText('twapPrice', p);
-            setText('depositPrice', '1 ETH = ' + p);
+            // 价格合理性检查：Sepolia测试网池子流动性差，价格可能异常
+            if (twapPrice > 10 && twapPrice < 100000) {
+                var p = '$' + twapPrice.toFixed(2);
+                setText('twapPrice', p);
+                setText('depositPrice', '1 ETH = ' + p);
+            } else {
+                // 价格异常，显示警告
+                setText('twapPrice', '异常 ⚠️');
+                setText('depositPrice', '价格异常 (测试网流动性不足)');
+                console.warn('TWAP price abnormal:', twapPrice, 'tick:', result[1]);
+            }
         } else {
             setText('twapPrice', '无数据');
             setText('depositPrice', '-');
         }
     } catch(e) {
         console.error('TWAP:', e.message);
-        setText('twapPrice', '未部署');
-        setText('depositPrice', 'Oracle未就绪');
+        setText('twapPrice', '待就绪');
+        setText('depositPrice', 'Oracle初始化中...');
     }
 }
 
 async function loadVaultData() {
+    // 1. 先加载份额（最核心，单独处理，不依赖其他数据）
+    let sharesF = 0;
+    let tsF = 0;
     try {
-        var shares = await C.vault.balanceOf(account);
-        var tvl = await C.vault.totalAssets();
-        var totalSupply = await C.vault.totalSupply();
-        var reCount = await C.vault.rebalanceCount();
-        var fees = await C.vault.cumulativeFeesUSDC();
-
-        var sharesF = parseFloat(ethers.utils.formatEther(shares));
-        var tvlF = tvl / 1e6;
-        var tsF = parseFloat(ethers.utils.formatEther(totalSupply));
-
+        const shares = await C.vault.balanceOf(account);
+        const totalSupply = await C.vault.totalSupply();
+        sharesF = parseFloat(ethers.utils.formatUnits(shares, 6));
+        tsF = parseFloat(ethers.utils.formatUnits(totalSupply, 6));
         setText('vaultShares', sharesF.toFixed(4) + ' ALP');
-        setText('totalAssets', '$' + (sharesF > 0 && tsF > 0 ? (sharesF / tsF * tvlF).toFixed(2) : '0.00'));
-        setText('tvl', '$' + tvlF.toFixed(2));
-        setText('rebalanceCount', reCount.toString());
-        setText('cumulativeFees', '$' + (fees / 1e6).toFixed(4));
         setText('sharesMaxHint', '余额: ' + sharesF.toFixed(4));
+    } catch(e) {
+        console.error('Vault shares:', e.message);
+        setText('vaultShares', '未部署');
+        setText('sharesMaxHint', '');
+    }
 
+    // 2. 加载TVL和持仓价值（依赖oracle，可能失败）
+    try {
+        const tvl = await C.vault.totalAssets();
+        const tvlF = parseFloat(ethers.utils.formatUnits(tvl,6));
+        setText('tvl', '$' + tvlF.toFixed(2));
+
+        let userValueStr = "0.00";
+        if (sharesF > 1e-9 && tsF > 1e-9 && tvlF > 0) {
+            const userVal = sharesF / tsF * tvlF;
+            userValueStr = userVal.toFixed(2);
+        }
+        setText('totalAssets', '$' + userValueStr);
+    } catch(e) {
+        console.error('Vault TVL:', e.message);
+        setText('tvl', '待数据');
+        setText('totalAssets', '待数据');
+    }
+
+    // 3. 加载再平衡统计
+    try {
+        const reCount = await C.vault.rebalanceCount();
+        const fees = await C.vault.cumulativeFeesUSDC();
+        setText('rebalanceCount', reCount.toString());
+        setText('cumulativeFees', '$' + parseFloat(ethers.utils.formatUnits(fees,6)).toFixed(4));
+    } catch(e) {
+        console.error('Vault stats:', e.message);
+        setText('rebalanceCount', '-');
+        setText('cumulativeFees', '-');
+    }
+
+    // 4. 更新预估（失败不影响主数据）
+    try {
         updateDepositEstimate();
         updateWithdrawEstimate();
     } catch(e) {
-        console.error('Vault data:', e.message);
-        setText('vaultShares', '未部署');
-        setText('tvl', '未部署');
-        setText('rebalanceCount', '-');
-        setText('cumulativeFees', '-');
+        console.error('Vault estimate:', e.message);
     }
 }
 
@@ -320,10 +348,10 @@ async function loadDistribution() {
             setText('pctV3Low', pL.toFixed(1) + '%');
             setText('pctV3High', pH.toFixed(1) + '%');
             $('distDetails').innerHTML =
-                '<div class="dist-row"><span class="dot idle"></span>闲置: <b>$'+(idle/1e6).toFixed(2)+'</b> ('+pI.toFixed(1)+'%)</div>' +
-                '<div class="dist-row"><span class="dot v2"></span>V2: <b>$'+(v2/1e6).toFixed(2)+'</b> ('+pV2.toFixed(1)+'%)</div>' +
-                '<div class="dist-row"><span class="dot v3low"></span>V3 0.05%: <b>$'+(v3l/1e6).toFixed(2)+'</b> ('+pL.toFixed(1)+'%)</div>' +
-                '<div class="dist-row"><span class="dot v3high"></span>V3 0.30%: <b>$'+(v3h/1e6).toFixed(2)+'</b> ('+pH.toFixed(1)+'%)</div>';
+                '<div class="dist-row"><span class="dot idle"></span>闲置: <b>$'+(parseFloat(ethers.utils.formatUnits(idle,6))).toFixed(2)+'</b> ('+pI.toFixed(1)+'%)</div>' +
+                '<div class="dist-row"><span class="dot v2"></span>V2: <b>$'+(parseFloat(ethers.utils.formatUnits(v2,6))).toFixed(2)+'</b> ('+pV2.toFixed(1)+'%)</div>' +
+                '<div class="dist-row"><span class="dot v3low"></span>V3 0.05%: <b>$'+(parseFloat(ethers.utils.formatUnits(v3l,6))).toFixed(2)+'</b> ('+pL.toFixed(1)+'%)</div>' +
+                '<div class="dist-row"><span class="dot v3high"></span>V3 0.30%: <b>$'+(parseFloat(ethers.utils.formatUnits(v3h,6))).toFixed(2)+'</b> ('+pH.toFixed(1)+'%)</div>';
         } else {
             $('distDetails').innerHTML = '<p class="hint">金库暂无资金</p>';
         }
@@ -368,7 +396,7 @@ async function loadIncentivesData() {
         var lastTime = await C.incentives.lastRebalanceTime();
         var cooldown = await C.incentives.cooldownPeriod();
 
-        setText('rbRewards', '$' + (rewards/1e6).toFixed(4));
+        setText('rbRewards', '$' + parseFloat(ethers.utils.formatUnits(rewards,6)).toFixed(4));
         setText('rbIncentiveBps', (bps/100).toFixed(1) + '%');
 
         if (lastTime.eq(0)) {
@@ -398,46 +426,96 @@ async function loadGovTokenBalance() {
 }
 
 // ============================================================
-// 预估计算
+// 预估计算（全部BigNumber，规避JS Number溢出）
 // ============================================================
 async function updateDepositEstimate() {
-    var wethAmt = parseFloat($('depositWeth').value) || 0;
-    var usdcAmt = parseFloat($('depositUsdc').value) || 0;
-    if (wethAmt === 0 && usdcAmt === 0) {
-        setText('estimatedShares', '0 ALP'); setText('sharePct', '0%'); return;
+    const wethAmtText = $('depositWeth').value || "0";
+    const usdcAmtText = $('depositUsdc').value || "0";
+
+    const wethWei = ethers.utils.parseEther(wethAmtText);
+    const usdcWei = ethers.utils.parseUnits(usdcAmtText,6);
+
+    if(wethWei.isZero() && usdcWei.isZero()){
+        setText('estimatedShares', '0 ALP');
+        setText('sharePct', '0%');
+        return;
     }
     try {
-        var tvl = await C.vault.totalAssets();
-        var totalSupply = await C.vault.totalSupply();
-        var tvlF = tvl.toNumber() / 1e6;
-        var tsF = parseFloat(ethers.utils.formatEther(totalSupply));
-        var depVal = usdcAmt + (twapPrice > 0 ? wethAmt * twapPrice : 0);
-        var newShares = (tsF === 0 || tvlF === 0) ? depVal : (depVal / tvlF) * tsF;
-        var pct = tsF > 0 ? (newShares / (tsF + newShares) * 100) : 100;
-        setText('estimatedShares', newShares.toFixed(4) + ' ALP');
-        setText('sharePct', pct.toFixed(2) + '%');
+        const totalAssetsBN = await C.vault.totalAssets();
+        const totalSupplyBN = await C.vault.totalSupply();
+
+        let depositValueUSD = usdcWei;
+        if(twapPrice > 0){
+            const priceScaled = ethers.BigNumber.from(Math.round(twapPrice * 100));
+            const wethValue = wethWei.mul(priceScaled).div(ethers.BigNumber.from("100").mul(ethers.BigNumber.from(10).pow(12)));
+            depositValueUSD = depositValueUSD.add(wethValue);
+        }
+
+        let newSharesBN;
+        if(totalSupplyBN.isZero() || totalAssetsBN.isZero()){
+            newSharesBN = depositValueUSD;
+        }else{
+            newSharesBN = depositValueUSD.mul(totalSupplyBN).div(totalAssetsBN);
+        }
+
+        const newSharesStr = ethers.utils.formatUnits(newSharesBN,6);
+        setText('estimatedShares', parseFloat(newSharesStr).toFixed(4) + ' ALP');
+
+        const totalAfter = totalSupplyBN.add(newSharesBN);
+        let pct = ethers.BigNumber.from(0);
+        if(!totalAfter.isZero()){
+            pct = newSharesBN.mul(ethers.BigNumber.from(10000)).div(totalAfter);
+        }
+        const pctNum = pct.toNumber() / 100;
+        setText('sharePct', pctNum.toFixed(2)+'%');
+
     } catch(e) {
-        setText('estimatedShares', '需先部署金库');
+        console.error("updateDepositEstimate error",e);
+        setText('estimatedShares', '计算失败');
     }
 }
 
 async function updateWithdrawEstimate() {
-    var sharesAmt = parseFloat($('withdrawShares').value) || 0;
-    if (sharesAmt === 0) {
-        setText('estimatedWeth', '-'); setText('estimatedUsdc', '-'); setText('withdrawPct', '0%'); return;
+    const sharesText = $('withdrawShares').value || "0";
+    const sharesWei = ethers.utils.parseUnits(sharesText,6);
+
+    if (sharesWei.isZero()) {
+        setText('estimatedWeth', '-');
+        setText('estimatedUsdc', '-');
+        setText('withdrawPct', '0%');
+        return;
     }
     try {
-        var totalSupply = await C.vault.totalSupply();
-        var d = await C.vault.getDistribution();
-        var tsF = parseFloat(ethers.utils.formatEther(totalSupply));
-        var ratio = tsF > 0 ? sharesAmt / tsF : 0;
-        var totalWeth = d[0].add(d[2]).add(d[4]).add(d[6]);
-        var totalUsdc = d[1].add(d[3]).add(d[5]).add(d[7]);
-        setText('estimatedWeth', (parseFloat(ethers.utils.formatEther(totalWeth)) * ratio).toFixed(6) + ' WETH');
-        setText('estimatedUsdc', (totalUsdc.toNumber()/1e6 * ratio).toFixed(2) + ' USDC');
-        setText('withdrawPct', (ratio*100).toFixed(2) + '%');
+        const totalSupplyBN = await C.vault.totalSupply();
+        const d = await C.vault.getDistribution();
+
+        const totalWeth = d[0].add(d[2]).add(d[4]).add(d[6]);
+        const totalUsdc = d[1].add(d[3]).add(d[5]).add(d[7]);
+
+        if(totalSupplyBN.isZero()){
+            setText('estimatedWeth','0 WETH');
+            setText('estimatedUsdc','0 USDC');
+            setText('withdrawPct','0%');
+            return;
+        }
+
+        const ratioScale = ethers.BigNumber.from(10).pow(18);
+        const ratioScaled = sharesWei.mul(ratioScale).div(totalSupplyBN);
+
+        const outWeth = totalWeth.mul(ratioScaled).div(ratioScale);
+        const outUsdc = totalUsdc.mul(ratioScaled).div(ratioScale);
+
+        const wethDisplay = parseFloat(ethers.utils.formatEther(outWeth)).toFixed(6);
+        const usdcDisplay = parseFloat(ethers.utils.formatUnits(outUsdc,6)).toFixed(2);
+        const pct = sharesWei.mul(ethers.BigNumber.from(10000)).div(totalSupplyBN).toNumber()/100;
+
+        setText('estimatedWeth', wethDisplay + ' WETH');
+        setText('estimatedUsdc', usdcDisplay + ' USDC');
+        setText('withdrawPct', pct.toFixed(2)+'%');
     } catch(e) {
-        setText('estimatedWeth', '-'); setText('estimatedUsdc', '-');
+        console.error("updateWithdrawEstimate",e);
+        setText('estimatedWeth', '-');
+        setText('estimatedUsdc', '-');
     }
 }
 
@@ -454,16 +532,16 @@ async function setMaxWeth() {
 async function setMaxUsdc() {
     try {
         var bal = await C.usdc.balanceOf(account);
-        $('depositUsdc').value = (bal / 1e6).toString();
+        $('depositUsdc').value = ethers.utils.formatUnits(bal, 6);
         updateDepositEstimate();
     } catch(e) { showToast('获取余额失败', 'error'); }
 }
 async function setMaxShares() {
     try {
         var bal = await C.vault.balanceOf(account);
-        $('withdrawShares').value = ethers.utils.formatEther(bal);
+        $('withdrawShares').value = ethers.utils.formatUnits(bal, 6);
         updateWithdrawEstimate();
-    } catch(e) { showToast('获取份额失败', 'error'); }
+    } catch(e) { showToast('获取余额失败', 'error'); }
 }
 
 async function deposit() {
@@ -511,11 +589,11 @@ async function withdraw() {
     var shares = $('withdrawShares').value;
     if (!shares || parseFloat(shares) <= 0) { showToast('请输入份额', 'error'); return; }
     try {
-        var sharesWei = ethers.utils.parseEther(shares);
+        var sharesWei = ethers.utils.parseUnits(shares, 6);
         var bal = await C.vault.balanceOf(account);
         if (sharesWei.gt(bal)) { showToast('份额不足', 'error'); return; }
         showTxModal('赎回中', '请确认交易...');
-        var tx = await C.vault.withdraw(sharesWei, 0, 0);
+        var tx = await C.vault.withdrawDual(sharesWei, 0, 0);
         await tx.wait();
         hideTxModal();
         showToast('✅ 赎回成功', 'success');
@@ -572,12 +650,8 @@ function copyVaultAddr() {
 // 价格计算
 // ============================================================
 function calcPrice(sqrtPriceX96) {
-    // Sepolia/主网: token0=USDC(6位), token1=WETH(18位)
-    // price = amount1/amount0 = WETH_raw/USDC_raw = sqrtPriceX96^2 / 2^192
-    // 1 ETH = X USDC: 10^18/(X*10^6) = sqrtPriceX96^2/2^192
-    // X = 10^12 * 2^192 / sqrtPriceX96^2
     var Q192 = ethers.BigNumber.from(2).pow(192);
-    var numerator = Q192.mul(100000000000000); // 10^12 * 100 保留2位小数
+    var numerator = Q192.mul(100000000000000);
     var denominator = sqrtPriceX96.mul(sqrtPriceX96);
     var priceScaled = numerator.div(denominator);
     return priceScaled.toNumber() / 100;

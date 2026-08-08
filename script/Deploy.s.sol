@@ -96,7 +96,7 @@ contract DeployScript is Script {
         vault.setAdapters(v2AdapterAddr, v3LowFeeAdapter, v3HighFeeAdapter);
 
         // 10. 激励
-        RebalanceIncentives incentives = new RebalanceIncentives(address(vault), USDC_SEPOLIA);
+        RebalanceIncentives incentives = new RebalanceIncentives(address(vault), USDC_SEPOLIA, address(governance));
         console2.log("RebalanceIncentives:", address(incentives));
         vault.setIncentives(address(incentives));
         vault.setGovernance(address(governance));

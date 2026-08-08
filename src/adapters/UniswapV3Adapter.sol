@@ -118,37 +118,16 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
     ) external onlyVault nonReentrant returns (uint256 amount0, uint256 amount1, bytes32 liquidityId) {
         // 解析data: tickLower, tickUpper
         (int24 tickLower, int24 tickUpper) = abi.decode(data, (int24, int24));
-        require(tickLower < tickUpper, "V3Adapter: invalid ticks");
-
-        // 对齐tickSpacing
-        int24 tickSpacing = POOL.tickSpacing();
-        require(tickLower % tickSpacing == 0 && tickUpper % tickSpacing == 0,
-            "V3Adapter: ticks not aligned");
+        _validateTicks(tickLower, tickUpper);
 
         liquidityId = getPositionId(tickLower, tickUpper);
 
         // 先计算liquidity，为0则跳过（单币种且区间不在价格范围内）
-        (uint160 sqrtPricex96, , , , , , ) = POOL.slot0();
-        uint160 sqrtRatioAx96 = TickMath.getSqrtRatioAtTick(tickLower);
-        uint160 sqrtRatioBx96 = TickMath.getSqrtRatioAtTick(tickUpper);
-
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            sqrtPricex96,
-            sqrtRatioAx96,
-            sqrtRatioBx96,
-            amount0Desired,
-            amount1Desired
-        );
-
+        uint128 liquidity = _calculateLiquidity(tickLower, tickUpper, amount0Desired, amount1Desired);
         if (liquidity == 0) return (0, 0, liquidityId);
 
         // 从金库转入代币
-        if (amount0Desired > 0) {
-            IERC20(TOKEN0).safeTransferFrom(VAULT, address(this), amount0Desired);
-        }
-        if (amount1Desired > 0) {
-            IERC20(TOKEN1).safeTransferFrom(VAULT, address(this), amount1Desired);
-        }
+        _transferFromVault(amount0Desired, amount1Desired);
 
         // Mint到V3池
         (amount0, amount1) = POOL.mint(
@@ -162,21 +141,73 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         require(amount0 >= amount0Min && amount1 >= amount1Min, "V3Adapter: slippage");
 
         // 更新position记录
+        _updatePosition(liquidityId, tickLower, tickUpper, liquidity);
+
+        // 返回剩余dust
+        _returnDust();
+
+        emit V3LiquidityAdded(liquidityId, tickLower, tickUpper, liquidity, amount0, amount1);
+    }
+
+    function _validateTicks(int24 tickLower, int24 tickUpper) internal view {
+        require(tickLower < tickUpper, "V3Adapter: invalid ticks");
+        int24 tickSpacing = POOL.tickSpacing();
+        require(tickLower % tickSpacing == 0 && tickUpper % tickSpacing == 0,
+            "V3Adapter: ticks not aligned");
+    }
+
+    function _calculateLiquidity(
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0Desired,
+        uint256 amount1Desired
+    ) internal view returns (uint128) {
+        (uint160 sqrtPricex96, , , , , , ) = POOL.slot0();
+        uint160 sqrtRatioAx96 = TickMath.getSqrtRatioAtTick(tickLower);
+        uint160 sqrtRatioBx96 = TickMath.getSqrtRatioAtTick(tickUpper);
+        return LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPricex96,
+            sqrtRatioAx96,
+            sqrtRatioBx96,
+            amount0Desired,
+            amount1Desired
+        );
+    }
+
+    function _transferFromVault(uint256 amount0Desired, uint256 amount1Desired) internal {
+        if (amount0Desired > 0) {
+            IERC20(TOKEN0).safeTransferFrom(VAULT, address(this), amount0Desired);
+        }
+        if (amount1Desired > 0) {
+            IERC20(TOKEN1).safeTransferFrom(VAULT, address(this), amount1Desired);
+        }
+    }
+
+    function _updatePosition(
+        bytes32 liquidityId,
+        int24 tickLower,
+        int24 tickUpper,
+        uint128 liquidity
+    ) internal {
         Position storage pos = positions[liquidityId];
         if (!pos.active) {
             pos.tickLower = tickLower;
             pos.tickUpper = tickUpper;
             pos.active = true;
+
+            (uint256 currFee0, uint256 currFee1) = _getFeeGrowthInside(pos);
+            pos.feeGrowthInside0LastX128 = currFee0;
+            pos.feeGrowthInside1LastX128 = currFee1;
             activePositionList.push(liquidityId);
         }
         pos.liquidity += liquidity;
+    }
 
+    function _returnDust() internal {
         uint256 bal0 = IERC20(TOKEN0).balanceOf(address(this));
         uint256 bal1 = IERC20(TOKEN1).balanceOf(address(this));
         if (bal0 > 0) IERC20(TOKEN0).safeTransfer(VAULT, bal0);
         if (bal1 > 0) IERC20(TOKEN1).safeTransfer(VAULT, bal1);
-
-        emit V3LiquidityAdded(liquidityId, tickLower, tickUpper, liquidity, amount0, amount1);
     }
 
     /// @inheritdoc ILPAdapter
@@ -208,6 +239,10 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         pos.liquidity -= liquidity;
         pos.tokensOwed0 = 0;
         pos.tokensOwed1 = 0;
+
+        (uint256 currFee0, uint256 currFee1) = _getFeeGrowthInside(pos);
+        pos.feeGrowthInside0LastX128 = currFee0;
+        pos.feeGrowthInside1LastX128 = currFee1;
 
         // 如果流动性为0，标记为非活跃
         if (pos.liquidity == 0) {
@@ -245,6 +280,10 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
 
         pos.tokensOwed0 = 0;
         pos.tokensOwed1 = 0;
+        (uint256 currFee0, uint256 currFee1) = _getFeeGrowthInside(pos);
+        pos.feeGrowthInside0LastX128 = currFee0;
+        pos.feeGrowthInside1LastX128 = currFee1;
+
 
         emit V3FeesCollected(liquidityId, fees0, fees1);
     }
@@ -341,20 +380,25 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         returns (uint256 feeGrowthInside0X128, uint256 feeGrowthInside1X128)
     {
         (, int24 tickCurrent, , , , , ) = POOL.slot0();
+        uint256 feeGrowthGlobal0 = POOL.feeGrowthGlobal0X128();
+        uint256 feeGrowthGlobal1 = POOL.feeGrowthGlobal1X128();
+
         (, , uint256 lowerFeeGrowthOutside0X128, uint256 lowerFeeGrowthOutside1X128, , , , ) =
             POOL.ticks(pos.tickLower);
         (, , uint256 upperFeeGrowthOutside0X128, uint256 upperFeeGrowthOutside1X128, , , , ) =
             POOL.ticks(pos.tickUpper);
 
-        if (tickCurrent < pos.tickLower) {
-            feeGrowthInside0X128 = lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
-        } else if (tickCurrent >= pos.tickUpper) {
-            feeGrowthInside0X128 = upperFeeGrowthOutside0X128 - lowerFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = upperFeeGrowthOutside1X128 - lowerFeeGrowthOutside1X128;
-        } else {
-            feeGrowthInside0X128 = POOL.feeGrowthGlobal0X128() - lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
-            feeGrowthInside1X128 = POOL.feeGrowthGlobal1X128() - lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+        unchecked {
+            if (tickCurrent < pos.tickLower) {
+                feeGrowthInside0X128 = lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+            } else if (tickCurrent >= pos.tickUpper) {
+                feeGrowthInside0X128 = upperFeeGrowthOutside0X128 - lowerFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = upperFeeGrowthOutside1X128 - lowerFeeGrowthOutside1X128;
+            } else {
+                feeGrowthInside0X128 = feeGrowthGlobal0 - lowerFeeGrowthOutside0X128 - upperFeeGrowthOutside0X128;
+                feeGrowthInside1X128 = feeGrowthGlobal1 - lowerFeeGrowthOutside1X128 - upperFeeGrowthOutside1X128;
+            }
         }
     }
 
@@ -389,10 +433,16 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
 
     function _computeFeesEarned(
         uint128 liquidity,
-        uint256 feeGrowthInside1X128,
-        uint256 feeGrowthInside0LastX128
+        uint256 feeGrowthInsideX128,
+        uint256 feeGrowthInsideLastX128
     ) internal pure returns (uint256) {
-        return FullMath.mulDiv(uint256(liquidity), feeGrowthInside1X128 - feeGrowthInside0LastX128, 1 << 128);
+        unchecked {
+            return FullMath.mulDiv(
+                uint256(liquidity), 
+                feeGrowthInsideX128 - feeGrowthInsideLastX128, 
+                1 << 128
+            );
+        }
     }
 
     function _removeFromActiveList(bytes32 id) internal {

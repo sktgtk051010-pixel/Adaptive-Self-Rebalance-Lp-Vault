@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {FullMath} from "../libraries/UniswapMath.sol";
+import {AdaptiveGovernance} from "../governance/AdaptiveGovernance.sol";
 
 /**
  * @title RebalanceIncentives
@@ -20,6 +21,8 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
 
     /// @notice 奖励代币（USDC）
     IERC20 public immutable REWARD_TOKEN;
+
+    AdaptiveGovernance public immutable GOVERNANCE;
 
     /// @notice 激励比例（basis points，从金库收益中扣除）
     uint256 public incentiveBps;
@@ -63,12 +66,17 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
 
     constructor(
         address _vault,
-        address _rewardToken
+        address _rewardToken,
+        address _governance
     ) Ownable(msg.sender) {
         require(_vault != address(0), "Incentives: zero vault");
         require(_rewardToken != address(0), "Incentives: zero token");
+        require(_governance != address(0), "Incentives: zero governance");
+
         VAULT = _vault;
         REWARD_TOKEN = IERC20(_rewardToken);
+        GOVERNANCE = AdaptiveGovernance(_governance);
+
         incentiveBps = DEFAULT_INCENTIVE_BPS;
         minProfitThreshold = DEFAULT_MIN_PROFIT;
         cooldownPeriod = DEFAULT_COOLDOWN;
@@ -141,7 +149,7 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
     /// @notice 注入奖励资金（由金库或治理调用）
     function fundRewards(uint256 amount) external {
         require(amount > 0, "Incentives: zero amount");
-        require(msg.sender == owner() || msg.sender == VAULT, "Incentives: not authorized");
+        require(msg.sender == address(GOVERNANCE) || msg.sender == VAULT, "Incentives: not authorized");
         REWARD_TOKEN.safeTransferFrom(msg.sender, address(this), amount);
     }
 

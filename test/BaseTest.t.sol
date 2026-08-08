@@ -96,7 +96,7 @@ contract BaseTest is Test {
         vault.setAdapters(address(v2Adapter), address(v3LowAdapter), address(v3HighAdapter));
 
         // 部署激励
-        incentives = new RebalanceIncentives(address(vault), address(usdc));
+        incentives = new RebalanceIncentives(address(vault), address(usdc), address(governance));
         vault.setIncentives(address(incentives));
         governance.setVault(address(vault));
 

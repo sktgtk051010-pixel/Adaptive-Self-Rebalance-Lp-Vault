@@ -1,0 +1,49 @@
+Warning: Found unknown `coverage` config for profile `default` defined in foundry.toml.
+Warning: `--ir-minimum` enables `viaIR` with minimum optimization, which can result in inaccurate source mappings.
+Only use this flag as a workaround if you are experiencing "stack too deep" errors.
+Note that `viaIR` is production ready since Solidity 0.8.13 and above.
+See more: https://github.com/foundry-rs/foundry/issues/3357
+Compiling 60 files with Solc 0.8.24
+Solc 0.8.24 finished in 752.43ms
+Error: Compiler run failed:
+Error (7364): Different number of components on the left hand side (1) than on the right hand side (2).
+   --> test/unit/MockTest.t.sol:345:9:
+    |
+345 |         uint128 liquidity = MockUniswapV3Pool(pool).mint(alice, -100, 100, 1000, "");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error (9574): Type uint256 is not implicitly convertible to expected type uint128.
+   --> test/unit/MockTest.t.sol:345:9:
+    |
+345 |         uint128 liquidity = MockUniswapV3Pool(pool).mint(alice, -100, 100, 1000, "");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error (7364): Different number of components on the left hand side (1) than on the right hand side (2).
+   --> test/unit/MockTest.t.sol:358:9:
+    |
+358 |         uint128 liquidity = MockUniswapV3Pool(pool).mint(alice, -100, 100, 1000, "");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error (9574): Type uint256 is not implicitly convertible to expected type uint128.
+   --> test/unit/MockTest.t.sol:358:9:
+    |
+358 |         uint128 liquidity = MockUniswapV3Pool(pool).mint(alice, -100, 100, 1000, "");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error (7364): Different number of components on the left hand side (4) than on the right hand side (7).
+   --> test/unit/MockTest.t.sol:407:9:
+    |
+407 |         (uint128 liquidity, , , ) = MockUniswapV3Pool(pool).positions(
+    |         ^ (Relevant source part starts here and spans across multiple lines).
+
+Error (6160): Wrong argument count for function call: 2 arguments given but expected 1.
+   --> test/unit/MockTest.t.sol:431:9:
+    |
+431 |         MockUniswapV3Pool(pool).setMockFees(1e6, 1e18);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error (9582): Member "burn" not found or not visible after argument-dependent lookup in contract MockERC20.
+   --> test/unit/MockTest.t.sol:453:9:
+    |
+453 |         token.burn(500);
+    |         ^^^^^^^^^^

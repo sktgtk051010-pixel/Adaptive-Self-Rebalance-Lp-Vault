@@ -18,7 +18,7 @@ import {RebalanceIncentives} from "../incentives/RebalanceIncentives.sol";
 
 interface IUniswapV2Adapter {
     function getLpBalance() external view returns(uint256);
-    function pair() external view returns(address);
+    function PAIR() external view returns(address);
 }
 
 interface IUniswapV2Pair {
@@ -77,6 +77,12 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     uint256 public constant PANIC_VOL_THRESHOLD = 5000; // 50% 波动率阈值，超过此值触发紧急模式
 
     uint256 public constant WAD = 1e18;
+
+    // V3多区间投资比例
+    uint256 internal constant TIGHT_RANGE_PCT = 4000;
+    uint256 internal constant MEDIUM_RANGE_PCT = 3500;
+    uint256 internal constant WIDE_RANGE_PCT = 2500;
+    uint256 internal constant TOTAL_RANGE_PCT = 10000;
 
     // ============ 不可变状态 ============
     /// @notice WETH地址
@@ -493,10 +499,14 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     /// @notice ERC4626总资产（USDC计价）
     function totalAssets() public view override returns (uint256) {
         (uint256 totalWETH, uint256 totalUSDC) = getTotalUnderlying();
-        // WETH按TWAP折算成USDC
-        (uint160 sqrtPriceX96Twap, ) = ORACLE.getTWAPPrice();
-        uint256 wethValueUSDC = _wethToUSDC(totalWETH, sqrtPriceX96Twap);
-        return totalUSDC + wethValueUSDC;
+        // WETH按TWAP折算成USDC；oracle不可用时只返回USDC部分，避免整体revert
+        try ORACLE.getTWAPPrice() returns (uint160 sqrtPriceX96Twap, int24) {
+            if (sqrtPriceX96Twap == 0) return totalUSDC;
+            uint256 wethValueUSDC = _wethToUSDC(totalWETH, sqrtPriceX96Twap);
+            return totalUSDC + wethValueUSDC;
+        } catch {
+            return totalUSDC;
+        }
     }
 
     /// @notice 获取底层WETH和USDC总量
@@ -577,27 +587,27 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
     function _wethToUSDC(uint256 wethAmount, uint160 sqrtPriceX96) internal view returns (uint256) {
         if (wethAmount == 0 || sqrtPriceX96 == 0) return 0;
-        uint256 priceSquared = uint256(sqrtPriceX96) * uint256(sqrtPriceX96);
+        uint256 priceX96 = FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 96);
         if (TOKEN0_IS_WETH) {
             // token0=WETH, token1=USDC: price = USDC_raw/WETH_raw = sqrtPriceX96^2/2^192
             // USDC_raw = WETH_raw * price
-            return FullMath.mulDiv(wethAmount, priceSquared, 2 ** 192);
+            return FullMath.mulDiv(wethAmount, priceX96, 1 << 96);
         } else {
             // token0=USDC, token1=WETH: price = WETH_raw/USDC_raw = sqrtPriceX96^2/2^192
             // USDC_raw = WETH_raw / price = WETH_raw * 2^192 / sqrtPriceX96^2
-            return FullMath.mulDiv(wethAmount, 2 ** 192, priceSquared);
+            return FullMath.mulDiv(wethAmount, 1 << 96, priceX96);
         }
     }
 
     function _usdcToWETH(uint256 usdcAmount, uint160 sqrtPriceX96) internal view returns (uint256) {
         if (usdcAmount == 0 || sqrtPriceX96 == 0) return 0;
-        uint256 priceSquared = uint256(sqrtPriceX96) * uint256(sqrtPriceX96);
+        uint256 priceX96 = FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 96);
         if (TOKEN0_IS_WETH) {
             // WETH_raw = USDC_raw / price
-            return FullMath.mulDiv(usdcAmount, 2 ** 192, priceSquared);
+            return FullMath.mulDiv(usdcAmount, 1 << 96, priceX96);
         } else {
             // WETH_raw = USDC_raw * price
-            return FullMath.mulDiv(usdcAmount, priceSquared, 2 ** 192);
+            return FullMath.mulDiv(usdcAmount, priceX96, 1 << 96);
         }
     }
 
@@ -675,29 +685,50 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
          int24 mLower, int24 mUpper,
          int24 wLower, int24 wUpper) = STRATEGY.getRangeTicks(currentTick);
 
-        uint256 tightPct = 4000;
-        uint256 mediumPct = 3500;
-        uint256 widePct = 2500;
-        uint256 totalPct = 10000;
-
         // 窄区间
         if (totalWETH > WETH_DUST_THRESHOLD || totalUSDC > USDC_DUST_THRESHOLD) {
-            uint256 w = FullMath.mulDiv(totalWETH, tightPct, totalPct);
-            uint256 u = FullMath.mulDiv(totalUSDC, tightPct, totalPct);
-            _investOneRange(adapter, w, u, tLower, tUpper);
+            _investV3TightRange(adapter, totalWETH, totalUSDC, tLower, tUpper);
         }
         // 中区间
-        {
-            uint256 w = FullMath.mulDiv(totalWETH, mediumPct, totalPct);
-            uint256 u = FullMath.mulDiv(totalUSDC, mediumPct, totalPct);
-            _investOneRange(adapter, w, u, mLower, mUpper);
-        }
+        _investV3MediumRange(adapter, totalWETH, totalUSDC, mLower, mUpper);
         // 宽区间
-        {
-            uint256 w = FullMath.mulDiv(totalWETH, widePct, totalPct);
-            uint256 u = FullMath.mulDiv(totalUSDC, widePct, totalPct);
-            _investOneRange(adapter, w, u, wLower, wUpper);
-        }
+        _investV3WideRange(adapter, totalWETH, totalUSDC, wLower, wUpper);
+    }
+
+    function _investV3TightRange(
+        ILPAdapter adapter,
+        uint256 totalWETH,
+        uint256 totalUSDC,
+        int24 tickLower,
+        int24 tickUpper
+    ) internal {
+        uint256 w = FullMath.mulDiv(totalWETH, TIGHT_RANGE_PCT, TOTAL_RANGE_PCT);
+        uint256 u = FullMath.mulDiv(totalUSDC, TIGHT_RANGE_PCT, TOTAL_RANGE_PCT);
+        _investOneRange(adapter, w, u, tickLower, tickUpper);
+    }
+
+    function _investV3MediumRange(
+        ILPAdapter adapter,
+        uint256 totalWETH,
+        uint256 totalUSDC,
+        int24 tickLower,
+        int24 tickUpper
+    ) internal {
+        uint256 w = FullMath.mulDiv(totalWETH, MEDIUM_RANGE_PCT, TOTAL_RANGE_PCT);
+        uint256 u = FullMath.mulDiv(totalUSDC, MEDIUM_RANGE_PCT, TOTAL_RANGE_PCT);
+        _investOneRange(adapter, w, u, tickLower, tickUpper);
+    }
+
+    function _investV3WideRange(
+        ILPAdapter adapter,
+        uint256 totalWETH,
+        uint256 totalUSDC,
+        int24 tickLower,
+        int24 tickUpper
+    ) internal {
+        uint256 w = FullMath.mulDiv(totalWETH, WIDE_RANGE_PCT, TOTAL_RANGE_PCT);
+        uint256 u = FullMath.mulDiv(totalUSDC, WIDE_RANGE_PCT, TOTAL_RANGE_PCT);
+        _investOneRange(adapter, w, u, tickLower, tickUpper);
     }
 
     /// @notice 带动态权重的再投资
@@ -755,23 +786,53 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         if (totalRange == 0) totalRange = 1;
 
         // 窄区间
-        {
-            uint256 w = FullMath.mulDiv(totalWETH, ranges.tightWeight, totalRange);
-            uint256 u = FullMath.mulDiv(totalUSDC, ranges.tightWeight, totalRange);
-            _investOneRange(adapter, w, u, tLower, tUpper);
-        }
+        _investV3TightWeighted(adapter, totalWETH, totalUSDC, tLower, tUpper, ranges.tightWeight, totalRange);
         // 中区间
-        {
-            uint256 w = FullMath.mulDiv(totalWETH, ranges.mediumWeight, totalRange);
-            uint256 u = FullMath.mulDiv(totalUSDC, ranges.mediumWeight, totalRange);
-            _investOneRange(adapter, w, u, mLower, mUpper);
-        }
+        _investV3MediumWeighted(adapter, totalWETH, totalUSDC, mLower, mUpper, ranges.mediumWeight, totalRange);
         // 宽区间
-        {
-            uint256 w = FullMath.mulDiv(totalWETH, ranges.wideWeight, totalRange);
-            uint256 u = FullMath.mulDiv(totalUSDC, ranges.wideWeight, totalRange);
-            _investOneRange(adapter, w, u, wLower, wUpper);
-        }
+        _investV3WideWeighted(adapter, totalWETH, totalUSDC, wLower, wUpper, ranges.wideWeight, totalRange);
+    }
+
+    function _investV3TightWeighted(
+        ILPAdapter adapter,
+        uint256 totalWETH,
+        uint256 totalUSDC,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 weight,
+        uint256 totalWeight
+    ) internal {
+        uint256 w = FullMath.mulDiv(totalWETH, weight, totalWeight);
+        uint256 u = FullMath.mulDiv(totalUSDC, weight, totalWeight);
+        _investOneRange(adapter, w, u, tickLower, tickUpper);
+    }
+
+    function _investV3MediumWeighted(
+        ILPAdapter adapter,
+        uint256 totalWETH,
+        uint256 totalUSDC,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 weight,
+        uint256 totalWeight
+    ) internal {
+        uint256 w = FullMath.mulDiv(totalWETH, weight, totalWeight);
+        uint256 u = FullMath.mulDiv(totalUSDC, weight, totalWeight);
+        _investOneRange(adapter, w, u, tickLower, tickUpper);
+    }
+
+    function _investV3WideWeighted(
+        ILPAdapter adapter,
+        uint256 totalWETH,
+        uint256 totalUSDC,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 weight,
+        uint256 totalWeight
+    ) internal {
+        uint256 w = FullMath.mulDiv(totalWETH, weight, totalWeight);
+        uint256 u = FullMath.mulDiv(totalUSDC, weight, totalWeight);
+        _investOneRange(adapter, w, u, tickLower, tickUpper);
     }
 
     /// @notice 投资到单个V3区间
@@ -809,7 +870,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
             uint256 lpBalance = IUniswapV2Adapter(address(v2Adapter)).getLpBalance();
             uint256 lpToWithdraw = FullMath.mulDiv(lpBalance, sharePct, WAD);
             if (lpToWithdraw > 0) {
-                address pair = IUniswapV2Adapter(address(v2Adapter)).pair();
+                address pair = IUniswapV2Adapter(address(v2Adapter)).PAIR();
                 IUniswapV2Pair pairContract = IUniswapV2Pair(pair);
                 (uint112 reserve0, uint112 reserve1, ) = pairContract.getReserves();
                 uint256 totalSupply = pairContract.totalSupply();
@@ -833,34 +894,44 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     function _withdrawPctFromV3(ILPAdapter adapter, uint256 sharePct) internal {
         bytes32[] memory positions = adapter.getActivePositions();
         uint256 slippageMin = BPS_SCALE - maxSlippageBps;
+        IUniswapV3Adapter adapterV3 = IUniswapV3Adapter(address(adapter));
+        (uint160 sqrtPricex96, ) = _getSpotPrice();
         
         for(uint256 i = 0; i < positions.length; i++) {
-            bytes32 key = positions[i];
-            IUniswapV3Adapter adapterV3 = IUniswapV3Adapter(address(adapter));
-            (int24 tickLower, int24 tickUpper, uint128 liquidity, , , , , bool active) = adapterV3.getPositionInfo(key);
+            _withdrawFromV3Position(adapter, adapterV3, positions[i], sharePct, slippageMin, sqrtPricex96);
+        }
+    }
 
-            if(!active || liquidity == 0) {
-                continue;
-            }
+    function _withdrawFromV3Position(
+        ILPAdapter adapter,
+        IUniswapV3Adapter adapterV3,
+        bytes32 key,
+        uint256 sharePct,
+        uint256 slippageMin,
+        uint160 sqrtPricex96
+    ) internal {
+        (int24 tickLower, int24 tickUpper, uint128 liquidity, , , , , bool active) = adapterV3.getPositionInfo(key);
 
-            uint256 lpToWithdraw = FullMath.mulDiv(liquidity, sharePct, WAD);
-            if (lpToWithdraw == 0) continue;
+        if(!active || liquidity == 0) {
+            return;
+        }
 
-            (uint160 sqrtPricex96, ) = _getSpotPrice();
-            uint160 sqrtRatioAx96 = TickMath.getSqrtRatioAtTick(tickLower);
-            uint160 sqrtRatioBx96 = TickMath.getSqrtRatioAtTick(tickUpper);
-            (uint256 amount0Est, uint256 amount1Est) = LiquidityAmounts.getAmountsForLiquidity(
-                sqrtPricex96,
-                sqrtRatioAx96,
-                sqrtRatioBx96,
-                uint128(lpToWithdraw)
-            );
-            
-            uint256 amount0Min = FullMath.mulDiv(amount0Est, slippageMin, BPS_SCALE);
-            uint256 amount1Min = FullMath.mulDiv(amount1Est, slippageMin, BPS_SCALE);
+        uint256 lpToWithdraw = FullMath.mulDiv(liquidity, sharePct, WAD);
+        if (lpToWithdraw == 0) return;
 
-            adapter.removeLiquidity(key, uint128(lpToWithdraw), amount0Min, amount1Min);
-            }
+        (uint256 amount0Est, uint256 amount1Est) = LiquidityAmounts.getAmountsForLiquidity(
+            sqrtPricex96,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            uint128(lpToWithdraw)
+        );
+        
+        adapter.removeLiquidity(
+            key, 
+            uint128(lpToWithdraw), 
+            FullMath.mulDiv(amount0Est, slippageMin, BPS_SCALE), 
+            FullMath.mulDiv(amount1Est, slippageMin, BPS_SCALE)
+        );
     }
 
     /// @notice 收集所有适配器手续费
@@ -926,9 +997,5 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         uint256 totalAssetsValue = totalAssets();
         if (supply == 0 || totalAssetsValue == 0) return shares;
         return shares.mulDiv(totalAssetsValue, supply, rounding);
-    }
-
-    function decimals() public pure override(ERC4626) returns (uint8) {
-        return 6; // USDC精度
     }
 }

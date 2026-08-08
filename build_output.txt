@@ -1,0 +1,1463 @@
+No files changed, compilation skipped
+note[screaming-snake-case-const]: constants should use SCREAMING_SNAKE_CASE
+  --> src/adapters/UniswapV2Adapter.sol:41:42
+   |
+41 |     AdapterType public constant override adapterType = AdapterType.UNISWAP_V2;
+   |                                          ^^^^^^^^^^^ help: consider using: `ADAPTER_TYPE`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-const
+
+note[mixed-case-function]: function names should use mixedCase
+  --> src/interfaces/IUniswapV2.sol:41:14
+   |
+41 |     function WETH() external pure returns (address);
+   |              ^^^^ help: consider using: `weth`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+  --> src/incentives/RebalanceIncentives.sol:62:5
+   |
+62 | /     modifier onlyVault() {
+63 | |         require(msg.sender == VAULT, "Incentives: not vault");
+64 | |         _;
+65 | |     }
+   | |_____^
+   |
+help: wrap modifier logic to reduce code size
+   |
+62 ~     modifier onlyVault() {
+63 +         _onlyVault();
+64 +         _;
+65 +     }
+66 + 
+67 +     function _onlyVault() internal {
+68 +         require(msg.sender == VAULT, "Incentives: not vault");
+69 +     }
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:113:20
+    |
+113 |     uint256 public cumulativeFeesUSDC;
+    |                    ^^^^^^^^^^^^^^^^^^ help: consider using: `cumulativeFeesUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:154:33
+    |
+154 |     event FeesCollected(uint256 feesWETH, uint256 feesUSDC);
+    |                                 ^^^^^^^^ help: consider using: `feesWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src/governance/AdaptiveGovernance.sol:266:14
+    |
+266 |     function setTWAPWindow(uint32 window) external override onlyOwner {
+    |              ^^^^^^^^^^^^^ help: consider using: `setTwapWindow`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+  --> src/governance/AdaptiveGovernance.sol:20:5
+   |
+20 | /     modifier onlyMinter() {
+21 | |         require(msg.sender == minter, "GovToken: not minter");
+22 | |         _;
+23 | |     }
+   | |_____^
+   |
+help: wrap modifier logic to reduce code size
+   |
+20 ~     modifier onlyMinter() {
+21 +         _onlyMinter();
+22 +         _;
+23 +     }
+24 + 
+25 +     function _onlyMinter() internal {
+26 +         require(msg.sender == minter, "GovToken: not minter");
+27 +     }
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+  --> src/adapters/UniswapV2Adapter.sol:53:5
+   |
+53 | /     modifier onlyVault() {
+54 | |         require(msg.sender == VAULT, "V2Adapter: not vault");
+55 | |         _;
+56 | |     }
+   | |_____^
+   |
+help: wrap modifier logic to reduce code size
+   |
+53 ~     modifier onlyVault() {
+54 +         _onlyVault();
+55 +         _;
+56 +     }
+57 + 
+58 +     function _onlyVault() internal {
+59 +         require(msg.sender == VAULT, "V2Adapter: not vault");
+60 +     }
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:154:51
+    |
+154 |     event FeesCollected(uint256 feesWETH, uint256 feesUSDC);
+    |                                                   ^^^^^^^^ help: consider using: `feesUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-function]: function names should use mixedCase
+  --> src/interfaces/ICoreInterfaces.sol:17:14
+   |
+17 |     function getTWAPPrice() external view returns (uint160 sqrtPriceX96Twap, int24 tick);
+   |              ^^^^^^^^^^^^ help: consider using: `getTwapPrice`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+  --> src/adapters/UniswapV3Adapter.sol:74:5
+   |
+74 | /     modifier onlyVault() {
+75 | |         require(msg.sender == VAULT, "V3Adapter: not vault");
+76 | |         _;
+77 | |     }
+   | |_____^
+   |
+help: wrap modifier logic to reduce code size
+   |
+74 ~     modifier onlyVault() {
+75 +         _onlyVault();
+76 +         _;
+77 +     }
+78 + 
+79 +     function _onlyVault() internal {
+80 +         require(msg.sender == VAULT, "V3Adapter: not vault");
+81 +     }
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+note[asm-keccak256]: use of inefficient hashing mechanism; consider using inline assembly
+   --> src/adapters/UniswapV3Adapter.sol:104:16
+    |
+104 |         return keccak256(abi.encodePacked(tickLower, tickUpper));
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#asm-keccak256
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:344:17
+    |
+344 |         uint256 minWETH,
+    |                 ^^^^^^^ help: consider using: `minWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+  --> src/interfaces/ICoreInterfaces.sol:31:41
+   |
+31 |     function quote(uint256 amount, bool isWETHToUSDC) external view returns (uint256);
+   |                                         ^^^^^^^^^^^^ help: consider using: `isWethToUsdc`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[unused-import]: unused imports should be removed
+ --> test/integration/IntegrationTest.t.sol:5:9
+  |
+5 | import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+  |         ^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:178:20
+    |
+178 |             int256 log_2 = (int256(msb) - 128) << 64;
+    |                    ^^^^^ help: consider using: `log2`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:264:20
+    |
+264 |             int256 log_sqrt10001 = log_2 * 255738958999603826347141;
+    |                    ^^^^^^^^^^^^^ help: consider using: `logSqrt10001`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> src/governance/AdaptiveGovernance.sol:304:33
+    |
+304 |             params.twapWindow = uint32(v1);
+    |                                 ^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint32' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unused-import]: unused imports should be removed
+ --> test/BaseTest.t.sol:5:9
+  |
+5 | import {console} from "forge-std/console.sol";
+  |         ^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:165:17
+    |
+165 |         uint160 sqrtPriceAX96 = TickMath.getSqrtRatioAtTick(-100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:345:17
+    |
+345 |         uint256 minUSDC
+    |                 ^^^^^^^ help: consider using: `minUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:283:17
+    |
+283 |         uint160 sqrtRatioAX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/mocks/MockUniswapV2.sol:118:20
+    |
+118 |     address public WETH;
+    |                    ^^^^ help: consider using: `weth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> src/adapters/UniswapV3Adapter.sol:233:13
+    |
+233 |             uint128(amount0) + pos.tokensOwed0,
+    |             ^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/unit/ComponentsTest.t.sol:392:45
+    |
+392 |         v3LowAdapter.removeLiquidity(posId, uint128(lpBalance), 0, 0);
+    |                                             ^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:354:18
+    |
+354 |         (uint256 totalWETH, uint256 totalUSDC) = getTotalUnderlying();
+    |                  ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:354:37
+    |
+354 |         (uint256 totalWETH, uint256 totalUSDC) = getTotalUnderlying();
+    |                                     ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test/mocks/MockUniswapV2.sol:48:20
+   |
+48 |         reserve0 = uint112(bal0);
+   |                    ^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint112' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> test/mocks/MockUniswapV2.sol:49:20
+   |
+49 |         reserve1 = uint112(bal1);
+   |                    ^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint112' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unused-import]: unused imports should be removed
+ --> test/BaseTest.t.sol:6:9
+  |
+6 | import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+  |         ^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:501:18
+    |
+501 |         (uint256 totalWETH, uint256 totalUSDC) = getTotalUnderlying();
+    |                  ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:166:17
+    |
+166 |         uint160 sqrtPriceBX96 = TickMath.getSqrtRatioAtTick(100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:174:17
+    |
+174 |         uint160 sqrtPriceAX96 = TickMath.getSqrtRatioAtTick(-100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> src/adapters/UniswapV3Adapter.sol:234:13
+    |
+234 |             uint128(amount1) + pos.tokensOwed1
+    |             ^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+  --> src/interfaces/ICoreInterfaces.sol:60:17
+   |
+60 |         uint256 totalWETH,
+   |                 ^^^^^^^^^ help: consider using: `totalWeth`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:284:17
+    |
+284 |         uint160 sqrtRatioBX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/mocks/MockUniswapV3.sol:112:17
+    |
+112 |         uint256 Q96 = 2 ** 96;
+    |                 ^^^ help: consider using: `q96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:501:37
+    |
+501 |         (uint256 totalWETH, uint256 totalUSDC) = getTotalUnderlying();
+    |                                     ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:505:21
+    |
+505 |             uint256 wethValueUSDC = _wethToUSDC(totalWETH, sqrtPriceX96Twap);
+    |                     ^^^^^^^^^^^^^ help: consider using: `wethValueUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:175:17
+    |
+175 |         uint160 sqrtPriceBX96 = TickMath.getSqrtRatioAtTick(100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:183:17
+    |
+183 |         uint160 sqrtPriceAX96 = TickMath.getSqrtRatioAtTick(-100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/VaultUnitTest.t.sol:174:18
+    |
+174 |          uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+    |                  ^^^^ help: consider using: `v3Lw`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:294:17
+    |
+294 |         uint160 sqrtRatioAX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:295:17
+    |
+295 |         uint160 sqrtRatioBX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+  --> src/interfaces/ICoreInterfaces.sol:61:17
+   |
+61 |         uint256 totalUSDC,
+   |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src/interfaces/ICoreInterfaces.sol:113:14
+    |
+113 |     function setTWAPWindow(uint32 window) external;
+    |              ^^^^^^^^^^^^^ help: consider using: `setTwapWindow`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[unused-import]: unused imports should be removed
+ --> test/fork/ForkTest.t.sol:5:9
+  |
+5 | import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+  |         ^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[mixed-case-function]: function names should use mixedCase
+   --> test/mocks/MockUniswapV3.sol:132:14
+    |
+132 |     function _isWETH(address token) internal view returns (bool) {
+    |              ^^^^^^^ help: consider using: `_isWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:305:17
+    |
+305 |         uint160 sqrtRatioAX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:306:17
+    |
+306 |         uint160 sqrtRatioBX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:513:64
+    |
+513 |     function getTotalUnderlying() public view returns (uint256 totalWETH, uint256 totalUSDC) {
+    |                                                                ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/VaultUnitTest.t.sol:174:32
+    |
+174 |          uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+    |                                ^^^^ help: consider using: `v3Lu`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/VaultUnitTest.t.sol:174:46
+    |
+174 |          uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+    |                                              ^^^^ help: consider using: `v3Hw`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-function]: function names should use mixedCase
+   --> test/unit/MockTest.t.sol:549:14
+    |
+549 |     function withdrawWETH(address payable weth, uint256 amount) external {
+    |              ^^^^^^^^^^^^ help: consider using: `withdrawWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:513:83
+    |
+513 |     function getTotalUnderlying() public view returns (uint256 totalWETH, uint256 totalUSDC) {
+    |                                                                                   ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[unused-import]: unused imports should be removed
+ --> test/fork/ForkTest.t.sol:6:9
+  |
+6 | import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+  |         ^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[unused-import]: unused imports should be removed
+  --> test/fork/ForkTest.t.sol:15:9
+   |
+15 | import {ITWAPOracle} from "../../src/interfaces/ICoreInterfaces.sol";
+   |         ^^^^^^^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/VaultUnitTest.t.sol:174:60
+    |
+174 |          uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+    |                                                            ^^^^ help: consider using: `v3Hu`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:326:17
+    |
+326 |         uint160 sqrtRatioAX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:327:17
+    |
+327 |         uint160 sqrtRatioBX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/mocks/MockUniswapV3.sol:226:17
+    |
+226 |         uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(tickLower);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/mocks/MockUniswapV3.sol:227:17
+    |
+227 |         uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+   --> test/unit/MockTest.t.sol:243:9
+    |
+243 |         weth.transfer(pair, 10 ether);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:343:17
+    |
+343 |         uint160 sqrtRatioAX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-function]: function names should use mixedCase
+  --> src/oracles/TWAPOracle.sol:75:14
+   |
+75 |     function getTWAPPrice() public view override returns (uint160 sqrtPriceX96Twap, int24 tick) {
+   |              ^^^^^^^^^^^^ help: consider using: `getTwapPrice`
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[screaming-snake-case-const]: constants should use SCREAMING_SNAKE_CASE
+   --> test/mocks/MockUniswapV3.sol:324:27
+    |
+324 |     int24 public constant tickSpacing = 60;
+    |                           ^^^^^^^^^^^ help: consider using: `TICK_SPACING`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#screaming-snake-case-const
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:184:17
+    |
+184 |         uint160 sqrtPriceBX96 = TickMath.getSqrtRatioAtTick(100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[unused-import]: unused imports should be removed
+  --> test/fork/ForkTest.t.sol:17:25
+   |
+17 | import {IUniswapV2Pair, IUniswapV2Router02} from "../../src/interfaces/IUniswapV2.sol";
+   |                         ^^^^^^^^^^^^^^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/VaultUnitTest.t.sol:658:18
+    |
+658 |          uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+    |                  ^^^^ help: consider using: `v3Lw`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+   --> test/unit/MockTest.t.sol:465:9
+    |
+465 |         IERC20(MockUniswapV3Pool(msg.sender).token0()).transfer(msg.sender, amount0);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+warning[erc20-unchecked-transfer]: ERC20 'transfer' and 'transferFrom' calls should check the return value
+   --> test/unit/MockTest.t.sol:466:9
+    |
+466 |         IERC20(MockUniswapV3Pool(msg.sender).token1()).transfer(msg.sender, amount1);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#erc20-unchecked-transfer
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:344:17
+    |
+344 |         uint160 sqrtRatioBX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/oracles/TWAPOracle.sol:105:41
+    |
+105 |     function quote(uint256 amount, bool isWETHToUSDC)
+    |                                         ^^^^^^^^^^^^ help: consider using: `isWethToUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/VaultUnitTest.t.sol:658:32
+    |
+658 |          uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+    |                                ^^^^ help: consider using: `v3Lu`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/fork/ForkTest.t.sol:105:45
+    |
+105 |         console2.log("V3 0.30% pool tick:", uint256(int256(tick)));
+    |                                             ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint256' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unused-import]: unused imports should be removed
+ --> src/strategies/AdaptiveRebalanceStrategy.sol:4:29
+  |
+4 | import {IRebalanceStrategy, IGovernance} from "../interfaces/ICoreInterfaces.sol";
+  |                             ^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+  --> src/strategies/AdaptiveRebalanceStrategy.sol:35:5
+   |
+35 | /     modifier onlyGovernance() {
+36 | |         require(msg.sender == governance || msg.sender == owner(), "Strategy: not authorized");
+37 | |         _;
+38 | |     }
+   | |_____^
+   |
+help: wrap modifier logic to reduce code size
+   |
+35 ~     modifier onlyGovernance() {
+36 +         _onlyGovernance();
+37 +         _;
+38 +     }
+39 + 
+40 +     function _onlyGovernance() internal {
+41 +         require(msg.sender == governance || msg.sender == owner(), "Strategy: not authorized");
+42 +     }
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:195:17
+    |
+195 |         uint160 sqrtPriceAX96 = TickMath.getSqrtRatioAtTick(100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/VaultUnitTest.t.sol:658:46
+    |
+658 |          uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+    |                                              ^^^^ help: consider using: `v3Hw`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:556:17
+    |
+556 |         uint256 idleWETH, uint256 idleUSDC,
+    |                 ^^^^^^^^ help: consider using: `idleWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:556:35
+    |
+556 |         uint256 idleWETH, uint256 idleUSDC,
+    |                                   ^^^^^^^^ help: consider using: `idleUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/VaultUnitTest.t.sol:658:60
+    |
+658 |          uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+    |                                                            ^^^^ help: consider using: `v3Hu`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src/oracles/TWAPOracle.sol:149:14
+    |
+149 |     function setTWAPWindow(uint32 _window) external onlyGovernance {
+    |              ^^^^^^^^^^^^^ help: consider using: `setTwapWindow`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[unused-import]: unused imports should be removed
+ --> test/mocks/MockUniswapV3.sol:8:9
+  |
+8 | import {IUniswapV3Pool, IUniswapV3MintCallback} from "../../src/interfaces/IUniswapV3.sol";
+  |         ^^^^^^^^^^^^^^
+  |
+  = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:125:28
+    |
+125 |             sqrtPriceX96 = uint160((1e9 * Q96) / sqrtPrice);
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint160' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+  --> src/oracles/TWAPOracle.sol:42:5
+   |
+42 | /     modifier onlyGovernance() {
+43 | |         require(msg.sender == governance || msg.sender == owner(), "TWAPOracle: not authorized");
+44 | |         _;
+45 | |     }
+   | |_____^
+   |
+help: wrap modifier logic to reduce code size
+   |
+42 ~     modifier onlyGovernance() {
+43 +         _onlyGovernance();
+44 +         _;
+45 +     }
+46 + 
+47 +     function _onlyGovernance() internal {
+48 +         require(msg.sender == governance || msg.sender == owner(), "TWAPOracle: not authorized");
+49 +     }
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> src/oracles/TWAPOracle.sol:86:36
+   |
+86 |         int24 arithmeticMeanTick = int24(tickCumulativesDelta / int56(uint56(window)));
+   |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'int24' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:244:42
+    |
+244 |         ticks[tickLower].liquidityNet += int128(amount);
+    |                                          ^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'int128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:357:17
+    |
+357 |         uint160 sqrtRatioAX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:196:17
+    |
+196 |         uint160 sqrtPriceBX96 = TickMath.getSqrtRatioAtTick(200);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:247:42
+    |
+247 |         ticks[tickUpper].liquidityNet -= int128(amount);
+    |                                          ^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'int128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/libraries/UniswapMath.sol:358:17
+    |
+358 |         uint160 sqrtRatioBX96,
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtRatioBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:557:17
+    |
+557 |         uint256 v2WETH, uint256 v2USDC,
+    |                 ^^^^^^ help: consider using: `v2Weth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:557:33
+    |
+557 |         uint256 v2WETH, uint256 v2USDC,
+    |                                 ^^^^^^ help: consider using: `v2Usdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:271:39
+    |
+271 |         positions[key].tokensOwed0 += uint128(amount0);
+    |                                       ^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:272:39
+    |
+272 |         positions[key].tokensOwed1 += uint128(amount1);
+    |                                       ^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:208:17
+    |
+208 |         uint160 sqrtPriceAX96 = TickMath.getSqrtRatioAtTick(-200);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:209:17
+    |
+209 |         uint160 sqrtPriceBX96 = TickMath.getSqrtRatioAtTick(-100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:558:17
+    |
+558 |         uint256 v3LowWETH, uint256 v3LowUSDC,
+    |                 ^^^^^^^^^ help: consider using: `v3LowWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> src/libraries/UniswapMath.sol:94:42
+   |
+94 |             uint256 absTick = tick < 0 ? uint256(-int256(tick)) : uint256(int256(tick));
+   |                                          ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint256' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:277:43
+    |
+277 |             positions[key].tokensOwed0 += uint128(mockFeesPerPosition);
+    |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:278:43
+    |
+278 |             positions[key].tokensOwed1 += uint128(mockFeesPerPosition);
+    |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:558:36
+    |
+558 |         uint256 v3LowWETH, uint256 v3LowUSDC,
+    |                                    ^^^^^^^^^ help: consider using: `v3LowUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:221:17
+    |
+221 |         uint160 sqrtPriceAX96 = TickMath.getSqrtRatioAtTick(-100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:222:17
+    |
+222 |         uint160 sqrtPriceBX96 = TickMath.getSqrtRatioAtTick(100);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> src/libraries/UniswapMath.sol:94:67
+   |
+94 |             uint256 absTick = tick < 0 ? uint256(-int256(tick)) : uint256(int256(tick));
+   |                                                                   ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint256' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:282:42
+    |
+282 |         ticks[tickLower].liquidityNet -= int128(amount);
+    |                                          ^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'int128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> test/mocks/MockUniswapV3.sol:284:42
+    |
+284 |         ticks[tickUpper].liquidityNet += int128(amount);
+    |                                          ^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'int128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[divide-before-multiply]: multiplication should occur before division to avoid loss of precision
+   --> test/unit/UniswapMathTest.t.sol:242:21
+    |
+242 |         tickLower = (tickLower / 60) * 60;
+    |                     ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#divide-before-multiply
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> src/libraries/UniswapMath.sol:95:32
+   |
+95 |             require(absTick <= uint256(uint24(MAX_TICK)), "T");
+   |                                ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint256' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[divide-before-multiply]: multiplication should occur before division to avoid loss of precision
+   --> test/unit/UniswapMathTest.t.sol:243:21
+    |
+243 |         tickUpper = (tickUpper / 60) * 60;
+    |                     ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#divide-before-multiply
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:559:17
+    |
+559 |         uint256 v3HighWETH, uint256 v3HighUSDC
+    |                 ^^^^^^^^^^ help: consider using: `v3HighWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:559:37
+    |
+559 |         uint256 v3HighWETH, uint256 v3HighUSDC
+    |                                     ^^^^^^^^^^ help: consider using: `v3HighUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:248:17
+    |
+248 |         uint160 sqrtPriceAX96 = TickMath.getSqrtRatioAtTick(tickLower);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:249:17
+    |
+249 |         uint160 sqrtPriceBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[divide-before-multiply]: multiplication should occur before division to avoid loss of precision
+   --> test/unit/UniswapMathTest.t.sol:267:21
+    |
+267 |         tickLower = (tickLower / 60) * 60;
+    |                     ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#divide-before-multiply
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+  --> src/libraries/UniswapMath.sol:95:40
+   |
+95 |             require(absTick <= uint256(uint24(MAX_TICK)), "T");
+   |                                        ^^^^^^^^^^^^^^^^
+   |
+   = note: consider disabling this lint if you're certain the cast is safe
+           
+           // casting to 'uint24' is safe because [explain why]
+           // forge-lint: disable-next-line(unsafe-typecast)
+           
+           
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[divide-before-multiply]: multiplication should occur before division to avoid loss of precision
+   --> test/unit/UniswapMathTest.t.sol:268:21
+    |
+268 |         tickUpper = (tickUpper / 60) * 60;
+    |                     ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#divide-before-multiply
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:588:14
+    |
+588 |     function _wethToUSDC(uint256 wethAmount, uint160 sqrtPriceX96) internal view returns (uint256) {
+    |              ^^^^^^^^^^^ help: consider using: `_wethToUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:273:17
+    |
+273 |         uint160 sqrtPriceAX96 = TickMath.getSqrtRatioAtTick(tickLower);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceAx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-function]: function names should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:602:14
+    |
+602 |     function _usdcToWETH(uint256 usdcAmount, uint160 sqrtPriceX96) internal view returns (uint256) {
+    |              ^^^^^^^^^^^ help: consider using: `_usdcToWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-function
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> test/unit/UniswapMathTest.t.sol:274:17
+    |
+274 |         uint160 sqrtPriceBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+    |                 ^^^^^^^^^^^^^ help: consider using: `sqrtPriceBx96`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> src/libraries/UniswapMath.sol:178:29
+    |
+178 |             int256 log_2 = (int256(msb) - 128) << 64;
+    |                             ^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'int256' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:627:17
+    |
+627 |         uint256 idleWETH = IERC20(WETH).balanceOf(address(this));
+    |                 ^^^^^^^^ help: consider using: `idleWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:628:17
+    |
+628 |         uint256 idleUSDC = IERC20(asset()).balanceOf(address(this));
+    |                 ^^^^^^^^ help: consider using: `idleUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> src/libraries/UniswapMath.sol:366:22
+    |
+366 |         require((y = uint128(x)) == x, "LiquidityAmounts: uint128 overflow");
+    |                      ^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:639:17
+    |
+639 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:640:17
+    |
+640 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:679:17
+    |
+679 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:680:17
+    |
+680 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:700:17
+    |
+700 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:701:17
+    |
+701 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:712:17
+    |
+712 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:713:17
+    |
+713 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:724:17
+    |
+724 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:725:17
+    |
+725 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:741:17
+    |
+741 |         uint256 idleWETH = IERC20(WETH).balanceOf(address(this));
+    |                 ^^^^^^^^ help: consider using: `idleWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:742:17
+    |
+742 |         uint256 idleUSDC = IERC20(asset()).balanceOf(address(this));
+    |                 ^^^^^^^^ help: consider using: `idleUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:776:17
+    |
+776 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:777:17
+    |
+777 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:798:17
+    |
+798 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:799:17
+    |
+799 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:812:17
+    |
+812 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:813:17
+    |
+813 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:826:17
+    |
+826 |         uint256 totalWETH,
+    |                 ^^^^^^^^^ help: consider using: `totalWeth`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[mixed-case-variable]: mutable variables should use mixedCase
+   --> src/vault/AdaptiveLPVault.sol:827:17
+    |
+827 |         uint256 totalUSDC,
+    |                 ^^^^^^^^^ help: consider using: `totalUsdc`
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#mixed-case-variable
+
+note[unused-import]: unused imports should be removed
+  --> src/vault/AdaptiveLPVault.sol:15:9
+   |
+15 | import {IWETH} from "../interfaces/ILPAdapter.sol";
+   |         ^^^^^
+   |
+   = help: https://book.getfoundry.sh/reference/forge/forge-lint#unused-import
+
+note[unwrapped-modifier-logic]: wrap modifier logic to reduce code size
+   --> src/vault/AdaptiveLPVault.sol:165:5
+    |
+165 | /     modifier whenNotPaused() {
+166 | |         if (paused) revert PausedError();
+167 | |         _;
+168 | |     }
+    | |_____^
+    |
+help: wrap modifier logic to reduce code size
+    |
+165 ~     modifier whenNotPaused() {
+166 +         _whenNotPaused();
+167 +         _;
+168 +     }
+169 + 
+170 +     function _whenNotPaused() internal {
+171 +         if (paused) revert PausedError();
+172 +     }
+    |
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unwrapped-modifier-logic
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> src/vault/AdaptiveLPVault.sol:882:56
+    |
+882 |                 v2Adapter.removeLiquidity (bytes32(0), uint128 (lpToWithdraw), amount0Min, amount1Min);
+    |                                                        ^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> src/vault/AdaptiveLPVault.sol:926:13
+    |
+926 |             uint128(lpToWithdraw)
+    |             ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+
+warning[unsafe-typecast]: typecasts that can truncate values should be checked
+   --> src/vault/AdaptiveLPVault.sol:931:13
+    |
+931 |             uint128(lpToWithdraw), 
+    |             ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider disabling this lint if you're certain the cast is safe
+            
+            // casting to 'uint128' is safe because [explain why]
+            // forge-lint: disable-next-line(unsafe-typecast)
+            
+            
+    = help: https://book.getfoundry.sh/reference/forge/forge-lint#unsafe-typecast
+

@@ -1,0 +1,10 @@
+Warning: optimizer settings and `viaIR` have been disabled for accurate coverage reports.
+If you encounter "stack too deep" errors, consider using `--ir-minimum` which enables `viaIR` with minimum optimization resolving most of the errors
+Compiling 59 files with Solc 0.8.24
+Solc 0.8.24 finished in 1.28s
+Error: Compiler run failed:
+Error: Compiler error (/solidity/libsolidity/codegen/LValue.cpp:51):Stack too deep. Try compiling with `--via-ir` (cli) or the equivalent `viaIR: true` (standard JSON) while enabling the optimizer. Otherwise, try removing local variables.
+   --> src/vault/AdaptiveLPVault.sol:863:62:
+    |
+863 |             uint256 amount0Min = FullMath.mulDiv(amount0Est, slippageMin, BPS_SCALE);
+    |                                                              ^^^^^^^^^^^

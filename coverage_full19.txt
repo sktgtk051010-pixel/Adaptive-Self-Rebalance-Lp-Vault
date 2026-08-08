@@ -1,0 +1,553 @@
+Warning: Found unknown `coverage` config for profile `default` defined in foundry.toml.
+Warning: optimizer settings and `viaIR` have been disabled for accurate coverage reports.
+If you encounter "stack too deep" errors, consider using `--ir-minimum` which enables `viaIR` with minimum optimization resolving most of the errors
+Compiling 62 files with Solc 0.8.24
+Solc 0.8.24 finished in 3.38s
+Compiler run successful with warnings:
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/unit/MockTest.t.sol:491:9:
+    |
+491 |         MockWETH weth = new MockWETH();
+    |         ^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/unit/MockTest.t.sol:14:5:
+   |
+14 |     MockERC20 weth;
+   |     ^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/unit/MockTest.t.sol:497:9:
+    |
+497 |         MockWETH weth = new MockWETH();
+    |         ^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/unit/MockTest.t.sol:14:5:
+   |
+14 |     MockERC20 weth;
+   |     ^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/unit/MockTest.t.sol:507:9:
+    |
+507 |         MockWETH weth = new MockWETH();
+    |         ^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/unit/MockTest.t.sol:14:5:
+   |
+14 |     MockERC20 weth;
+   |     ^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/unit/MockTest.t.sol:514:9:
+    |
+514 |         MockWETH weth = new MockWETH();
+    |         ^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/unit/MockTest.t.sol:14:5:
+   |
+14 |     MockERC20 weth;
+   |     ^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/unit/MockTest.t.sol:522:9:
+    |
+522 |         MockUSDC usdc = new MockUSDC();
+    |         ^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/unit/MockTest.t.sol:15:5:
+   |
+15 |     MockERC20 usdc;
+   |     ^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/unit/MockTest.t.sol:528:9:
+    |
+528 |         MockUSDC usdc = new MockUSDC();
+    |         ^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/unit/MockTest.t.sol:15:5:
+   |
+15 |     MockERC20 usdc;
+   |     ^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/unit/ComponentsTest.t.sol:716:28:
+    |
+716 |         (int24 tightLower, int24 tightUpper, int24 mediumLower, int24 mediumUpper, int24 wideLower, int24 wideUpper) = 
+    |                            ^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/unit/ComponentsTest.t.sol:716:65:
+    |
+716 |         (int24 tightLower, int24 tightUpper, int24 mediumLower, int24 mediumUpper, int24 wideLower, int24 wideUpper) = 
+    |                                                                 ^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/unit/ComponentsTest.t.sol:716:101:
+    |
+716 |         (int24 tightLower, int24 tightUpper, int24 mediumLower, int24 mediumUpper, int24 wideLower, int24 wideUpper) = 
+    |                                                                                                     ^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/unit/ComponentsTest.t.sol:727:10:
+    |
+727 |         (int24 tightLower, int24 tightUpper, int24 mediumLower, int24 mediumUpper, int24 wideLower, int24 wideUpper) = 
+    |          ^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/unit/ComponentsTest.t.sol:727:46:
+    |
+727 |         (int24 tightLower, int24 tightUpper, int24 mediumLower, int24 mediumUpper, int24 wideLower, int24 wideUpper) = 
+    |                                              ^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/unit/ComponentsTest.t.sol:727:84:
+    |
+727 |         (int24 tightLower, int24 tightUpper, int24 mediumLower, int24 mediumUpper, int24 wideLower, int24 wideUpper) = 
+    |                                                                                    ^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+  --> test/unit/MockV2Test.t.sol:36:10:
+   |
+36 |         (uint256 amountA, uint256 amountB, uint256 liquidity) = router.addLiquidity(
+   |          ^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+  --> test/unit/MockV2Test.t.sol:36:27:
+   |
+36 |         (uint256 amountA, uint256 amountB, uint256 liquidity) = router.addLiquidity(
+   |                           ^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+  --> test/unit/MockV2Test.t.sol:66:10:
+   |
+66 |         (uint256 amountA, uint256 amountB, uint256 liquidity) = router.addLiquidity(
+   |          ^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+  --> test/unit/MockV2Test.t.sol:66:27:
+   |
+66 |         (uint256 amountA, uint256 amountB, uint256 liquidity) = router.addLiquidity(
+   |                           ^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/unit/VaultUnitTest.t.sol:610:9:
+    |
+610 |         uint256 shares = _deposit(alice, 10 ether, 20000e6);
+    |         ^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/unit/VaultUnitTest.t.sol:751:9:
+    |
+751 |         address oldV2 = address(vault.v2Adapter());
+    |         ^^^^^^^^^^^^^
+
+Warning (2018): Function state mutability can be restricted to view
+   --> test/unit/VaultUnitTest.t.sol:655:5:
+    |
+655 |     function test_GetDistribution_Empty() public {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+   --> test/unit/VaultUnitTest.t.sol:736:5:
+    |
+736 |     function test_ConvertToShares_ZeroSupply() public {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+   --> test/unit/VaultUnitTest.t.sol:743:5:
+    |
+743 |     function test_ConvertToAssets_ZeroSupply() public {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Analysing contracts...
+Running tests...
+
+Ran 6 tests for test/unit/MockV3Test.t.sol:MockV3Test
+[PASS] test_CreatePool() (gas: 3546272)
+[PASS] test_Fee() (gas: 7945)
+[PASS] test_Observe() (gas: 20349)
+[PASS] test_Positions() (gas: 21749)
+[PASS] test_TickSpacing() (gas: 7956)
+[PASS] test_Token0Token1() (gas: 15643)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 9.28ms (4.45ms CPU time)
+
+Ran 11 tests for test/unit/ComponentsTest.t.sol:V2AdapterTest
+[PASS] test_AdapterType() (gas: 5909)
+[PASS] test_AddLiquidity_BothTokens() (gas: 270772)
+[PASS] test_GetActivePositions() (gas: 8351)
+[PASS] test_GetLpBalance() (gas: 11831)
+[PASS] test_GetPositionAssets() (gas: 284720)
+[PASS] test_GetTotalAssets_NoLP() (gas: 28292)
+[PASS] test_GetTotalAssets_WithLP() (gas: 274908)
+[PASS] test_Revert_AddLiquidity_NotVault() (gas: 14045)
+[PASS] test_Revert_AddLiquidity_ZeroAmounts() (gas: 19173)
+[PASS] test_Revert_WithdrawAll_NotVault() (gas: 11520)
+[PASS] test_WithdrawAll() (gas: 328500)
+Suite result: ok. 11 passed; 0 failed; 0 skipped; finished in 135.26ms (113.98ms CPU time)
+
+Ran 26 tests for test/unit/ComponentsTest.t.sol:IncentivesTest
+[PASS] test_CanRebalance_AfterCooldownPeriod() (gas: 102611)
+[PASS] test_CanRebalance_Initially() (gas: 8040)
+[PASS] test_ClaimReward() (gas: 100306)
+[PASS] test_ClaimReward_NoReward() (gas: 18719)
+[PASS] test_FundRewards() (gas: 66652)
+[PASS] test_FundRewards_ByVault() (gas: 66421)
+[PASS] test_OnRebalanceExecuted() (gas: 99948)
+[PASS] test_OnRebalance_RewardCappedByAvailable() (gas: 104851)
+[PASS] test_OnRebalance_SecondTime_AfterCooldown() (gas: 133849)
+[PASS] test_OnRebalance_ZeroReward_ZeroBps() (gas: 64653)
+[PASS] test_PendingReward() (gas: 139676)
+[PASS] test_Revert_FundRewards_NotAuthorized() (gas: 57553)
+[PASS] test_Revert_FundRewards_ZeroAmount() (gas: 12061)
+[PASS] test_Revert_OnRebalance_Cooldown() (gas: 108427)
+[PASS] test_Revert_OnRebalance_NotProfitable() (gas: 22026)
+[PASS] test_Revert_OnRebalance_NotVault() (gas: 12843)
+[PASS] test_Revert_OnRebalance_ProfitTooSmall() (gas: 24631)
+[PASS] test_Revert_SetCooldown_TooLarge() (gas: 11674)
+[PASS] test_Revert_SetCooldown_TooSmall() (gas: 11682)
+[PASS] test_Revert_SetIncentiveBps_TooHigh() (gas: 11370)
+[PASS] test_Revert_SetMinProfitThreshold_NotOwner() (gas: 13962)
+[PASS] test_RewardsEarnedTracking() (gas: 98578)
+[PASS] test_SetCooldownPeriod() (gas: 14942)
+[PASS] test_SetIncentiveBps() (gas: 15947)
+[PASS] test_SetMinProfitThreshold() (gas: 14771)
+[PASS] test_TotalRewardsPaid_MultipleRebalances() (gas: 169416)
+Suite result: ok. 26 passed; 0 failed; 0 skipped; finished in 289.75ms (243.96ms CPU time)
+
+Ran 24 tests for test/unit/ComponentsTest.t.sol:V3AdapterTest
+[PASS] test_AdapterType() (gas: 8135)
+[PASS] test_AddLiquidity_MultipleRanges() (gas: 736656)
+[PASS] test_AddLiquidity_SingleRange() (gas: 463827)
+[PASS] test_AddLiquidity_ZeroLiquidity() (gas: 394356)
+[PASS] test_CollectFees() (gas: 505976)
+[PASS] test_CollectFees_PriceAboveRange() (gas: 536402)
+[PASS] test_CollectFees_PriceBelowRange() (gas: 535721)
+[PASS] test_GetActivePositions() (gas: 463094)
+[PASS] test_GetPositionAssets() (gas: 488186)
+[PASS] test_GetPositionInfo() (gas: 465531)
+[PASS] test_GetTotalAssets_NoLP() (gas: 22061)
+[PASS] test_GetTotalAssets_WithLP() (gas: 490544)
+[PASS] test_RemoveLiquidity() (gas: 532840)
+[PASS] test_RemoveLiquidity_All() (gas: 471514)
+[PASS] test_Revert_AddLiquidity_InvalidTicks() (gas: 31098)
+[PASS] test_Revert_AddLiquidity_NotVault() (gas: 25726)
+[PASS] test_Revert_AddLiquidity_Slippage() (gas: 360172)
+[PASS] test_Revert_AddLiquidity_TicksNotAligned() (gas: 34799)
+[PASS] test_Revert_CollectFees_NotFound() (gas: 19311)
+[PASS] test_Revert_RemoveLiquidity_NotFound() (gas: 20534)
+[PASS] test_Revert_RemoveLiquidity_TooMuch() (gas: 468689)
+[PASS] test_Revert_RemoveLiquidity_ZeroLiquidity() (gas: 468598)
+[PASS] test_Revert_WithdrawAll_NotVault() (gas: 11542)
+[PASS] test_WithdrawAll() (gas: 453109)
+Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 310.31ms (275.89ms CPU time)
+
+Ran 17 tests for test/unit/ComponentsTest.t.sol:OracleTest
+[PASS] test_EnsureObservationCardinality() (gas: 14774)
+[PASS] test_GetCurrentPrice() (gas: 14322)
+[PASS] test_GetTWAPPrice() (gas: 28317)
+[PASS] test_GetTWAPPrice_NegativeDelta() (gas: 35247)
+[PASS] test_OnlyAuthorized_CanSetWindow() (gas: 16403)
+[PASS] test_Quote_USDCtoWETH() (gas: 35430)
+[PASS] test_Quote_WETHtoUSDC() (gas: 35429)
+[PASS] test_Quote_ZeroAmount() (gas: 47319)
+[PASS] test_Revert_Constructor_ZeroPool() (gas: 70666)
+[PASS] test_Revert_SetGovernance_NotOwner() (gas: 16112)
+[PASS] test_Revert_SetGovernance_NotOwner_Oracle() (gas: 14090)
+[PASS] test_Revert_SetTWAPWindow_NotGovernance() (gas: 16116)
+[PASS] test_Revert_SetTWAPWindow_TooLarge() (gas: 13537)
+[PASS] test_Revert_SetTWAPWindow_TooSmall() (gas: 13489)
+[PASS] test_SetGovernance() (gas: 18589)
+[PASS] test_SetTWAPWindow() (gas: 16559)
+[PASS] test_SetTWAPWindow_ByGovernance() (gas: 25149)
+Suite result: ok. 17 passed; 0 failed; 0 skipped; finished in 317.91ms (170.12ms CPU time)
+
+Ran 39 tests for test/unit/MockTest.t.sol:MockTest
+[PASS] test_MockToken_Decimals() (gas: 860466)
+[PASS] test_MockToken_Mint() (gas: 911210)
+[PASS] test_MockToken_Name() (gas: 869579)
+[PASS] test_MockUSDC_Decimals() (gas: 832899)
+[PASS] test_MockUSDC_Mint() (gas: 881531)
+[PASS] test_MockWETH_Deposit() (gas: 1083063)
+[PASS] test_MockWETH_Mint() (gas: 1075586)
+[PASS] test_MockWETH_Receive() (gas: 1083052)
+[PASS] test_MockWETH_Withdraw() (gas: 1095959)
+[PASS] test_Revert_MockWETH_Withdraw_FailedTransfer() (gas: 1217981)
+[PASS] test_Revert_V2_AddLiquidity_Slippage() (gas: 78262)
+[PASS] test_Revert_V2_CreatePair_AlreadyExists() (gas: 1709096)
+[PASS] test_Revert_V2_Mint_ZeroLiquidity() (gas: 1758548)
+[PASS] test_Revert_V2_RemoveLiquidity_Slippage() (gas: 1927334)
+[PASS] test_Revert_V2_Swap_Slippage() (gas: 2034848)
+[PASS] test_Revert_V3_Burn_InsufficientLiquidity() (gas: 3875157)
+[PASS] test_Revert_V3_CreatePool_AlreadyExists() (gas: 3551296)
+[PASS] test_Revert_V3_Mint_ZeroAmount() (gas: 3551704)
+[PASS] test_V2_AddLiquidity_FirstTime() (gas: 1963116)
+[PASS] test_V2_AddLiquidity_SecondTime() (gas: 2088170)
+[PASS] test_V2_CreatePair() (gas: 1710018)
+[PASS] test_V2_GetAmountsOut() (gas: 14292)
+[PASS] test_V2_GetReserves() (gas: 1969547)
+[PASS] test_V2_Quote() (gas: 7566)
+[PASS] test_V2_RemoveLiquidity() (gas: 1926298)
+[PASS] test_V2_SetReserves() (gas: 1729705)
+[PASS] test_V2_SwapExactTokensForTokens() (gas: 105974)
+[PASS] test_V3_Burn() (gas: 210)
+[PASS] test_V3_Burn_WithMockFees() (gas: 3980884)
+[PASS] test_V3_Collect() (gas: 3785640)
+[PASS] test_V3_CreatePool() (gas: 3551408)
+[PASS] test_V3_FeeGrowth() (gas: 277)
+[PASS] test_V3_IncreaseObservationCardinalityNext() (gas: 3547081)
+[PASS] test_V3_Mint() (gas: 254)
+[PASS] test_V3_Observe() (gas: 277)
+[PASS] test_V3_Positions() (gas: 255)
+[PASS] test_V3_SetMockFees() (gas: 3568550)
+[PASS] test_V3_SetPrice() (gas: 3566950)
+[PASS] test_V3_TickSpacing() (gas: 255)
+Suite result: ok. 39 passed; 0 failed; 0 skipped; finished in 318.07ms (93.77ms CPU time)
+
+Ran 22 tests for test/unit/ComponentsTest.t.sol:StrategyTest
+[PASS] testFuzz_AllocationWeightsSum(uint256) (runs: 256, μ: 12060, ~: 12485)
+[PASS] testFuzz_RangeTicksWithinBounds(int24) (runs: 256, μ: 16594, ~: 16469)
+[PASS] test_CalculateAllocation_HighVolatility() (gas: 10347)
+[PASS] test_CalculateAllocation_LowVolatility() (gas: 10806)
+[PASS] test_CalculateAllocation_MediumVolatility() (gas: 10705)
+[PASS] test_CalculateDeviation() (gas: 7666)
+[PASS] test_CalculateDeviation_ZeroTarget() (gas: 6853)
+[PASS] test_EstimateVolatility() (gas: 10937)
+[PASS] test_EstimateVolatility_PriceDown() (gas: 10970)
+[PASS] test_EstimateVolatility_SamePrice() (gas: 7698)
+[PASS] test_GetRangeTicks_ExtremeHighTick() (gas: 15249)
+[PASS] test_GetRangeTicks_ExtremeLowTick() (gas: 14360)
+[PASS] test_GetRangeTicks_NegativeTick() (gas: 15318)
+[PASS] test_GetRangeTicks_PositiveTick() (gas: 13846)
+[PASS] test_GetRangeTicks_TightMediumWide() (gas: 16339)
+[PASS] test_NeedsRebalance() (gas: 11794)
+[PASS] test_Revert_SetGovernance_NotOwner() (gas: 16001)
+[PASS] test_Revert_SetRebalanceThreshold_TooLarge() (gas: 13770)
+[PASS] test_Revert_SetRebalanceThreshold_TooSmall() (gas: 13777)
+[PASS] test_SetGovernance() (gas: 24832)
+[PASS] test_SetRebalanceThreshold() (gas: 20338)
+[PASS] test_SetRebalanceThreshold_ByGovernance() (gas: 29465)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 319.00ms (474.90ms CPU time)
+
+Ran 10 tests for test/integration/IntegrationTest.t.sol:IntegrationTest
+[PASS] test_ERC4626_StandardDepositWithdraw() (gas: 369515)
+[PASS] test_FullUserFlow_DepositRebalanceWithdraw() (gas: 12012477)
+[PASS] test_GetDistribution() (gas: 4921283)
+[PASS] test_MultipleUsers_TotalAssets() (gas: 6882288)
+[PASS] test_OnlyOwner_CanPause() (gas: 14247)
+[PASS] test_Paused_DepositReverts() (gas: 73497)
+[PASS] test_RebalanceCount() (gas: 7095222)
+[PASS] test_Rebalance_Cooldown() (gas: 4789955)
+[PASS] test_SetMaxSlippage() (gas: 16104)
+[PASS] test_SharePrice_AfterRebalance() (gas: 5098460)
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 328.17ms (507.51ms CPU time)
+
+Ran 41 tests for test/unit/ComponentsTest.t.sol:GovernanceTest
+[PASS] test_AllProposalTypes_FullFlow() (gas: 1678618)
+[PASS] test_CancelProposal() (gas: 242126)
+[PASS] test_CancelProposal_ByOwner() (gas: 243567)
+[PASS] test_CancelProposal_ByProposer() (gas: 242226)
+[PASS] test_DefaultParams() (gas: 30562)
+[PASS] test_ExecuteTimelock_AfterDelay() (gas: 350686)
+[PASS] test_FullProposalLifecycle() (gas: 368588)
+[PASS] test_GetProposalState_Active() (gas: 219902)
+[PASS] test_GetProposalState_Pending() (gas: 219020)
+[PASS] test_GovToken_MintBurn() (gas: 71493)
+[PASS] test_ProposalCount() (gas: 7930)
+[PASS] test_ProposalTypes() (gas: 418983)
+[PASS] test_Proposal_Defeated() (gas: 313086)
+[PASS] test_Proposal_Defeated_BelowQuorum() (gas: 274022)
+[PASS] test_Proposal_Defeated_BothConditions() (gas: 354579)
+[PASS] test_Proposal_Succeeded_ExactlyQuorum() (gas: 276255)
+[PASS] test_Propose_RequiresThreshold() (gas: 22815)
+[PASS] test_Quorum_Boundary() (gas: 276382)
+[PASS] test_Revert_CancelProposal_AlreadyCanceled() (gas: 245709)
+[PASS] test_Revert_CancelProposal_NotAuthorized() (gas: 221474)
+[PASS] test_Revert_CastVote_ProposalNotFound() (gas: 14201)
+[PASS] test_Revert_ExecuteProposal_AlreadyExecuted() (gas: 353145)
+[PASS] test_Revert_ExecuteProposal_NotSucceeded() (gas: 234780)
+[PASS] test_Revert_ExecuteTimelock_AlreadyExecuted() (gas: 352729)
+[PASS] test_Revert_ExecuteTimelock_BeforeDelay() (gas: 360195)
+[PASS] test_Revert_ExecuteTimelock_NoTimelock() (gas: 16317)
+[PASS] test_Revert_ExecuteTimelock_NotReady() (gas: 358743)
+[PASS] test_Revert_GetProposalState_NotFound() (gas: 11420)
+[PASS] test_Revert_GovToken_Burn_NotMinter() (gas: 65524)
+[PASS] test_Revert_GovToken_NotMinter() (gas: 16332)
+[PASS] test_Revert_Propose_BelowThreshold() (gas: 70291)
+[PASS] test_Revert_SetParams_InvalidValues() (gas: 19784)
+[PASS] test_Revert_SetParams_NotOwner() (gas: 14394)
+[PASS] test_Revert_SetVault_NotOwner() (gas: 16112)
+[PASS] test_Revert_VoteAfterEnded() (gas: 218662)
+[PASS] test_Revert_VoteBeforeActive() (gas: 257638)
+[PASS] test_Revert_VoteNoPower() (gas: 226272)
+[PASS] test_Revert_VoteTwice() (gas: 309612)
+[PASS] test_SetParams_Owner() (gas: 141583)
+[PASS] test_SetVault() (gas: 15406)
+[PASS] test_Vote_Against() (gas: 305112)
+Suite result: ok. 41 passed; 0 failed; 0 skipped; finished in 328.38ms (373.09ms CPU time)
+
+Ran 7 tests for test/unit/MockV2Test.t.sol:MockV2Test
+[PASS] test_AddLiquidity_ExistingPair() (gas: 1955069)
+[PASS] test_AddLiquidity_NewPair() (gas: 1916962)
+[PASS] test_GetAmountsOut() (gas: 14252)
+[PASS] test_Pair_SetReserves() (gas: 1729673)
+[PASS] test_Quote() (gas: 7499)
+[PASS] test_Revert_AddLiquidity_Slippage() (gas: 19504)
+[PASS] test_Revert_CreatePair_Exists() (gas: 1709317)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 359.81ms (17.48ms CPU time)
+
+Ran 42 tests for test/unit/UniswapMathTest.t.sol:UniswapMathTest
+[PASS] testFuzz_FullMath_MulDiv(uint256,uint256,uint256) (runs: 256, μ: 2850, ~: 2082)
+[PASS] testFuzz_FullMath_MulDivRoundingUp(uint256,uint256,uint256) (runs: 256, μ: 3083, ~: 2311)
+[PASS] testFuzz_LiquidityAmounts_BelowRange(uint128,int24,int24) (runs: 256, μ: 12551, ~: 12473)
+[PASS] testFuzz_LiquidityAmounts_RoundTrip(uint128,int24,int24) (runs: 256, μ: 17270, ~: 17093)
+[PASS] testFuzz_TickMath_RoundTrip(int24) (runs: 256, μ: 8477, ~: 8263)
+[PASS] testFuzz_TickMath_SqrtRatioRoundTrip(uint160) (runs: 256, μ: 7056, ~: 7848)
+[PASS] test_AmountsForLiquidity_PriceAtLowerBound() (gas: 4352)
+[PASS] test_AmountsForLiquidity_PriceAtUpperBound() (gas: 4139)
+[PASS] test_FullMath_MulDiv() (gas: 1211)
+[PASS] test_FullMath_MulDivRoundingUp() (gas: 1297)
+[PASS] test_FullMath_MulDivRoundingUp_ExactDivision() (gas: 569)
+[PASS] test_FullMath_MulDivRoundingUp_LargeNumbers() (gas: 849)
+[PASS] test_FullMath_MulDivRoundingUp_WithRemainder() (gas: 634)
+[PASS] test_FullMath_MulDiv_LargeNumbers() (gas: 875)
+[PASS] test_FullMath_MulDiv_MaxOverflow() (gas: 832)
+[PASS] test_FullMath_MulDiv_SmallProduct() (gas: 441)
+[PASS] test_FullMath_MulDiv_ZeroMultiplier() (gas: 968)
+[PASS] test_LiquidityAmounts_GetAmountsForLiquidity_AboveRange() (gas: 3740)
+[PASS] test_LiquidityAmounts_GetAmountsForLiquidity_BelowRange() (gas: 3986)
+[PASS] test_LiquidityAmounts_GetAmountsForLiquidity_CurrentPriceInRange() (gas: 4498)
+[PASS] test_LiquidityAmounts_GetLiquidityForAmount0() (gas: 2993)
+[PASS] test_LiquidityAmounts_GetLiquidityForAmount1() (gas: 2763)
+[PASS] test_LiquidityAmounts_GetLiquidityForAmounts() (gas: 9926)
+[PASS] test_LiquidityAmounts_PriceAtLowerBound() (gas: 4298)
+[PASS] test_LiquidityAmounts_PriceAtUpperBound() (gas: 4120)
+[PASS] test_LiquidityAmounts_ReversedTicks() (gas: 3898)
+[PASS] test_LiquidityAmounts_ReversedTicks_Amount1() (gas: 3484)
+[PASS] test_LiquidityAmounts_ReversedTicks_GetAmounts() (gas: 6056)
+[PASS] test_LiquidityAmounts_ReversedTicks_GetLiquidity() (gas: 6368)
+[PASS] test_TickMath_Constants() (gas: 473)
+[PASS] test_TickMath_GetSqrtRatioAtTick_Max() (gas: 1550)
+[PASS] test_TickMath_GetSqrtRatioAtTick_Min() (gas: 1423)
+[PASS] test_TickMath_GetSqrtRatioAtTick_Negative() (gas: 2039)
+[PASS] test_TickMath_GetSqrtRatioAtTick_Positive() (gas: 2034)
+[PASS] test_TickMath_GetSqrtRatioAtTick_Zero() (gas: 1161)
+[PASS] test_TickMath_GetTickAtSqrtRatio_Max() (gas: 4172)
+[PASS] test_TickMath_GetTickAtSqrtRatio_MidRange() (gas: 3660)
+[PASS] test_TickMath_GetTickAtSqrtRatio_Min() (gas: 3051)
+[PASS] test_TickMath_GetTickAtSqrtRatio_NegativeTick() (gas: 4010)
+[PASS] test_TickMath_GetTickAtSqrtRatio_One() (gas: 2775)
+[PASS] test_TickMath_GetTickAtSqrtRatio_PositiveTick() (gas: 4050)
+[PASS] test_TickMath_RoundTrip_VariousTicks() (gas: 22408)
+Suite result: ok. 42 passed; 0 failed; 0 skipped; finished in 360.07ms (1.05s CPU time)
+
+Ran 72 tests for test/unit/VaultUnitTest.t.sol:VaultUnitTest
+[PASS] testFuzz_Deposit_Withdraw(uint256,uint256) (runs: 256, μ: 3089192, ~: 3089967)
+[PASS] test_ConvertToAssets_ZeroSupply() (gas: 103584)
+[PASS] test_ConvertToShares_ZeroSupply() (gas: 103584)
+[PASS] test_CumulativeFees() (gas: 4893760)
+[PASS] test_Deposit_AfterRebalance() (gas: 5665917)
+[PASS] test_Deposit_DualAsset() (gas: 2827696)
+[PASS] test_Deposit_ERC4626Standard() (gas: 348784)
+[PASS] test_Deposit_ExactDustThreshold() (gas: 313886)
+[PASS] test_Deposit_MaxSharesSlippage() (gas: 181790)
+[PASS] test_Deposit_MinSharesSlippage() (gas: 2850289)
+[PASS] test_Deposit_MultipleUsers() (gas: 3400229)
+[PASS] test_Deposit_OnlyUSDC() (gas: 359789)
+[PASS] test_Deposit_OnlyWETH() (gas: 360121)
+[PASS] test_Deposit_SmallAmount_Dust() (gas: 266737)
+[PASS] test_Deposit_WithZeroAdapters() (gas: 254)
+[PASS] test_ERC4626_ConvertToAssets() (gas: 2826905)
+[PASS] test_ERC4626_ConvertToShares() (gas: 2826904)
+[PASS] test_ERC4626_TotalAssets() (gas: 2827245)
+[PASS] test_GetDistribution() (gas: 2815260)
+[PASS] test_GetDistribution_Empty() (gas: 74772)
+[PASS] test_MaxDeposit() (gas: 2626904)
+[PASS] test_MaxMint() (gas: 2626878)
+[PASS] test_MaxRedeem() (gas: 2627093)
+[PASS] test_MaxWithdraw() (gas: 2829825)
+[PASS] test_Mint_ERC4626() (gas: 3378096)
+[PASS] test_MultipleDeposits() (gas: 4127695)
+[PASS] test_OnlyOwner_CanSetAdapters() (gas: 15059)
+[PASS] test_PreviewDeposit() (gas: 2829345)
+[PASS] test_PreviewMint() (gas: 2829388)
+[PASS] test_PreviewRedeem() (gas: 2829455)
+[PASS] test_PreviewWithdraw() (gas: 2829607)
+[PASS] test_Rebalance_AfterSmallDeposit() (gas: 5584265)
+[PASS] test_Rebalance_FirstTime() (gas: 4770545)
+[PASS] test_Rebalance_HighVolatility() (gas: 7645376)
+[PASS] test_Rebalance_HighVolatility_EmergencyCooldown() (gas: 7060344)
+[PASS] test_Rebalance_IncentivesFail() (gas: 7096997)
+[PASS] test_Rebalance_Multiple() (gas: 7690468)
+[PASS] test_Rebalance_NotProfitable() (gas: 7094285)
+[PASS] test_Rebalance_Success() (gas: 4933296)
+[PASS] test_Rebalance_WithZeroIncentives() (gas: 4775742)
+[PASS] test_Revert_Constructor_ZeroOracle() (gas: 178712)
+[PASS] test_Revert_Constructor_ZeroStrategy() (gas: 178747)
+[PASS] test_Revert_Constructor_ZeroWETH() (gas: 178647)
+[PASS] test_Revert_Deposit_WhenPaused() (gas: 45659)
+[PASS] test_Revert_Deposit_ZeroAmount() (gas: 20930)
+[PASS] test_Revert_Rebalance_Cooldown() (gas: 4789490)
+[PASS] test_Revert_SetAdapters_NotOwner() (gas: 14729)
+[PASS] test_Revert_SetGovernance_NotOwner() (gas: 14134)
+[PASS] test_Revert_SetIncentives_NotOwner() (gas: 1516142)
+[PASS] test_Revert_SetMaxSlippage_TooHigh() (gas: 11464)
+[PASS] test_Revert_Withdraw_InsufficientShares() (gas: 2634968)
+[PASS] test_SetAdapters_PartialUpdate() (gas: 91140)
+[PASS] test_SetAdapters_ZeroAddresses() (gas: 16165)
+[PASS] test_SetGovernance() (gas: 19734)
+[PASS] test_SetIncentives() (gas: 1517078)
+[PASS] test_SetIncentives_ZeroAddress() (gas: 10089)
+[PASS] test_SetMaxSlippage() (gas: 16104)
+[PASS] test_SetMaxSlippage_Max() (gas: 16146)
+[PASS] test_SetMaxSlippage_Zero() (gas: 11301)
+[PASS] test_SetPaused() (gas: 25201)
+[PASS] test_TotalAssets_AfterWithdraw() (gas: 3710112)
+[PASS] test_TotalAssets_IncreasesWithFees() (gas: 5259142)
+[PASS] test_TotalAssets_OracleFail() (gas: 2818044)
+[PASS] test_TotalAssets_OracleZeroPrice() (gas: 2819239)
+[PASS] test_WithdrawDual_MaxSlippage() (gas: 2844924)
+[PASS] test_WithdrawDual_MinOutputSlippage() (gas: 2822563)
+[PASS] test_WithdrawDual_SmallShares() (gas: 3304007)
+[PASS] test_WithdrawDual_ZeroShares() (gas: 19023)
+[PASS] test_Withdraw_AfterMultipleRebalances() (gas: 7746564)
+[PASS] test_Withdraw_DualAsset() (gas: 3062584)
+[PASS] test_Withdraw_Partial() (gas: 3307247)
+[PASS] test_Withdraw_PartialShares() (gas: 3334372)
+Suite result: ok. 72 passed; 0 failed; 0 skipped; finished in 2.48s (4.50s CPU time)
+
+Ran 12 test suites in 2.51s (5.56s CPU time): 317 tests passed, 0 failed, 0 skipped (317 total tests)
+
+╭----------------------------------------------+--------------------+--------------------+------------------+------------------╮
+| File                                         | % Lines            | % Statements       | % Branches       | % Funcs          |
++==============================================================================================================================+
+| script/Deploy.s.sol                          | 0.00% (0/46)       | 0.00% (0/58)       | 0.00% (0/6)      | 0.00% (0/1)      |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/adapters/UniswapV2Adapter.sol            | 100.00% (78/78)    | 95.56% (86/90)     | 56.52% (13/23)   | 100.00% (11/11)  |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/adapters/UniswapV3Adapter.sol            | 98.21% (165/168)   | 97.83% (180/184)   | 76.09% (35/46)   | 95.65% (22/23)   |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/governance/AdaptiveGovernance.sol        | 100.00% (110/110)  | 100.00% (94/94)    | 97.62% (41/42)   | 100.00% (21/21)  |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/incentives/RebalanceIncentives.sol       | 100.00% (53/53)    | 100.00% (48/48)    | 89.29% (25/28)   | 100.00% (10/10)  |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/libraries/UniswapMath.sol                | 100.00% (179/179)  | 99.13% (228/230)   | 85.42% (41/48)   | 100.00% (11/11)  |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/oracles/TWAPOracle.sol                   | 93.75% (45/48)     | 90.20% (46/51)     | 63.16% (12/19)   | 100.00% (8/8)    |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/strategies/AdaptiveRebalanceStrategy.sol | 100.00% (56/56)    | 100.00% (57/57)    | 100.00% (12/12)  | 100.00% (12/12)  |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/tokens/MockTokens.sol                    | 100.00% (23/23)    | 100.00% (15/15)    | 100.00% (2/2)    | 100.00% (9/9)    |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| src/vault/AdaptiveLPVault.sol                | 92.24% (333/361)   | 90.84% (456/502)   | 82.28% (65/79)   | 92.86% (39/42)   |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| test/BaseTest.t.sol                          | 91.07% (51/56)     | 89.47% (51/57)     | 100.00% (0/0)    | 66.67% (4/6)     |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| test/mocks/MockUniswapV2.sol                 | 100.00% (84/84)    | 98.86% (87/88)     | 83.33% (15/18)   | 100.00% (15/15)  |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| test/mocks/MockUniswapV3.sol                 | 87.39% (104/119)   | 89.55% (120/134)   | 72.73% (16/22)   | 82.35% (14/17)   |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| test/unit/MockTest.t.sol                     | 100.00% (2/2)      | 100.00% (1/1)      | 100.00% (0/0)    | 100.00% (1/1)    |
+|----------------------------------------------+--------------------+--------------------+------------------+------------------|
+| Total                                        | 92.77% (1283/1383) | 91.30% (1469/1609) | 80.29% (277/345) | 94.65% (177/187) |
+╰----------------------------------------------+--------------------+--------------------+------------------+------------------╯

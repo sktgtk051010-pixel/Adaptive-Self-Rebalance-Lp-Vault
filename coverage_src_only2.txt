@@ -1,0 +1,7 @@
+error: unexpected argument '--exclude-path' found
+
+  tip: a similar argument exists: '--exclude-tests'
+
+Usage: forge coverage --ir-minimum --no-match-contract <REGEX> --exclude-tests [PATH]
+
+For more information, try '--help'.

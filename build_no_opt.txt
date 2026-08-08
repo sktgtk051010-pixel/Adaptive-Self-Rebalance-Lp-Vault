@@ -1,0 +1,7 @@
+error: unexpected argument '--no-optimize' found
+
+  tip: a similar argument exists: '--optimize'
+
+Usage: forge build --optimize [<OPTIMIZE>] [PATHS]...
+
+For more information, try '--help'.
