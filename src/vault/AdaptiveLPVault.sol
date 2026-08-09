@@ -350,28 +350,27 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         uint256 totalSupply = totalSupply();
         uint256 sharePct = FullMath.mulDiv(shares, WAD, totalSupply);
 
-        // 计算应得资产
-        (uint256 totalWETH, uint256 totalUSDC) = getTotalUnderlying();
-        uint256 theoreticalWeth = FullMath.mulDiv(totalWETH, sharePct, WAD);
-        uint256 theoreticalUsdc = FullMath.mulDiv(totalUSDC, sharePct, WAD);
-
-        uint256 slippageMin = BPS_SCALE - maxSlippageBps;
-        wethOut = FullMath.mulDiv(theoreticalWeth, slippageMin, BPS_SCALE);
-        usdcOut = FullMath.mulDiv(theoreticalUsdc, slippageMin, BPS_SCALE);
-
-        if (wethOut < minWETH || usdcOut < minUSDC) revert SlippageExceeded();
+        // 记录撤出前合约闲置余额
+        uint256 idleWethBefore = IERC20(WETH).balanceOf(address(this));
+        uint256 idleUsdcBefore = IERC20(asset()).balanceOf(address(this));
 
         // 销毁份额
         _burn(msg.sender, shares);
 
-        // 从适配器撤出对应比例资金
+        // 从适配器撤出对应比例资金（内部已有maxSlippageBps滑点保护）
         _withdrawFromAdapters(sharePct);
 
-        uint256 wethBal = IERC20(WETH).balanceOf(address(this));
-        uint256 usdcBal = IERC20(asset()).balanceOf(address(this));
+        // 撤出后合约余额 = 原闲置 + 从adapter撤出的资金
+        uint256 wethBalAfter = IERC20(WETH).balanceOf(address(this));
+        uint256 usdcBalAfter = IERC20(asset()).balanceOf(address(this));
 
-        wethOut = wethOut > wethBal ? wethBal : wethOut;
-        usdcOut = usdcOut > usdcBal ? usdcBal : usdcOut;
+        // 用户应得 = 原闲置资金的sharePct比例 + 从adapter撤出的全部资金
+        // 滑点损失由赎回用户承担，不摊给其他用户
+        wethOut = FullMath.mulDiv(idleWethBefore, sharePct, WAD) + (wethBalAfter - idleWethBefore);
+        usdcOut = FullMath.mulDiv(idleUsdcBefore, sharePct, WAD) + (usdcBalAfter - idleUsdcBefore);
+
+        // 用户层滑点保护
+        if (wethOut < minWETH || usdcOut < minUSDC) revert SlippageExceeded();
 
         // 转账给用户
         if (wethOut > 0) {

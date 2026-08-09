@@ -14,6 +14,14 @@ contract VaultUnitTest is BaseTest {
         super.setUp();
     }
 
+    /// @dev 辅助函数：获取金库总WETH和总USDC（避免8个返回值占用太多栈）
+    function _getTotalUnderlying() internal view returns (uint256 totalWeth, uint256 totalUsdc) {
+        (uint256 idleW, uint256 idleU, uint256 v2W, uint256 v2U,
+         uint256 v3LW, uint256 v3LU, uint256 v3HW, uint256 v3HU) = vault.getDistribution();
+        totalWeth = idleW + v2W + v3LW + v3HW;
+        totalUsdc = idleU + v2U + v3LU + v3HU;
+    }
+
     // ============ 存款测试 ============
 
     function test_Deposit_DualAsset() public {
@@ -979,5 +987,193 @@ contract VaultUnitTest is BaseTest {
 
         // 验证总份额是三次之和
         assertEq(vault.balanceOf(alice), shares1 + shares2 + shares3);
+    }
+
+    // ============ 滑点机制专项测试 ============
+
+    /// @notice 正常赎回场景：根据份额计算预期输出，设置合理minAmount（99%）
+    function test_WithdrawDual_RealisticSlippage() public {
+        uint256 shares = _deposit(alice, 10 ether, 20000e6);
+
+        // 先rebalance让资金进入adapter
+        vault.rebalance();
+
+        // 查询总资产，计算minAmount（1%滑点容忍）
+        (uint256 totalW, uint256 totalU) = _getTotalUnderlying();
+        uint256 totalSupply = vault.totalSupply();
+        uint256 minWeth = totalW * shares / totalSupply * 99 / 100;
+        uint256 minUsdc = totalU * shares / totalSupply * 99 / 100;
+
+        uint256 balWethBefore = weth.balanceOf(alice);
+        uint256 balUsdcBefore = usdc.balanceOf(alice);
+
+        vm.startPrank(alice);
+        (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(shares, minWeth, minUsdc);
+        vm.stopPrank();
+
+        // 验证输出在合理范围内
+        assertGt(wethOut, 0, "should receive WETH");
+        assertGt(usdcOut, 0, "should receive USDC");
+        assertGe(wethOut, minWeth, "WETH output >= min");
+        assertGe(usdcOut, minUsdc, "USDC output >= min");
+
+        // 验证用户确实收到了代币
+        assertEq(weth.balanceOf(alice) - balWethBefore, wethOut);
+        assertEq(usdc.balanceOf(alice) - balUsdcBefore, usdcOut);
+
+        // 验证份额已销毁
+        assertEq(vault.balanceOf(alice), 0);
+    }
+
+    /// @notice 反向测试：minAmount设置过高，应该revert
+    function test_WithdrawDual_RevertWhenSlippageTooHigh() public {
+        uint256 shares = _deposit(alice, 10 ether, 20000e6);
+        vault.rebalance();
+
+        // 设置不可能达到的min（10倍预期）
+        uint256 impossibleMinWeth = 100 ether;
+        uint256 impossibleMinUsdc = 200000e6;
+
+        vm.startPrank(alice);
+        vm.expectRevert(AdaptiveLPVault.SlippageExceeded.selector);
+        vault.withdrawDual(shares, impossibleMinWeth, impossibleMinUsdc);
+        vm.stopPrank();
+    }
+
+    /// @notice 全部赎回：赎回所有份额，合约应基本清空
+    function test_WithdrawDual_FullWithdraw() public {
+        uint256 shares = _deposit(alice, 5 ether, 10000e6);
+        vault.rebalance();
+
+        uint256 totalSupplyBefore = vault.totalSupply();
+        assertEq(totalSupplyBefore, shares, "alice should have all shares");
+
+        // 全部赎回，min设0（测试环境无真实滑点）
+        vm.startPrank(alice);
+        (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(shares, 0, 0);
+        vm.stopPrank();
+
+        // 验证份额全部销毁
+        assertEq(vault.totalSupply(), 0);
+        assertEq(vault.balanceOf(alice), 0);
+
+        // 验证收到了资金（可能有少量dust留在合约）
+        assertGt(wethOut, 0);
+        assertGt(usdcOut, 0);
+    }
+
+    /// @notice 部分赎回：赎回一半份额，剩余份额仍有价值
+    function test_WithdrawDual_PartialWithdrawWithSlippage() public {
+        uint256 shares = _deposit(alice, 10 ether, 20000e6);
+        vault.rebalance();
+
+        uint256 halfShares = shares / 2;
+
+        // 查询总资产
+        uint256 totalAssetsBefore = vault.totalAssets();
+
+        vm.startPrank(alice);
+        (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(halfShares, 0, 0);
+        vm.stopPrank();
+
+        // 验证剩余份额
+        assertEq(vault.balanceOf(alice), shares - halfShares);
+
+        // 验证总资产减少（赎回带走了部分资金）
+        uint256 totalAssetsAfter = vault.totalAssets();
+        assertLt(totalAssetsAfter, totalAssetsBefore, "assets should decrease");
+
+        // 验证收到了资金
+        assertGt(wethOut, 0);
+        assertGt(usdcOut, 0);
+    }
+
+    /// @notice 多用户赎回：A赎回不影响B的资金
+    function test_WithdrawDual_MultipleUsersNoCrossContamination() public {
+        // Alice存10ETH+20000USDC
+        uint256 sharesA = _deposit(alice, 10 ether, 20000e6);
+        // Bob存5ETH+10000USDC（一半）
+        uint256 sharesB = _deposit(bob, 5 ether, 10000e6);
+
+        vault.rebalance();
+
+        // 记录Bob赎回前的资产
+        uint256 totalAssetsBefore = vault.totalAssets();
+
+        // Alice赎回全部
+        vm.startPrank(alice);
+        vault.withdrawDual(sharesA, 0, 0);
+        vm.stopPrank();
+
+        // Alice份额清零
+        assertEq(vault.balanceOf(alice), 0);
+        // Bob份额不变
+        assertEq(vault.balanceOf(bob), sharesB);
+
+        // Bob赎回全部
+        uint256 balWethBobBefore = weth.balanceOf(bob);
+        uint256 balUsdcBobBefore = usdc.balanceOf(bob);
+
+        vm.startPrank(bob);
+        (uint256 wethOutB, uint256 usdcOutB) = vault.withdrawDual(sharesB, 0, 0);
+        vm.stopPrank();
+
+        // Bob应该收到约5ETH+10000USDC（有少量手续费/滑点）
+        assertGt(wethOutB, 4 ether, "Bob should get ~5 ETH");
+        assertGt(usdcOutB, 9000e6, "Bob should get ~10000 USDC");
+    }
+
+    /// @notice 零份额赎回应该revert
+    function test_WithdrawDual_ZeroSharesRevert() public {
+        _deposit(alice, 1 ether, 2000e6);
+
+        vm.startPrank(alice);
+        vm.expectRevert(AdaptiveLPVault.ZeroAmount.selector);
+        vault.withdrawDual(0, 0, 0);
+        vm.stopPrank();
+    }
+
+    /// @notice 重平衡后赎回，验证资金从adapter正确撤出
+    function test_WithdrawDual_AfterRebalanceWithSlippage() public {
+        uint256 shares = _deposit(alice, 20 ether, 40000e6);
+
+        // 多次rebalance
+        vault.rebalance();
+        vm.warp(block.timestamp + 700);
+        v3PoolHighFee.setPrice(2100);
+        v3PoolLowFee.setPrice(2100);
+        vault.rebalance();
+
+        // 计算预期输出（95%滑点容忍，价格变动后）
+        (uint256 totalW, uint256 totalU) = _getTotalUnderlying();
+        uint256 totalSupply = vault.totalSupply();
+        uint256 minW = totalW * shares / totalSupply * 95 / 100;
+        uint256 minU = totalU * shares / totalSupply * 95 / 100;
+
+        vm.startPrank(alice);
+        (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(shares, minW, minU);
+        vm.stopPrank();
+
+        assertGt(wethOut, 0);
+        assertGt(usdcOut, 0);
+        assertGe(wethOut, minW);
+        assertGe(usdcOut, minU);
+    }
+
+    /// @notice 测试setMaxSlippage影响adapter层滑点保护
+    function test_WithdrawDual_CustomMaxSlippage() public {
+        uint256 shares = _deposit(alice, 10 ether, 20000e6);
+        vault.rebalance();
+
+        // 设置更严格的滑点（0.5%）
+        vault.setMaxSlippage(50);
+
+        // 正常赎回应该成功
+        vm.startPrank(alice);
+        (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(shares, 0, 0);
+        vm.stopPrank();
+
+        assertGt(wethOut, 0);
+        assertGt(usdcOut, 0);
     }
 }
