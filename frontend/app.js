@@ -1,33 +1,38 @@
 // ============================================================
-// Adaptive LP Vault Frontend v4 (FIXED BigNumber overflow, ALP 6 decimals)
+// Adaptive LP Vault Frontend v5 (Local Anvil + Sepolia support)
 // ============================================================
 const SEPOLIA_CHAIN_ID = 11155111;
+const LOCAL_CHAIN_ID = 31337;
 
-const ADDRESSES = {
-    vault: '0x203E3ea414B550552783054B7525890bb08A52B7',
+// Sepolia 地址
+const SEPOLIA_ADDRESSES = {
+    vault: '0xEf104626cef86709284bA1e166A902626BB63473',
     weth: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
     usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
-    oracle: '0xD0D2421D3d9a0a0C23ea0e597f1a54F8A7C1Ae25',
-    strategy: '0x9331E43dbA088bEe53198d70c63AFE64d2c29d99',
-    governance: '0x51841b1B6feE4f5d333900C7Ce66a2FE7512349B',
-    incentives: '0x341382cE4BBA956BACB28802BddA951039d2Ab1E',
-    govToken: '0xc7D690c0a921307e3f5939F0811E3875D0f0808A',
+    oracle: '0x54fAb281E70914f10b61A46231940F01363B0613',
+    strategy: '0xf94A724BD5Ba064ce8f09d264AC1efAE5F3c8723',
+    governance: '0x5079602959f0DD9F07FF59eCB8961518292E12e7',
+    incentives: '0x1ed10deB31551f90D711ca2050A529F14b9D2b7a',
+    govToken: '0x89604c71b77f60e31D6dB9FBe4280A588A7456d8',
 };
 
-// 从localStorage读取deploy.html部署的新地址（如果有）
-try {
-    const saved = localStorage.getItem('deployed_addresses');
-    if (saved) {
-        const s = JSON.parse(saved);
-        if (s.VAULT) ADDRESSES.vault = s.VAULT;
-        if (s.ORACLE) ADDRESSES.oracle = s.ORACLE;
-        if (s.STRAT) ADDRESSES.strategy = s.STRAT;
-        if (s.GOV) ADDRESSES.governance = s.GOV;
-        if (s.GOV_TOKEN) ADDRESSES.govToken = s.GOV_TOKEN;
-        if (s.INCENTIVES) ADDRESSES.incentives = s.INCENTIVES;
-        console.log('Loaded addresses from localStorage:', ADDRESSES);
-    }
-} catch(e) { console.warn('Failed to load localStorage addresses:', e); }
+// Anvil 本地部署地址（从 DeployLocal.s.sol 输出）
+const LOCAL_ADDRESSES = {
+    vault: '0x9A676e781A523b5d0C0e43731313A708CB607508',
+    weth: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    usdc: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+    oracle: '0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82',
+    strategy: '0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0',
+    governance: '0x610178dA211FEF7D417bC0e6FeD39F05609AD788',
+    incentives: '0x3Aa5ebB10DC797CAC828524e59A333d0A371443c',
+    govToken: '0x8A791620dd6260079BF849Dc5567aDC3F2FdC318',
+};
+
+// 默认使用Sepolia
+let ADDRESSES = { ...SEPOLIA_ADDRESSES };
+let currentChainId = SEPOLIA_CHAIN_ID;
+
+// localStorage 地址在 connectWallet 中根据网络加载
 
 const ERC20_ABI = [
     'function balanceOf(address) view returns (uint256)',
@@ -45,6 +50,7 @@ const VAULT_ABI = [
     'function rebalanceCount() view returns (uint256)',
     'function cumulativeFeesUSDC() view returns (uint256)',
     'function getDistribution() view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)',
+    'function TOKEN0_IS_WETH() view returns (bool)',
 ];
 const ORACLE_ABI = [
     'function getTWAPPrice() view returns (uint160 sqrtPriceX96, int24 tick)',
@@ -67,6 +73,7 @@ const GOV_TOKEN_ABI = [
 let provider, signer, account;
 let C = {}; // contracts
 let twapPrice = 0;
+let token0IsWeth = false; // token0是否为WETH，从合约读取
 let refreshTimer = null;
 
 // ============================================================
@@ -122,27 +129,61 @@ async function connectWallet() {
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
 
-        // 检查/切换网络
+        // 检测网络
         var network = await provider.getNetwork();
-        if (network.chainId !== SEPOLIA_CHAIN_ID) {
+        currentChainId = network.chainId;
+
+        if (currentChainId === LOCAL_CHAIN_ID) {
+            // 本地 Anvil 网络
+            ADDRESSES = { ...LOCAL_ADDRESSES };
+            $('networkBadge').textContent = 'Local Anvil';
+            $('networkBadge').className = 'network-badge success';
+        } else if (currentChainId === SEPOLIA_CHAIN_ID) {
+            // Sepolia
+            ADDRESSES = { ...SEPOLIA_ADDRESSES };
+            $('networkBadge').textContent = 'Sepolia';
+            $('networkBadge').className = 'network-badge success';
+        } else {
+            // 尝试切换到本地网络（优先用于测试）
             try {
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: '0xaa36a7' }],
+                    params: [{ chainId: '0x7a69' }], // 31337
                 });
                 await new Promise(r => setTimeout(r, 1000));
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 signer = provider.getSigner();
+                network = await provider.getNetwork();
+                currentChainId = network.chainId;
+                if (currentChainId === LOCAL_CHAIN_ID) {
+                    ADDRESSES = { ...LOCAL_ADDRESSES };
+                    $('networkBadge').textContent = 'Local Anvil';
+                    $('networkBadge').className = 'network-badge success';
+                } else {
+                    throw new Error('switch failed');
+                }
             } catch(e) {
-                showToast('请手动切换到 Sepolia 测试网', 'error');
-                btn.textContent = '连接钱包';
-                btn.disabled = false;
-                return;
+                // 本地网络不存在，尝试Sepolia
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: '0xaa36a7' }],
+                    });
+                    await new Promise(r => setTimeout(r, 1000));
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    ADDRESSES = { ...SEPOLIA_ADDRESSES };
+                    $('networkBadge').textContent = 'Sepolia';
+                    $('networkBadge').className = 'network-badge success';
+                } catch(e2) {
+                    showToast('请切换到 Sepolia 或本地 Anvil 网络', 'error');
+                    btn.textContent = '连接钱包';
+                    btn.disabled = false;
+                    return;
+                }
             }
         }
 
-        $('networkBadge').textContent = 'Sepolia';
-        $('networkBadge').className = 'network-badge success';
         btn.textContent = account.slice(0,6) + '...' + account.slice(-4);
         btn.disabled = false;
 
@@ -154,7 +195,22 @@ async function connectWallet() {
         $('accountAddr').textContent = account;
         setText('vaultAddr', ADDRESSES.vault.slice(0,10) + '...' + ADDRESSES.vault.slice(-6));
 
-        showToast('钱包连接成功', 'success');
+        showToast('钱包连接成功 (' + $('networkBadge').textContent + ')', 'success');
+
+        // 从localStorage读取deploy.html部署的新地址（如果有，覆盖当前网络地址）
+        try {
+            const saved = localStorage.getItem('deployed_addresses');
+            if (saved) {
+                const s = JSON.parse(saved);
+                if (s.VAULT) ADDRESSES.vault = s.VAULT;
+                if (s.ORACLE) ADDRESSES.oracle = s.ORACLE;
+                if (s.STRAT) ADDRESSES.strategy = s.STRAT;
+                if (s.GOV) ADDRESSES.governance = s.GOV;
+                if (s.GOV_TOKEN) ADDRESSES.govToken = s.GOV_TOKEN;
+                if (s.INCENTIVES) ADDRESSES.incentives = s.INCENTIVES;
+                console.log('Loaded addresses from localStorage:', ADDRESSES);
+            }
+        } catch(e) { console.warn('Failed to load localStorage addresses:', e); }
 
         try {
             C = {
@@ -166,6 +222,14 @@ async function connectWallet() {
                 incentives: new ethers.Contract(ADDRESSES.incentives, INCENTIVES_ABI, signer),
                 govToken: new ethers.Contract(ADDRESSES.govToken, GOV_TOKEN_ABI, signer),
             };
+            // 读取token0/token1顺序（与合约逻辑一致）
+            try {
+                token0IsWeth = await C.vault.TOKEN0_IS_WETH();
+                console.log('[Vault] TOKEN0_IS_WETH =', token0IsWeth);
+            } catch(e) {
+                console.warn('[Vault] Failed to read TOKEN0_IS_WETH, defaulting to false (token0=USDC):', e.message);
+                token0IsWeth = false;
+            }
         } catch(e) {
             console.error('Contract init error:', e);
             showToast('合约初始化失败: ' + e.message, 'error');
@@ -592,8 +656,22 @@ async function withdraw() {
         var sharesWei = ethers.utils.parseUnits(shares, 6);
         var bal = await C.vault.balanceOf(account);
         if (sharesWei.gt(bal)) { showToast('份额不足', 'error'); return; }
+
+        // 计算预计输出，设置1%滑点保护
+        var totalSupplyBN = await C.vault.totalSupply();
+        var d = await C.vault.getDistribution();
+        var totalWeth = d[0].add(d[2]).add(d[4]).add(d[6]);
+        var totalUsdc = d[1].add(d[3]).add(d[5]).add(d[7]);
+        var ratioScale = ethers.BigNumber.from(10).pow(18);
+        var ratioScaled = sharesWei.mul(ratioScale).div(totalSupplyBN);
+        var outWeth = totalWeth.mul(ratioScaled).div(ratioScale);
+        var outUsdc = totalUsdc.mul(ratioScaled).div(ratioScale);
+        // 允许1%滑点
+        var minWeth = outWeth.mul(99).div(100);
+        var minUsdc = outUsdc.mul(99).div(100);
+
         showTxModal('赎回中', '请确认交易...');
-        var tx = await C.vault.withdrawDual(sharesWei, 0, 0);
+        var tx = await C.vault.withdrawDual(sharesWei, minWeth, minUsdc);
         await tx.wait();
         hideTxModal();
         showToast('✅ 赎回成功', 'success');
@@ -603,6 +681,7 @@ async function withdraw() {
         hideTxModal();
         var msg = (e.error && e.error.message) || e.message || '未知错误';
         if (msg.indexOf('user rejected') >= 0) showToast('交易已取消', 'warn');
+        else if (msg.indexOf('SlippageExceeded') >= 0) showToast('滑点超限，请调整滑点容忍度或稍后重试', 'error');
         else showToast('赎回失败: ' + msg.substring(0,80), 'error');
     }
 }
@@ -649,10 +728,33 @@ function copyVaultAddr() {
 // ============================================================
 // 价格计算
 // ============================================================
+// Uniswap V3: sqrtPriceX96 = sqrt(price) * 2^96
+// price = token1_raw / token0_raw
+// 当token0=USDC(6位), token1=WETH(18位)时：
+//   1 WETH = 2^192 * 1e12 / sqrtPriceX96^2 USDC
+// 当token0=WETH(18位), token1=USDC(6位)时：
+//   1 WETH = sqrtPriceX96^2 * 1e12 / 2^192 USDC
 function calcPrice(sqrtPriceX96) {
     var Q192 = ethers.BigNumber.from(2).pow(192);
-    var numerator = Q192.mul(100000000000000);
-    var denominator = sqrtPriceX96.mul(sqrtPriceX96);
-    var priceScaled = numerator.div(denominator);
-    return priceScaled.toNumber() / 100;
+    var PRICE_SCALE = ethers.BigNumber.from('1000000000000'); // 1e12 = 1e18 / 1e6
+    var priceSquared = sqrtPriceX96.mul(sqrtPriceX96);
+
+    var usdcRawPerWeth;
+    if (token0IsWeth) {
+        // token0=WETH, token1=USDC: USDC_raw = WETH_raw * price = WETH_raw * priceSquared / Q192
+        usdcRawPerWeth = priceSquared.mul(PRICE_SCALE).div(Q192);
+    } else {
+        // token0=USDC, token1=WETH: USDC_raw = WETH_raw / price = WETH_raw * Q192 / priceSquared
+        usdcRawPerWeth = Q192.mul(PRICE_SCALE).div(priceSquared);
+    }
+
+    // usdcRawPerWeth是USDC最小单位(6位小数)，除以1e6得到人类可读价格
+    // 用字符串方式避免JS Number溢出
+    var priceStr = usdcRawPerWeth.toString();
+    if (priceStr.length <= 6) {
+        return parseFloat('0.' + priceStr.padStart(6, '0'));
+    }
+    var intPart = priceStr.slice(0, -6);
+    var decPart = priceStr.slice(-6);
+    return parseFloat(intPart + '.' + decPart);
 }
