@@ -191,19 +191,14 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
     function withdrawAll() external onlyVault nonReentrant {
         uint256 lpBalance = PAIR.balanceOf(address(this));
 
-        (uint112 reserve0, uint112 reserve1, ) = PAIR.getReserves();
-        uint256 totalSupply = PAIR.totalSupply();
-
-        uint256 slippageMin = BPS_SCALE - maxSlippageBps;
-
-        uint256 expected0 = FullMath.mulDiv(uint256(reserve0), lpBalance, totalSupply);
-        uint256 expected1 = FullMath.mulDiv(uint256(reserve1), lpBalance, totalSupply);
-
-        // 扣除滑点下限
-        uint256 amount0Min = FullMath.mulDiv(expected0, slippageMin, BPS_SCALE);
-        uint256 amount1Min = FullMath.mulDiv(expected1, slippageMin, BPS_SCALE);
-
         if (lpBalance > 0) {
+            (uint112 reserve0, uint112 reserve1, ) = PAIR.getReserves();
+            uint256 totalSupply = PAIR.totalSupply();
+            uint256 slippageMin = BPS_SCALE - maxSlippageBps;
+            uint256 expected0 = FullMath.mulDiv(uint256(reserve0), lpBalance, totalSupply);
+            uint256 expected1 = FullMath.mulDiv(uint256(reserve1), lpBalance, totalSupply);
+            uint256 amount0Min = FullMath.mulDiv(expected0, slippageMin, BPS_SCALE);
+            uint256 amount1Min = FullMath.mulDiv(expected1, slippageMin, BPS_SCALE);
             ROUTER.removeLiquidity(
                 TOKEN0,
                 TOKEN1,

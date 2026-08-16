@@ -1,0 +1,105 @@
+{
+	"deploy": {
+		"VM:-": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"main:1": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"sepolia:11155111": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"Custom": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		}
+	},
+	"data": {
+		"bytecode": {
+			"object": "",
+			"sourceMap": "",
+			"linkReferences": {}
+		},
+		"deployedBytecode": {
+			"object": "",
+			"sourceMap": "",
+			"linkReferences": {}
+		},
+		"methodIdentifiers": {
+			"getPositionInfo(bytes32)": "5f458e51",
+			"pool()": "16f0115b"
+		}
+	},
+	"abi": [
+		{
+			"type": "function",
+			"name": "getPositionInfo",
+			"inputs": [
+				{
+					"name": "liquidityId",
+					"type": "bytes32",
+					"internalType": "bytes32"
+				}
+			],
+			"outputs": [
+				{
+					"name": "tickLower",
+					"type": "int24",
+					"internalType": "int24"
+				},
+				{
+					"name": "tickUpper",
+					"type": "int24",
+					"internalType": "int24"
+				},
+				{
+					"name": "liquidity",
+					"type": "uint128",
+					"internalType": "uint128"
+				},
+				{
+					"name": "tokensOwed0",
+					"type": "uint256",
+					"internalType": "uint256"
+				},
+				{
+					"name": "tokensOwed1",
+					"type": "uint256",
+					"internalType": "uint256"
+				},
+				{
+					"name": "feeGrowthInside0LastX128",
+					"type": "uint256",
+					"internalType": "uint256"
+				},
+				{
+					"name": "feeGrowthInside1LastX128",
+					"type": "uint256",
+					"internalType": "uint256"
+				},
+				{
+					"name": "active",
+					"type": "bool",
+					"internalType": "bool"
+				}
+			],
+			"stateMutability": "view"
+		},
+		{
+			"type": "function",
+			"name": "pool",
+			"inputs": [],
+			"outputs": [
+				{
+					"name": "",
+					"type": "address",
+					"internalType": "contract IUniswapV3Pool"
+				}
+			],
+			"stateMutability": "view"
+		}
+	]
+}

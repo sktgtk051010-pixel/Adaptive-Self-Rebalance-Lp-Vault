@@ -64,6 +64,8 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
     // ============ 常量 ============
     uint256 public constant BPS_SCALE = 10000;
+
+
     uint256 public constant WETH_DECIMALS = 18;
     uint256 public constant USDC_DECIMALS = 6;
 
@@ -190,7 +192,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         governance = IGovernance(_governance);
 
         // 从oracle池读取真实token0/token1顺序（Uniswap按地址排序，mock可能不排序）
-        TOKEN0_IS_WETH = (IUniswapV3Pool(address(ORACLE.ORACLE_POOL())).token0() == _weth);
+        TOKEN0_IS_WETH = ORACLE.ORACLE_POOL().token0() == _weth;
 
         // 默认权重
         currentWeights = TargetWeights({v2: 2000, v3Low: 3000, v3High: 5000});
@@ -390,14 +392,17 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         address owner
     ) public override nonReentrant returns (uint256 shares) {
         shares = previewWithdraw(assets);
-        _burn(owner, shares);
 
-        // 撤出部分资金
+        if(msg.sender != owner) {
+            _spendAllowance(owner, msg.sender, shares);
+        }
+
         uint256 sharePct = FullMath.mulDiv(shares, WAD, totalSupply());
+
+        _burn(owner, shares);
         _withdrawFromAdapters(sharePct);
 
         IERC20(asset()).safeTransfer(receiver, assets);
-        emit Withdrawn(owner, shares, 0, assets);
     }
 
     /// @notice ERC4626标准redeem
@@ -407,13 +412,17 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         address owner
     ) public override nonReentrant returns (uint256 assets) {
         assets = previewRedeem(shares);
-        _burn(owner, shares);
 
-        uint256 sharePct = FullMath.mulDiv(shares, WAD, totalSupply() + shares);
+        if(msg.sender != owner) {
+            _spendAllowance(owner, msg.sender, shares);
+        }
+
+        uint256 sharePct = FullMath.mulDiv(shares, WAD, totalSupply());
+
+        _burn(owner, shares);
         _withdrawFromAdapters(sharePct);
 
         IERC20(asset()).safeTransfer(receiver, assets);
-        emit Withdrawn(owner, shares, 0, assets);
     }
 
     // ============ 再平衡 ============
@@ -456,11 +465,11 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
                 volatility
             );
 
-        // 3. 从所有适配器撤出全部流动性
-        _withdrawAllFromAdapters();
-
-        // 4. 收集所有手续费（撤出后兜底）
+        // 3. 先收集所有手续费（此时position仍active）
         _collectAllFees();
+
+        // 4. 从所有适配器撤出全部流动性
+        _withdrawAllFromAdapters();
 
         // 5. 按目标权重重新投资
         currentWeights = TargetWeights({

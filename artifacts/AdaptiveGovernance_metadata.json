@@ -1,0 +1,1017 @@
+{
+	"compiler": {
+		"version": "0.8.25+commit.b61c2a91"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_govToken",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					}
+				],
+				"name": "OwnableInvalidOwner",
+				"type": "error"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					}
+				],
+				"name": "OwnableUnauthorizedAccount",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "ReentrancyGuardReentrantCall",
+				"type": "error"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "previousOwner",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "newOwner",
+						"type": "address"
+					}
+				],
+				"name": "OwnershipTransferred",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint32",
+								"name": "twapWindow",
+								"type": "uint32"
+							},
+							{
+								"internalType": "uint256",
+								"name": "rebalanceThreshold",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "incentiveBps",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "maxSlippageBps",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "v2WeightCap",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "v3LowFeeWeightCap",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "v3HighFeeWeightCap",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "tightRangeBps",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "mediumRangeBps",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "wideRangeBps",
+								"type": "uint256"
+							}
+						],
+						"indexed": false,
+						"internalType": "struct IGovernance.StrategyParams",
+						"name": "newParams",
+						"type": "tuple"
+					}
+				],
+				"name": "ParamsUpdated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					}
+				],
+				"name": "ProposalCanceled",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "proposer",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum AdaptiveGovernance.ProposalType",
+						"name": "pType",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "newValue",
+						"type": "uint256"
+					}
+				],
+				"name": "ProposalCreated",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					}
+				],
+				"name": "ProposalExecuted",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "voter",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "proposalId",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "bool",
+						"name": "support",
+						"type": "bool"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "votes",
+						"type": "uint256"
+					}
+				],
+				"name": "VoteCast",
+				"type": "event"
+			},
+			{
+				"inputs": [],
+				"name": "GOV_TOKEN",
+				"outputs": [
+					{
+						"internalType": "contract GovernanceToken",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "proposalId",
+						"type": "uint256"
+					}
+				],
+				"name": "cancelProposal",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "proposalId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "support",
+						"type": "bool"
+					}
+				],
+				"name": "castVote",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "proposalId",
+						"type": "uint256"
+					}
+				],
+				"name": "executeProposal",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "proposalId",
+						"type": "uint256"
+					}
+				],
+				"name": "executeTimelock",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getParams",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint32",
+								"name": "twapWindow",
+								"type": "uint32"
+							},
+							{
+								"internalType": "uint256",
+								"name": "rebalanceThreshold",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "incentiveBps",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "maxSlippageBps",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "v2WeightCap",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "v3LowFeeWeightCap",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "v3HighFeeWeightCap",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "tightRangeBps",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "mediumRangeBps",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "wideRangeBps",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct IGovernance.StrategyParams",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "proposalId",
+						"type": "uint256"
+					}
+				],
+				"name": "getProposalState",
+				"outputs": [
+					{
+						"internalType": "enum AdaptiveGovernance.ProposalState",
+						"name": "",
+						"type": "uint8"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "owner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "params",
+				"outputs": [
+					{
+						"internalType": "uint32",
+						"name": "twapWindow",
+						"type": "uint32"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rebalanceThreshold",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "incentiveBps",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "maxSlippageBps",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "v2WeightCap",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "v3LowFeeWeightCap",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "v3HighFeeWeightCap",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "tightRangeBps",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "mediumRangeBps",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "wideRangeBps",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "proposalCount",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "proposalThreshold",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "proposals",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "proposer",
+						"type": "address"
+					},
+					{
+						"internalType": "enum AdaptiveGovernance.ProposalType",
+						"name": "pType",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "newValue",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "newValue2",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "newValue3",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "startBlock",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "endBlock",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "forVotes",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "againstVotes",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "executed",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "canceled",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "enum AdaptiveGovernance.ProposalType",
+						"name": "pType",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "newValue",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "newValue2",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "newValue3",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "",
+						"type": "string"
+					}
+				],
+				"name": "propose",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "quorumVotes",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "renounceOwnership",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "bps",
+						"type": "uint256"
+					}
+				],
+				"name": "setIncentiveBps",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "bps",
+						"type": "uint256"
+					}
+				],
+				"name": "setMaxSlippageBps",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "tight",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "medium",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "wide",
+						"type": "uint256"
+					}
+				],
+				"name": "setRangeBps",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "threshold",
+						"type": "uint256"
+					}
+				],
+				"name": "setRebalanceThreshold",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint32",
+						"name": "window",
+						"type": "uint32"
+					}
+				],
+				"name": "setTWAPWindow",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_vault",
+						"type": "address"
+					}
+				],
+				"name": "setVault",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "v2",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "v3Low",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "v3High",
+						"type": "uint256"
+					}
+				],
+				"name": "setWeightCaps",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "timelockActions",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "readyTime",
+						"type": "uint256"
+					},
+					{
+						"internalType": "enum AdaptiveGovernance.ProposalType",
+						"name": "pType",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "v1",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "v2",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "v3",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "timelockDelay",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "newOwner",
+						"type": "address"
+					}
+				],
+				"name": "transferOwnership",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "vault",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "votingDelay",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "votingPeriod",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"details": "治理代币持有者可提案、投票修改策略参数",
+			"errors": {
+				"OwnableInvalidOwner(address)": [
+					{
+						"details": "The owner is not a valid owner account. (eg. `address(0)`)"
+					}
+				],
+				"OwnableUnauthorizedAccount(address)": [
+					{
+						"details": "The caller account is not authorized to perform an operation."
+					}
+				],
+				"ReentrancyGuardReentrantCall()": [
+					{
+						"details": "Unauthorized reentrant call."
+					}
+				]
+			},
+			"kind": "dev",
+			"methods": {
+				"owner()": {
+					"details": "Returns the address of the current owner."
+				},
+				"renounceOwnership()": {
+					"details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner."
+				},
+				"transferOwnership(address)": {
+					"details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+				}
+			},
+			"title": "AdaptiveGovernance",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"GOV_TOKEN()": {
+					"notice": "治理代币"
+				},
+				"cancelProposal(uint256)": {
+					"notice": "取消提案"
+				},
+				"castVote(uint256,bool)": {
+					"notice": "投票"
+				},
+				"executeProposal(uint256)": {
+					"notice": "执行提案（通过后）"
+				},
+				"executeTimelock(uint256)": {
+					"notice": "执行时间锁操作"
+				},
+				"getProposalState(uint256)": {
+					"notice": "查询提案状态"
+				},
+				"params()": {
+					"notice": "策略参数"
+				},
+				"proposalCount()": {
+					"notice": "提案计数"
+				},
+				"proposalThreshold()": {
+					"notice": "提案门槛（治理代币数量）"
+				},
+				"proposals(uint256)": {
+					"notice": "提案映射"
+				},
+				"propose(uint8,uint256,uint256,uint256,string)": {
+					"notice": "创建提案"
+				},
+				"quorumVotes()": {
+					"notice": "法定人数（需要的投票数）"
+				},
+				"setVault(address)": {
+					"notice": "设置金库地址"
+				},
+				"timelockDelay()": {
+					"notice": "时间锁延迟（秒）"
+				},
+				"vault()": {
+					"notice": "金库地址"
+				},
+				"votingDelay()": {
+					"notice": "投票延迟（区块数）"
+				},
+				"votingPeriod()": {
+					"notice": "投票周期（区块数）"
+				}
+			},
+			"notice": "链上治理模块（Variation 3）",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/governance/AdaptiveGovernance.sol": "AdaptiveGovernance"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"@openzeppelin/contracts/access/Ownable.sol": {
+			"keccak256": "0xff6d0bb2e285473e5311d9d3caacb525ae3538a80758c10649a4d61029b017bb",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://8ed324d3920bb545059d66ab97d43e43ee85fd3bd52e03e401f020afb0b120f6",
+				"dweb:/ipfs/QmfEckWLmZkDDcoWrkEvMWhms66xwTLff9DDhegYpvHo1a"
+			]
+		},
+		"@openzeppelin/contracts/interfaces/draft-IERC6093.sol": {
+			"keccak256": "0x1b88b3fb3d85ba5496d7d5f396f83ee1fddcdd6762059ff65992655b67920998",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://89393bb3212da1c0889601b9706a07b39419ddc4d2faab9eaf6e7f9152cf6a1c",
+				"dweb:/ipfs/QmcCfzzxv1Bkdz1c1yF4gQCeYb6Us5BJANnzTFqawfd1HL"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/ERC20.sol": {
+			"keccak256": "0x669464167428061ee0f8618b73b3ee90aff8405683e7ddde8cd77dadaa1afe29",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://0dda78587a7358b4fdf6b9fca0fde5a5e34930f36d5268a16028627fc0170195",
+				"dweb:/ipfs/QmQ1b6cCceDRWNxti9HifsTCzmVP25Haxs1bWugm52vTqH"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+			"keccak256": "0x74ed01eb66b923d0d0cfe3be84604ac04b76482a55f9dd655e1ef4d367f95bc2",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://5282825a626cfe924e504274b864a652b0023591fa66f06a067b25b51ba9b303",
+				"dweb:/ipfs/QmeCfPykghhMc81VJTrHTC7sF6CRvaA1FXVq2pJhwYp1dV"
+			]
+		},
+		"@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+			"keccak256": "0xd6fa4088198f04eef10c5bce8a2f4d60554b7ec4b987f684393c01bf79b94d9f",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://f95ee0bbd4dd3ac730d066ba3e785ded4565e890dbec2fa7d3b9fe3bad9d0d6e",
+				"dweb:/ipfs/QmSLr6bHkPFWT7ntj34jmwfyskpwo97T9jZUrk5sz3sdtR"
+			]
+		},
+		"@openzeppelin/contracts/utils/Context.sol": {
+			"keccak256": "0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12",
+				"dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF"
+			]
+		},
+		"@openzeppelin/contracts/utils/ReentrancyGuard.sol": {
+			"keccak256": "0xa516cbf1c7d15d3517c2d668601ce016c54395bf5171918a14e2686977465f53",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://1e1d079e8edfb58efd23a311e315a4807b01b5d1cf153f8fa2d0608b9dec3e99",
+				"dweb:/ipfs/QmTBExeX2SDTkn5xbk5ssbYSx7VqRp9H4Ux1CY4uQM4b9N"
+			]
+		},
+		"@openzeppelin/contracts/utils/StorageSlot.sol": {
+			"keccak256": "0xcf74f855663ce2ae00ed8352666b7935f6cddea2932fdf2c3ecd30a9b1cd0e97",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://9f660b1f351b757dfe01438e59888f31f33ded3afcf5cb5b0d9bf9aa6f320a8b",
+				"dweb:/ipfs/QmarDJ5hZEgBtCmmrVzEZWjub9769eD686jmzb2XpSU1cM"
+			]
+		},
+		"src/governance/AdaptiveGovernance.sol": {
+			"keccak256": "0x2c5564a56b6bc0aab4ac8d21d66668a404b115e4b1195faffd6754f04e25e33d",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://569070410ecc8d446b1bc0be66dc15a54cec76dc339f43b31e05097d26a80eab",
+				"dweb:/ipfs/QmdqbUWBe7JwykQUqvL7H8XS7A9fxZ7XscaGUZn3NyiBaD"
+			]
+		},
+		"src/interfaces/ICoreInterfaces.sol": {
+			"keccak256": "0x1fce8d3344016039de8c14b4885185fdb58b6ae1306828e35ea79df9d0652a80",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://889e7c00cc13d066de03f0de0c8fa488a9ac25e7631c0d40cd22d5e39b7a811e",
+				"dweb:/ipfs/QmerTRxpqSAFcWNwiTfANBr95By2Vyd3emXeZbWWLDugEp"
+			]
+		},
+		"src/interfaces/IUniswapV3.sol": {
+			"keccak256": "0x1916a16c2e354e080125dc8cd12c7d512b1c61fa8c0d2a70e24a349a3c5a349c",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://54f4458a5c31a262976e87f2731693dfd1c8ff1696725fb3b12682b436e664b8",
+				"dweb:/ipfs/QmTd4RHU4kTZPH8DZjQTemtCzgjnQ8UN1ES2eVHKBv8u35"
+			]
+		}
+	},
+	"version": 1
+}

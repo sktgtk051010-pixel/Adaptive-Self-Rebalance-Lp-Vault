@@ -1,0 +1,74 @@
+{
+	"deploy": {
+		"VM:-": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"main:1": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"sepolia:11155111": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"Custom": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		}
+	},
+	"data": {
+		"bytecode": {
+			"object": "",
+			"sourceMap": "",
+			"linkReferences": {}
+		},
+		"deployedBytecode": {
+			"object": "",
+			"sourceMap": "",
+			"linkReferences": {}
+		},
+		"methodIdentifiers": {
+			"getReserves()": "0902f1ac",
+			"totalSupply()": "18160ddd"
+		}
+	},
+	"abi": [
+		{
+			"type": "function",
+			"name": "getReserves",
+			"inputs": [],
+			"outputs": [
+				{
+					"name": "reserve0",
+					"type": "uint112",
+					"internalType": "uint112"
+				},
+				{
+					"name": "reserve1",
+					"type": "uint112",
+					"internalType": "uint112"
+				},
+				{
+					"name": "blockTimestampLast",
+					"type": "uint32",
+					"internalType": "uint32"
+				}
+			],
+			"stateMutability": "view"
+		},
+		{
+			"type": "function",
+			"name": "totalSupply",
+			"inputs": [],
+			"outputs": [
+				{
+					"name": "",
+					"type": "uint256",
+					"internalType": "uint256"
+				}
+			],
+			"stateMutability": "view"
+		}
+	]
+}

@@ -1,0 +1,492 @@
+{
+	"compiler": {
+		"version": "0.8.24+commit.e11b9ed9"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_oraclePool",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_weth",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_usdc",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "_governance",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					}
+				],
+				"type": "error",
+				"name": "OwnableInvalidOwner"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					}
+				],
+				"type": "error",
+				"name": "OwnableUnauthorizedAccount"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "oldGovernance",
+						"type": "address",
+						"indexed": false
+					},
+					{
+						"internalType": "address",
+						"name": "newGovernance",
+						"type": "address",
+						"indexed": false
+					}
+				],
+				"type": "event",
+				"name": "GovernanceUpdated",
+				"anonymous": false
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "previousOwner",
+						"type": "address",
+						"indexed": true
+					},
+					{
+						"internalType": "address",
+						"name": "newOwner",
+						"type": "address",
+						"indexed": true
+					}
+				],
+				"type": "event",
+				"name": "OwnershipTransferred",
+				"anonymous": false
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint32",
+						"name": "oldWindow",
+						"type": "uint32",
+						"indexed": false
+					},
+					{
+						"internalType": "uint32",
+						"name": "newWindow",
+						"type": "uint32",
+						"indexed": false
+					}
+				],
+				"type": "event",
+				"name": "TWAPWindowUpdated",
+				"anonymous": false
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "DEFAULT_TWAP_WINDOW",
+				"outputs": [
+					{
+						"internalType": "uint32",
+						"name": "",
+						"type": "uint32"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "MAX_TWAP_WINDOW",
+				"outputs": [
+					{
+						"internalType": "uint32",
+						"name": "",
+						"type": "uint32"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "MIN_TWAP_WINDOW",
+				"outputs": [
+					{
+						"internalType": "uint32",
+						"name": "",
+						"type": "uint32"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "ORACLE_POOL",
+				"outputs": [
+					{
+						"internalType": "contract IUniswapV3Pool",
+						"name": "",
+						"type": "address"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "USDC",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "WETH",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				]
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint16",
+						"name": "cardinalityNext",
+						"type": "uint16"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function",
+				"name": "ensureObservationCardinality"
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "getCurrentPrice",
+				"outputs": [
+					{
+						"internalType": "uint160",
+						"name": "sqrtPriceX96Spot",
+						"type": "uint160"
+					},
+					{
+						"internalType": "int24",
+						"name": "tick",
+						"type": "int24"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "getTWAPPrice",
+				"outputs": [
+					{
+						"internalType": "uint160",
+						"name": "sqrtPriceX96Twap",
+						"type": "uint160"
+					},
+					{
+						"internalType": "int24",
+						"name": "tick",
+						"type": "int24"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "governance",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "owner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				]
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isWETHToUSDC",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "quote",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				]
+			},
+			{
+				"inputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function",
+				"name": "renounceOwnership"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_governance",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function",
+				"name": "setGovernance"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint32",
+						"name": "_window",
+						"type": "uint32"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function",
+				"name": "setTWAPWindow"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "newOwner",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function",
+				"name": "transferOwnership"
+			},
+			{
+				"inputs": [],
+				"stateMutability": "view",
+				"type": "function",
+				"name": "twapWindow",
+				"outputs": [
+					{
+						"internalType": "uint32",
+						"name": "",
+						"type": "uint32"
+					}
+				]
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {
+				"getTWAPPrice()": {
+					"returns": {
+						"sqrtPriceX96Twap": "时间加权均价 (sqrt(price) * 2^96)",
+						"tick": "算术平均tick"
+					}
+				},
+				"owner()": {
+					"details": "Returns the address of the current owner."
+				},
+				"quote(uint256,bool)": {
+					"params": {
+						"amount": "输入数量",
+						"isWETHToUSDC": "true=WETH->USDC, false=USDC->WETH"
+					}
+				},
+				"renounceOwnership()": {
+					"details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner."
+				},
+				"transferOwnership(address)": {
+					"details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+				}
+			},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"DEFAULT_TWAP_WINDOW()": {
+					"notice": "默认TWAP窗口：30分钟"
+				},
+				"MAX_TWAP_WINDOW()": {
+					"notice": "最大TWAP窗口：24小时"
+				},
+				"MIN_TWAP_WINDOW()": {
+					"notice": "最小TWAP窗口：5分钟"
+				},
+				"ORACLE_POOL()": {
+					"notice": "V3预言机池（使用0.30%费率池，流动性最深）"
+				},
+				"USDC()": {
+					"notice": "USDC地址"
+				},
+				"WETH()": {
+					"notice": "WETH地址"
+				},
+				"ensureObservationCardinality(uint16)": {
+					"notice": "确保V3池有足够的观察基数"
+				},
+				"getCurrentPrice()": {
+					"notice": "获取当前即时价格（非TWAP，仅用于参考）"
+				},
+				"getTWAPPrice()": {
+					"notice": "获取TWAP价格和当前tick"
+				},
+				"governance()": {
+					"notice": "治理合约地址（可更新TWAP窗口）"
+				},
+				"quote(uint256,bool)": {
+					"notice": "按TWAP价格换算代币数量"
+				},
+				"setGovernance(address)": {
+					"notice": "更新治理合约地址"
+				},
+				"setTWAPWindow(uint32)": {
+					"notice": "更新TWAP窗口（仅治理）"
+				},
+				"twapWindow()": {
+					"notice": "TWAP采样窗口（秒）"
+				}
+			},
+			"version": 1
+		}
+	},
+	"settings": {
+		"remappings": [
+			"@openzeppelin/=lib/openzeppelin-contracts/",
+			"forge-std/=lib/forge-std/src/",
+			"openzeppelin-contracts/=lib/openzeppelin-contracts/"
+		],
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"compilationTarget": {
+			"src/oracles/TWAPOracle.sol": "TWAPOracle"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"viaIR": true
+	},
+	"sources": {
+		"lib/openzeppelin-contracts/contracts/access/Ownable.sol": {
+			"keccak256": "0xff6d0bb2e285473e5311d9d3caacb525ae3538a80758c10649a4d61029b017bb",
+			"urls": [
+				"bzz-raw://8ed324d3920bb545059d66ab97d43e43ee85fd3bd52e03e401f020afb0b120f6",
+				"dweb:/ipfs/QmfEckWLmZkDDcoWrkEvMWhms66xwTLff9DDhegYpvHo1a"
+			],
+			"license": "MIT"
+		},
+		"lib/openzeppelin-contracts/contracts/utils/Context.sol": {
+			"keccak256": "0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2",
+			"urls": [
+				"bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12",
+				"dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF"
+			],
+			"license": "MIT"
+		},
+		"src/interfaces/ICoreInterfaces.sol": {
+			"keccak256": "0x8f62595215a2d3c3f72e73c90eed56e4c44024c97754098ddc5b3bd9257e739f",
+			"urls": [
+				"bzz-raw://89026ea19a61bdc1cde45b41daeff51c874cf7a0264c6cbf0f18d71c5858ab87",
+				"dweb:/ipfs/QmUXd3p7H5AthTxTQffqhVWHgWppboteNA3rZZR4AamxHC"
+			],
+			"license": "MIT"
+		},
+		"src/interfaces/IUniswapV3.sol": {
+			"keccak256": "0x42459b6040572ca3c6e0ee929f8494b085bf3446d7bfd5997aa650ede5dea70a",
+			"urls": [
+				"bzz-raw://18e39827259dbdf26b6cd839cf3d1f715a89accfb1b6f73b0cde645a1e7780be",
+				"dweb:/ipfs/QmXCMKv6NmeGgJ8a83jcwwxgEtocnDc4QUPe8DhEaYRiiP"
+			],
+			"license": "MIT"
+		},
+		"src/libraries/UniswapMath.sol": {
+			"keccak256": "0x07d14482d6e9a0859e1b825c5bdc749f1caed6c024d65e54c3ad8711010bc9d5",
+			"urls": [
+				"bzz-raw://603c885e967203e13ef1e9cfeb6205f227c4d0f444780f0b2da43fec721fb67f",
+				"dweb:/ipfs/Qmch8T65EtWi33f9N7KkU6vns7zfHKeAhKXCKasNDu2CL8"
+			],
+			"license": "MIT"
+		},
+		"src/oracles/TWAPOracle.sol": {
+			"keccak256": "0xf6df4aa8ffbdb733a065662d1c4cd9b494a9ed4b8c4d6c4f291373101a9f4a88",
+			"urls": [
+				"bzz-raw://a7ef34ec0c663c7f45e1201cb5fa67ae45ec1582d7c040ede0fcab5bb964e476",
+				"dweb:/ipfs/QmWeWJRYAEANFxUnNsxDQq1cKRnaCmKGD2RPjomKVhHmtg"
+			],
+			"license": "MIT"
+		}
+	},
+	"version": 1
+}

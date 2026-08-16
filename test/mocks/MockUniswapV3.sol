@@ -98,35 +98,17 @@ contract MockUniswapV3Pool {
     }
 
     function setPrice(uint256 priceUsdcPerEth) public {
-        // priceUsdcPerEth: 人类可读价格，如2000表示1 ETH = 2000 USDC
-        // 计算正确的sqrtPriceX96
-        // P = token1_raw / token0_raw
-        // 如果token0=WETH(18位), token1=USDC(6位):
-        //   P = (price * 10^6) / 10^18 = price / 10^12
-        //   sqrtPriceX96 = sqrt(price * 10^6 * 2^192 / 10^18)
-        // 如果token0=USDC(6位), token1=WETH(18位):
-        //   P = 10^18 / (price * 10^6) = 10^12 / price
-        //   sqrtPriceX96 = sqrt(10^18 * 2^192 / (price * 10^6))
-
+        _updateObservation();
         bool wethIsToken0 = _isWETH(token0);
         uint256 Q96 = 2 ** 96;
-
         if (wethIsToken0) {
-            // token0=WETH, token1=USDC
-            // P = price * 10^6 / 10^18 = price / 10^12
-            // sqrtPriceX96 = sqrt(price) * Q96 / 10^6
-            uint256 sqrtPrice = _sqrt(priceUsdcPerEth * 1e6); // sqrt(price * 10^6)
+            uint256 sqrtPrice = _sqrt(priceUsdcPerEth * 1e6);
             sqrtPriceX96 = uint160((sqrtPrice * Q96) / 1e9);
         } else {
-            // token0=USDC, token1=WETH
-            // P = 10^18 / (price * 10^6) = 10^12 / price
-            // sqrtPriceX96 = 10^6 * Q96 / sqrt(price * 10^6)
             uint256 sqrtPrice = _sqrt(priceUsdcPerEth * 1e6);
             sqrtPriceX96 = uint160((1e9 * Q96) / sqrtPrice);
         }
-
         tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
-        _updateObservation();
     }
 
     function _isWETH(address token) internal view returns (bool) {
@@ -153,29 +135,28 @@ contract MockUniswapV3Pool {
     }
 
     function _updateObservation() internal {
-        Observation storage last = observations[observationIndex];
-        if (last.blockTimestamp == uint32(block.timestamp)) return;
-
-        uint32 delta = uint32(block.timestamp) - last.blockTimestamp;
-        int56 newTickCumulative = last.tickCumulative + int56(tick) * int56(uint56(delta));
-
-        if (observationIndex + 1 >= observationCardinalityNext) {
+        if (observations.length > 0) {
+            Observation storage last = observations[observations.length - 1];
+            if (last.blockTimestamp == uint32(block.timestamp)) return;
+            uint32 delta = uint32(block.timestamp) - last.blockTimestamp;
+            int56 newTickCumulative = last.tickCumulative + int56(tick) * int56(uint56(delta));
             observations.push(Observation({
                 blockTimestamp: uint32(block.timestamp),
                 tickCumulative: newTickCumulative,
                 secondsPerLiquidityCumulativeX128: 0,
                 initialized: true
             }));
-            observationCardinality = uint16(observations.length);
         } else {
-            observations[observationIndex + 1] = Observation({
+            observations.push(Observation({
                 blockTimestamp: uint32(block.timestamp),
-                tickCumulative: newTickCumulative,
+                tickCumulative: 0,
                 secondsPerLiquidityCumulativeX128: 0,
                 initialized: true
-            });
+            }));
         }
-        observationIndex = (observationIndex + 1) % observationCardinalityNext;
+        observationIndex = uint16(observations.length - 1);
+        observationCardinality = uint16(observations.length);
+        observationCardinalityNext = uint16(observations.length);
     }
 
     function slot0() external view returns (
@@ -197,13 +178,67 @@ contract MockUniswapV3Pool {
         returns (int56[] memory tickCumulatives, uint160[] memory)
     {
         tickCumulatives = new int56[](secondsAgos.length);
-        int56 currentCum = observations[observationIndex].tickCumulative;
+        int56 currentCum = observations.length > 0
+            ? observations[observations.length - 1].tickCumulative
+            : int56(0);
+
         for (uint256 i = 0; i < secondsAgos.length; i++) {
-            // 简化：假设价格一直是当前价格，回推tickCumulative
-            tickCumulatives[i] = currentCum - int56(tick) * int56(uint56(secondsAgos[i]));
+            if (uint256(secondsAgos[i]) >= block.timestamp) {
+                // 时间早于第一个观察，用当前tick外推（假设价格一直是当前价格）
+                tickCumulatives[i] = currentCum - int56(tick) * int56(uint56(secondsAgos[i]));
+            } else {
+                uint32 targetTime = uint32(block.timestamp - secondsAgos[i]);
+                tickCumulatives[i] = _getTickCumulativeAt(targetTime);
+            }
         }
         uint160[] memory secLiq = new uint160[](secondsAgos.length);
         return (tickCumulatives, secLiq);
+    }
+
+    /// @notice 获取指定时间点的tickCumulative，使用历史观察插值
+    function _getTickCumulativeAt(uint32 targetTime) internal view returns (int56) {
+        if (observations.length == 0) return 0;
+
+        // 找到blockTimestamp <= targetTime的最新观察
+        int256 beforeIdx = -1;
+        for (uint256 j = 0; j < observations.length; j++) {
+            if (observations[j].blockTimestamp <= targetTime) {
+                beforeIdx = int256(j);
+            }
+        }
+
+        if (beforeIdx < 0) {
+            // 目标时间早于第一个观察，用第一个观察外推
+            return observations[0].tickCumulative;
+        }
+
+        Observation memory beforeOrAt = observations[uint256(beforeIdx)];
+        if (beforeOrAt.blockTimestamp == targetTime) {
+            return beforeOrAt.tickCumulative;
+        }
+
+        // 找blockTimestamp > targetTime的第一个观察
+        int256 afterIdx = -1;
+        for (uint256 j = 0; j < observations.length; j++) {
+            if (observations[j].blockTimestamp > targetTime) {
+                afterIdx = int256(j);
+                break;
+            }
+        }
+
+        if (afterIdx < 0) {
+            // 没有后续观察，用当前tick外推
+            uint32 delta = targetTime - beforeOrAt.blockTimestamp;
+            return beforeOrAt.tickCumulative + int56(tick) * int56(uint56(delta));
+        }
+
+        // 在两个观察之间插值
+        Observation memory atOrAfter = observations[uint256(afterIdx)];
+        uint32 timeDelta = atOrAfter.blockTimestamp - beforeOrAt.blockTimestamp;
+        uint32 targetDelta = targetTime - beforeOrAt.blockTimestamp;
+        if (timeDelta == 0) return beforeOrAt.tickCumulative;
+        int56 cumDelta = atOrAfter.tickCumulative - beforeOrAt.tickCumulative;
+        return beforeOrAt.tickCumulative + (cumDelta * int56(uint56(targetDelta))) / int56(uint56(timeDelta));
     }
 
     function _positionKey(address owner, int24 tickLower, int24 tickUpper)
@@ -295,6 +330,14 @@ contract MockUniswapV3Pool {
     ) external returns (uint128 amount0, uint128 amount1) {
         bytes32 key = _positionKey(msg.sender, tickLower, tickUpper);
         PositionInfo storage pos = positions[key];
+
+        // 如果设置了mockFees，在collect时模拟手续费累积
+        if (mockFeesPerPosition > 0 && pos.liquidity > 0) {
+            IMintable(token0).mint(address(this), mockFeesPerPosition);
+            IMintable(token1).mint(address(this), mockFeesPerPosition);
+            pos.tokensOwed0 += uint128(mockFeesPerPosition);
+            pos.tokensOwed1 += uint128(mockFeesPerPosition);
+        }
 
         amount0 = amount0Requested > pos.tokensOwed0 ? pos.tokensOwed0 : amount0Requested;
         amount1 = amount1Requested > pos.tokensOwed1 ? pos.tokensOwed1 : amount1Requested;
