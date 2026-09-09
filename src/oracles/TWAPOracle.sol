@@ -9,31 +9,18 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title TWAPOracle
  * @notice 基于Uniswap V3的时间加权平均价格预言机
- * @dev 读取V3池的observe()获取TWAP，防止瞬时价格操纵
  */
 contract TWAPOracle is ITWAPOracle, Ownable {
-    /// @notice V3预言机池（使用0.30%费率池，流动性最深）
     IUniswapV3Pool public immutable ORACLE_POOL;
 
-    /// @notice WETH地址
     address public immutable override WETH;
-
-    /// @notice USDC地址
     address public immutable override USDC;
 
-    /// @notice 治理合约地址（可更新TWAP窗口）
     address public governance;
-
-    /// @notice TWAP采样窗口（秒）
     uint32 public override twapWindow;
 
-    /// @notice 默认TWAP窗口：30分钟
     uint32 public constant DEFAULT_TWAP_WINDOW = 1800;
-
-    /// @notice 最小TWAP窗口：5分钟
     uint32 public constant MIN_TWAP_WINDOW = 300;
-
-    /// @notice 最大TWAP窗口：24小时
     uint32 public constant MAX_TWAP_WINDOW = 86400;
 
     event TWAPWindowUpdated(uint32 oldWindow, uint32 newWindow);
@@ -60,7 +47,6 @@ contract TWAPOracle is ITWAPOracle, Ownable {
         governance = _governance;
         twapWindow = DEFAULT_TWAP_WINDOW;
 
-        // 验证池的token匹配
         address token0 = IUniswapV3Pool(_oraclePool).token0();
         address token1 = IUniswapV3Pool(_oraclePool).token1();
         require(
@@ -69,23 +55,22 @@ contract TWAPOracle is ITWAPOracle, Ownable {
         );
     }
 
-    /// @notice 获取TWAP价格和当前tick
-    /// @return sqrtPriceX96Twap 时间加权均价 (sqrt(price) * 2^96)
-    /// @return tick 算术平均tick
+    /**
+     *  @notice 获取TWAP价格和当前tick
+     * @return sqrtPriceX96Twap 时间加权均价 (sqrt(price) * 2^96)
+     * @return tick 算术平均tick
+     */
     function getTWAPPrice() public view override returns (uint160 sqrtPriceX96Twap, int24 tick) {
         uint32 window = twapWindow;
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[0] = window;
         secondsAgos[1] = 0;
 
-        // observe返回tickCumulatives
         (int56[] memory tickCumulatives, ) = ORACLE_POOL.observe(secondsAgos);
 
-        // 计算时间加权平均tick
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
         int24 arithmeticMeanTick = int24(tickCumulativesDelta / int56(uint56(window)));
 
-        // 向下取整处理负数
         if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int56(uint56(window)) != 0)) {
             arithmeticMeanTick--;
         }
@@ -94,14 +79,22 @@ contract TWAPOracle is ITWAPOracle, Ownable {
         sqrtPriceX96Twap = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
     }
 
-    /// @notice 获取当前即时价格（非TWAP，仅用于参考）
+    /// @notice 获取当前即时价格
+
+    /**
+     * @notice 获取当前即时价格
+     * @return sqrtPriceX96Spot 当前即时价格 (sqrt(price) * 2^96)
+     * @return tick 当时刻度
+     */
     function getCurrentPrice() external view returns (uint160 sqrtPriceX96Spot, int24 tick) {
         (sqrtPriceX96Spot, tick, , , , , ) = ORACLE_POOL.slot0();
     }
 
-    /// @notice 按TWAP价格换算代币数量
-    /// @param amount 输入数量
-    /// @param isWETHToUSDC true=WETH->USDC, false=USDC->WETH
+    /**
+     * @notice 按TWAP价格换算代币数量
+     * @param amount 输入数量
+     * @param isWETHToUSDC true=WETH->USDC, false=USDC->WETH
+     */
     function quote(uint256 amount, bool isWETHToUSDC)
         external
         view
@@ -110,55 +103,47 @@ contract TWAPOracle is ITWAPOracle, Ownable {
     {
         (uint160 sqrtPriceX96Twap, ) = getTWAPPrice();
 
-        // 确定token0/token1顺序
         bool wethIsToken0 = ORACLE_POOL.token0() == WETH;
-
-        // sqrtPriceX96 = sqrt(price) * 2^96
-        // price = (sqrtPriceX96 / 2^96)^2 = sqrtPriceX96^2 / 2^192
-        // price 表示 token1/token0 的比率（以最小单位计）
-        // 注意：price已经包含了精度差，不需要额外乘除1e12
-
-        uint256 priceSquared = uint256(sqrtPriceX96Twap) * uint256(sqrtPriceX96Twap);
+        uint256 priceX96 = FullMath.mulDiv(uint256(sqrtPriceX96Twap), uint256(sqrtPriceX96Twap), 2 ** 96);
 
         if (isWETHToUSDC) {
             if (wethIsToken0) {
-                // token0=WETH, token1=USDC
-                // price = USDC_raw / WETH_raw
-                // USDC_raw = WETH_raw * price
-                return FullMath.mulDiv(amount, priceSquared, 2 ** 192);
+                return FullMath.mulDiv(amount, priceX96, 2 ** 96);
             } else {
-                // token0=USDC, token1=WETH
-                // price = WETH_raw / USDC_raw
-                // USDC_raw = WETH_raw / price
-                return FullMath.mulDiv(amount, 2 ** 192, priceSquared);
+                return FullMath.mulDiv(amount, 2 ** 96, priceX96);
             }
         } else {
             if (wethIsToken0) {
-                // token0=WETH, token1=USDC
-                // WETH_raw = USDC_raw / price
-                return FullMath.mulDiv(amount, 2 ** 192, priceSquared);
+                return FullMath.mulDiv(amount, 2 ** 96, priceX96);
             } else {
-                // token0=USDC, token1=WETH
-                // WETH_raw = USDC_raw * price
-                return FullMath.mulDiv(amount, priceSquared, 2 ** 192);
+                return FullMath.mulDiv(amount, priceX96, 2 ** 96);
             }
         }
     }
 
-    /// @notice 更新TWAP窗口（仅治理）
+    /**
+     * @notice 更新TWAP窗口（仅治理）
+     * @param _window 新的TWAP窗口大小
+     */
     function setTWAPWindow(uint32 _window) external onlyGovernance {
         require(_window >= MIN_TWAP_WINDOW && _window <= MAX_TWAP_WINDOW, "TWAPOracle: invalid window");
         emit TWAPWindowUpdated(twapWindow, _window);
         twapWindow = _window;
     }
 
-    /// @notice 更新治理合约地址
+    /**
+     * @notice 更新治理合约地址
+     * @param _governance 新的治理合约地址
+     */
     function setGovernance(address _governance) external onlyOwner {
         emit GovernanceUpdated(governance, _governance);
         governance = _governance;
     }
 
-    /// @notice 确保V3池有足够的观察基数
+    /**
+     * @notice 确保V3池有足够的观察基数
+     * @param cardinalityNext 新的观察基数
+     */
     function ensureObservationCardinality(uint16 cardinalityNext) external {
         ORACLE_POOL.increaseObservationCardinalityNext(cardinalityNext);
     }

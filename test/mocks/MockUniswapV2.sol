@@ -5,10 +5,6 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/**
- * @title MockUniswapV2Pair
- * @notice 模拟Uniswap V2 Pair
- */
 contract MockUniswapV2Pair is ERC20 {
     using SafeERC20 for IERC20;
 
@@ -87,9 +83,6 @@ library Math {
     }
 }
 
-/**
- * @title MockUniswapV2Factory
- */
 contract MockUniswapV2Factory {
     mapping(address => mapping(address => address)) public getPair;
     address[] public allPairs;
@@ -108,9 +101,6 @@ contract MockUniswapV2Factory {
     }
 }
 
-/**
- * @title MockUniswapV2Router
- */
 contract MockUniswapV2Router {
     using SafeERC20 for IERC20;
 
@@ -132,20 +122,33 @@ contract MockUniswapV2Router {
         address to,
         uint256
     ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
-        amountA = amountADesired;
-        amountB = amountBDesired;
-        require(amountA >= amountAMin && amountB >= amountBMin, "V2: SLIPPAGE");
-
-        IERC20(tokenA).safeTransferFrom(msg.sender, address(this), amountA);
-        IERC20(tokenB).safeTransferFrom(msg.sender, address(this), amountB);
-
         address pair = MockUniswapV2Factory(factory).getPair(tokenA, tokenB);
         if (pair == address(0)) {
             pair = MockUniswapV2Factory(factory).createPair(tokenA, tokenB);
         }
 
-        IERC20(tokenA).safeTransfer(pair, amountA);
-        IERC20(tokenB).safeTransfer(pair, amountB);
+        (uint112 reserveA, uint112 reserveB, ) = MockUniswapV2Pair(pair).getReserves();
+
+        if (reserveA == 0 && reserveB == 0) {
+            amountA = amountADesired;
+            amountB = amountBDesired;
+        } else {
+            uint256 amountBOptimal = (amountADesired * reserveB) / reserveA;
+            if (amountBOptimal <= amountBDesired) {
+                require(amountBOptimal >= amountBMin, "V2: SLIPPAGE");
+                amountA = amountADesired;
+                amountB = amountBOptimal;
+            } else {
+                uint256 amountAOptimal = (amountBDesired * reserveA) / reserveB;
+                require(amountAOptimal >= amountAMin, "V2: SLIPPAGE");
+                amountA = amountAOptimal;
+                amountB = amountBDesired;
+            }
+        }
+        require(amountA >= amountAMin && amountB >= amountBMin, "V2: SLIPPAGE");
+
+        IERC20(tokenA).safeTransferFrom(msg.sender, pair, amountA);
+        IERC20(tokenB).safeTransferFrom(msg.sender, pair, amountB);
         liquidity = MockUniswapV2Pair(pair).mint(to);
     }
 
@@ -171,22 +174,73 @@ contract MockUniswapV2Router {
         address to,
         uint256
     ) external returns (uint256[] memory amounts) {
-        // 简化：1:1 swap
+        require(path.length == 2, "V2: INVALID_PATH");
+        address pair = MockUniswapV2Factory(factory).getPair(path[0], path[1]);
+        require(pair != address(0), "V2: PAIR_NOT_FOUND");
+
+        (uint112 reserve0, uint112 reserve1, ) = MockUniswapV2Pair(pair).getReserves();
+
+        uint256 reserveIn;
+        uint256 reserveOut;
+        bool inputIsToken0 = (path[0] == MockUniswapV2Pair(pair).token0());
+        if (inputIsToken0) {
+            reserveIn = reserve0;
+            reserveOut = reserve1;
+        } else {
+            reserveIn = reserve1;
+            reserveOut = reserve0;
+        }
+
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 amountOut = (amountInWithFee * reserveOut) / (reserveIn * 1000 + amountInWithFee);
+        require(amountOut > 0, "V2: INSUFFICIENT_OUTPUT");
+        require(amountOut >= amountOutMin, "V2: SLIPPAGE");
+
+        IERC20(path[0]).safeTransferFrom(msg.sender, pair, amountIn);
+        IERC20(path[1]).safeTransfer(to, amountOut);
+
+        if (inputIsToken0) {
+            MockUniswapV2Pair(pair).setReserves(
+                uint112(reserve0 + amountIn),
+                uint112(reserve1 - amountOut)
+            );
+        } else {
+            MockUniswapV2Pair(pair).setReserves(
+                uint112(reserve0 - amountOut),
+                uint112(reserve1 + amountIn)
+            );
+        }
+
         amounts = new uint256[](2);
         amounts[0] = amountIn;
-        amounts[1] = amountIn;
-        require(amounts[1] >= amountOutMin, "V2: SLIPPAGE");
-        IERC20(path[0]).safeTransferFrom(msg.sender, address(this), amountIn);
-        IERC20(path[1]).safeTransfer(to, amounts[1]);
+        amounts[1] = amountOut;
     }
 
     function quote(uint256 amountA, uint256 reserveA, uint256 reserveB) external pure returns (uint256) {
         return (amountA * reserveB) / reserveA;
     }
 
-    function getAmountsOut(uint256 amountIn, address[] calldata) external pure returns (uint256[] memory amounts) {
+    function getAmountsOut(uint256 amountIn, address[] calldata path) external view returns (uint256[] memory amounts) {
+        require(path.length == 2, "V2: INVALID_PATH");
+        address pair = MockUniswapV2Factory(factory).getPair(path[0], path[1]);
+        require(pair != address(0), "V2: PAIR_NOT_FOUND");
+
+        (uint112 reserve0, uint112 reserve1, ) = MockUniswapV2Pair(pair).getReserves();
+        uint256 reserveIn;
+        uint256 reserveOut;
+        if (path[0] == MockUniswapV2Pair(pair).token0()) {
+            reserveIn = reserve0;
+            reserveOut = reserve1;
+        } else {
+            reserveIn = reserve1;
+            reserveOut = reserve0;
+        }
+
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 amountOut = (amountInWithFee * reserveOut) / (reserveIn * 1000 + amountInWithFee);
+
         amounts = new uint256[](2);
         amounts[0] = amountIn;
-        amounts[1] = amountIn;
+        amounts[1] = amountOut;
     }
 }

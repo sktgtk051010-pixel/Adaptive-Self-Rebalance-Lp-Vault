@@ -6,26 +6,14 @@ const LOCAL_CHAIN_ID = 31337;
 
 // Sepolia 地址
 const SEPOLIA_ADDRESSES = {
-    vault: '0xEf104626cef86709284bA1e166A902626BB63473',
+    vault: '0x8748D341274df6915bcbbA61f2fDaC337acf7A6F',
     weth: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
     usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
-    oracle: '0x54fAb281E70914f10b61A46231940F01363B0613',
-    strategy: '0xf94A724BD5Ba064ce8f09d264AC1efAE5F3c8723',
-    governance: '0x5079602959f0DD9F07FF59eCB8961518292E12e7',
-    incentives: '0x1ed10deB31551f90D711ca2050A529F14b9D2b7a',
-    govToken: '0x89604c71b77f60e31D6dB9FBe4280A588A7456d8',
-};
-
-// Anvil 主网分叉部署地址（从 DeployFork.s.sol 输出）
-const LOCAL_ADDRESSES = {
-    vault: '0xDe8E63b8F12eb883cB997D66333241581cE8049C',
-    weth: '0x0c82CB749B53cB3433319cd6Be18d746b3781B9B',
-    usdc: '0xB7a90aB16DC735fEef37B6Cc8c730800a0303C7A',
-    oracle: '0xa36A4fe5D0a8E2b67f8bA71879be4c32a831F82a',
-    strategy: '0x600e629667376ed170F72649cc45FcB2b4A91f07',
-    governance: '0x82A5dF42DF7c74eD0FeFd0e352f8932958D24da0',
-    incentives: '0xa6b6Df450a921753d4706F93eE809d8596fC6727',
-    govToken: '0xD2ec315B6f013f3AaaB32da7EdFdb6c3f28a040E',
+    oracle: '0x84Fe1e0F45ADD448501326d4851A1F49BE2ab481',
+    strategy: '0x15B07834C30e785d1B7eB6Fe042851895D15d910',
+    governance: '0xd0b9F7eD49f01790Abe071E838e1eF3550d45EF6',
+    incentives: ' 0xC2f7200cC9bd7c49DF58F2E93baB1C53261ABC4a',
+    govToken: '0x91f7Fea94f59d898aAd8e6f4728eC35A2Caf3530',
 };
 
 // 默认使用Sepolia
@@ -51,12 +39,27 @@ const VAULT_ABI = [
     'function cumulativeFeesUSDC() view returns (uint256)',
     'function getDistribution() view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)',
     'function TOKEN0_IS_WETH() view returns (bool)',
+    'function lastRebalanceTimestamp() view returns (uint256)',
 ];
 const ORACLE_ABI = [
     'function getTWAPPrice() view returns (uint160 sqrtPriceX96, int24 tick)',
 ];
 const GOV_ABI = [
     'function getParams() view returns (tuple(uint32 twapWindow, uint256 rebalanceThreshold, uint256 incentiveBps, uint256 maxSlippageBps, uint256 v2WeightCap, uint256 v3LowFeeWeightCap, uint256 v3HighFeeWeightCap, uint256 tightRangeBps, uint256 mediumRangeBps, uint256 wideRangeBps))',
+    'function propose(uint8 pType, uint256 newValue, uint256 newValue2, uint256 newValue3, string description) returns (uint256)',
+    'function castVote(uint256 proposalId, bool support)',
+    'function getProposalState(uint256 proposalId) view returns (uint8)',
+    'function executeProposal(uint256 proposalId)',
+    'function executeTimelock(uint256 proposalId)',
+    'function cancelProposal(uint256 proposalId)',
+    'function proposalCount() view returns (uint256)',
+    'function proposals(uint256) view returns (uint256 id, address proposer, uint8 pType, uint256 newValue, uint256 newValue2, uint256 newValue3, uint256 snapshot, uint256 startBlock, uint256 endBlock, uint256 forVotes, uint256 againstVotes, bool executed, bool canceled)',
+    'function votingDelay() view returns (uint256)',
+    'function votingPeriod() view returns (uint256)',
+    'function proposalThreshold() view returns (uint256)',
+    'function quorumVotes() view returns (uint256)',
+    'function timelockDelay() view returns (uint256)',
+    'function timelockActions(uint256) view returns (uint256 readyTime, uint8 pType, uint256 v1, uint256 v2, uint256 v3)',
 ];
 const INCENTIVES_ABI = [
     'function rewardsEarned(address) view returns (uint256)',
@@ -68,6 +71,10 @@ const INCENTIVES_ABI = [
 ];
 const GOV_TOKEN_ABI = [
     'function balanceOf(address) view returns (uint256)',
+    'function delegate(address delegatee)',
+    'function delegates(address account) view returns (address)',
+    'function getVotes(address account) view returns (uint256)',
+    'function getPastVotes(address account, uint256 blockNumber) view returns (uint256)',
 ];
 
 let provider, signer, account;
@@ -363,16 +370,26 @@ async function loadVaultData() {
         setText('totalAssets', '待数据');
     }
 
-    // 3. 加载再平衡统计
+    // 3. 加载再平衡统计（分开try-catch，一个失败不影响另一个）
+    // 3a. 再平衡次数
     try {
         const reCount = await C.vault.rebalanceCount();
-        const fees = await C.vault.cumulativeFeesUSDC();
         setText('rebalanceCount', reCount.toString());
-        setText('cumulativeFees', '$' + parseFloat(ethers.utils.formatUnits(fees,6)).toFixed(4));
     } catch(e) {
-        console.error('Vault stats:', e.message);
+        console.error('rebalanceCount error:', e);
         setText('rebalanceCount', '-');
+    }
+
+    // 3b. 累计手续费
+    try {
+        const fees = await C.vault.cumulativeFeesUSDC();
+        const feesStr = '$' + parseFloat(ethers.utils.formatUnits(fees,6)).toFixed(4);
+        setText('cumulativeFees', feesStr); // 数据看板标签页
+        setText('rbFees', feesStr);         // 再平衡标签页
+    } catch(e) {
+        console.error('cumulativeFeesUSDC error:', e);
         setText('cumulativeFees', '-');
+        setText('rbFees', '-');
     }
 
     // 4. 更新预估（失败不影响主数据）
@@ -391,7 +408,7 @@ async function loadDistribution() {
 
         function w2u(bn) {
             if (!twapPrice || twapPrice <= 0) return ethers.BigNumber.from(0);
-            return bn.mul(Math.floor(twapPrice * 10000)).div(10000).mul(1e6).div(1e18);
+            return bn.mul(Math.floor(twapPrice * 10000)).div(10000).mul('1000000').div('1000000000000000000');
         }
 
         var idle = idleUsdc.add(w2u(idleWeth));
@@ -456,20 +473,19 @@ async function loadIncentivesData() {
     try {
         var rewards = await C.incentives.rewardsEarned(account);
         var bps = await C.incentives.incentiveBps();
-        var canReb = await C.incentives.canRebalance();
-        var lastTime = await C.incentives.lastRebalanceTime();
-        var cooldown = await C.incentives.cooldownPeriod();
 
         setText('rbRewards', '$' + parseFloat(ethers.utils.formatUnits(rewards,6)).toFixed(4));
         setText('rbIncentiveBps', (bps/100).toFixed(1) + '%');
 
-        if (lastTime.eq(0)) {
+        // 冷却状态从金库读取（金库的REBALANCE_COOLDOWN=600秒才是真正控制rebalance的）
+        var vaultLastRebalance = await C.vault.lastRebalanceTimestamp();
+        var vaultCooldown = 600; // REBALANCE_COOLDOWN = 600秒
+
+        if (vaultLastRebalance.eq(0)) {
             setText('cooldownStatus', '✅ 可触发（首次）');
-        } else if (canReb) {
-            setText('cooldownStatus', '✅ 可触发');
         } else {
-            var elapsed = Math.floor(Date.now()/1000) - lastTime.toNumber();
-            var remain = cooldown.toNumber() - elapsed;
+            var elapsed = Math.floor(Date.now()/1000) - vaultLastRebalance.toNumber();
+            var remain = vaultCooldown - elapsed;
             setText('cooldownStatus', remain > 0 ? '⏳ 冷却中 '+remain+'s' : '✅ 可触发');
         }
     } catch(e) {
@@ -486,6 +502,266 @@ async function loadGovTokenBalance() {
         setText('govBalance', ethers.utils.formatEther(bal) + ' ALP-GOV');
     } catch(e) {
         setText('govBalance', '0 ALP-GOV');
+    }
+    loadDelegateStatus();
+    loadProposals();
+}
+
+// ============================================================
+// 治理功能
+// ============================================================
+
+// 提案类型名称映射
+const PROPOSAL_TYPE_NAMES = [
+    'TWAP 窗口',
+    '再平衡阈值',
+    '激励比例',
+    '最大滑点',
+    '权重上限',
+    '区间范围'
+];
+
+// 提案状态名称映射
+const PROPOSAL_STATE_NAMES = [
+    '⏳ 等待投票',
+    '🗳️ 投票中',
+    '✅ 已通过',
+    '✔️ 已执行',
+    '❌ 未通过',
+    '🚫 已取消'
+];
+
+// 提案类型改变时，显示/隐藏三值输入框
+function onProposalTypeChange() {
+    var type = parseInt($('proposalType').value);
+    var singleGroup = $('singleValueGroup');
+    var tripleGroup = $('tripleValueGroup');
+    if (type === 4 || type === 5) {
+        // 权重上限(4)和区间范围(5)需要三个值
+        singleGroup.style.display = 'none';
+        tripleGroup.style.display = 'block';
+        if (type === 4) {
+            $('label1').textContent = 'V2 权重上限 (bps)';
+            $('label2').textContent = 'V3 低费率上限 (bps)';
+            $('label3').textContent = 'V3 高费率上限 (bps)';
+        } else {
+            $('label1').textContent = '窄区间 (bps)';
+            $('label2').textContent = '中区间 (bps)';
+            $('label3').textContent = '宽区间 (bps)';
+        }
+    } else {
+        // 其他类型只需要一个值
+        singleGroup.style.display = 'block';
+        tripleGroup.style.display = 'none';
+    }
+}
+
+// 加载委托状态
+async function loadDelegateStatus() {
+    try {
+        var delegatee = await C.govToken.delegates(account);
+        if (delegatee === ethers.constants.AddressZero) {
+            setText('delegateStatus', '❌ 未委托');
+        } else if (delegatee.toLowerCase() === account.toLowerCase()) {
+            setText('delegateStatus', '✅ 已委托给自己');
+        } else {
+            setText('delegateStatus', '✅ 已委托: ' + delegatee.substring(0,8) + '...');
+        }
+    } catch(e) {
+        setText('delegateStatus', '-');
+    }
+}
+
+// 委托投票权给自己
+async function delegateVotes() {
+    try {
+        showTxModal('委托中', '请确认交易...');
+        var tx = await C.govToken.delegate(account);
+        await tx.wait();
+        hideTxModal();
+        showToast('委托成功！', 'success');
+        loadDelegateStatus();
+    } catch(e) {
+        hideTxModal();
+        var msg = (e.error && e.error.message) || e.message || '';
+        if (msg.indexOf('user rejected') >= 0) showToast('交易已取消', 'warn');
+        else showToast('委托失败: ' + msg.substring(0,80), 'error');
+    }
+}
+
+// 创建提案
+async function createProposal() {
+    try {
+        var type = parseInt($('proposalType').value);
+        var desc = $('proposalDesc').value || '';
+        var v1, v2, v3;
+
+        if (type === 4 || type === 5) {
+            v1 = ethers.BigNumber.from($('proposalValue1').value || '0');
+            v2 = ethers.BigNumber.from($('proposalValue2').value || '0');
+            v3 = ethers.BigNumber.from($('proposalValue3').value || '0');
+        } else {
+            v1 = ethers.BigNumber.from($('proposalValue1').value || '0');
+            v2 = ethers.BigNumber.from(0);
+            v3 = ethers.BigNumber.from(0);
+        }
+
+        showTxModal('创建提案中', '请确认交易...');
+        var tx = await C.governance.propose(type, v1, v2, v3, desc);
+        var receipt = await tx.wait();
+        hideTxModal();
+
+        // 从事件中获取提案ID
+        var proposalId = 0;
+        for (var i = 0; i < receipt.logs.length; i++) {
+            try {
+                var parsed = C.governance.interface.parseLog(receipt.logs[i]);
+                if (parsed.name === 'ProposalCreated') {
+                    proposalId = parsed.args.id.toString();
+                    break;
+                }
+            } catch(e) {}
+        }
+
+        showToast('提案创建成功！ID: ' + proposalId, 'success');
+        loadProposals();
+    } catch(e) {
+        hideTxModal();
+        var msg = (e.error && e.error.message) || e.message || '';
+        if (msg.indexOf('user rejected') >= 0) showToast('交易已取消', 'warn');
+        else if (msg.indexOf('below proposal threshold') >= 0) showToast('治理代币不足，需要至少1000枚', 'error');
+        else showToast('创建失败: ' + msg.substring(0,80), 'error');
+    }
+}
+
+// 加载提案列表
+async function loadProposals() {
+    try {
+        var count = await C.governance.proposalCount();
+        var countNum = count.toNumber();
+
+        if (countNum === 0) {
+            $('proposalList').innerHTML = '<p class="hint">暂无提案</p>';
+            return;
+        }
+
+        var html = '';
+        for (var i = countNum; i >= 1; i--) {
+            try {
+                var p = await C.governance.proposals(i);
+                var state = await C.governance.getProposalState(i);
+                html += renderProposal(i, p, state);
+            } catch(e) {
+                console.error('Load proposal ' + i + ' error:', e);
+            }
+        }
+        $('proposalList').innerHTML = html;
+    } catch(e) {
+        $('proposalList').innerHTML = '<p class="hint">加载失败: ' + e.message + '</p>';
+    }
+}
+
+// 渲染单个提案
+function renderProposal(id, p, state) {
+    var typeName = PROPOSAL_TYPE_NAMES[p.pType] || ('类型' + p.pType);
+    var stateName = PROPOSAL_STATE_NAMES[state] || ('状态' + state);
+    var stateClass = state === 2 ? 'state-success' : (state === 3 ? 'state-executed' : (state === 4 ? 'state-fail' : 'state-pending'));
+
+    // 提案值显示
+    var valuesStr = '';
+    if (p.pType === 4 || p.pType === 5) {
+        valuesStr = '[' + p.newValue.toString() + ', ' + p.newValue2.toString() + ', ' + p.newValue3.toString() + ']';
+    } else {
+        valuesStr = p.newValue.toString();
+    }
+
+    var forVotes = ethers.utils.formatEther(p.forVotes);
+    var againstVotes = ethers.utils.formatEther(p.againstVotes);
+
+    // 操作按钮
+    var actions = '';
+    if (state === 1) {
+        // 投票中
+        actions = '<button class="btn btn-small btn-success" onclick="voteProposal(' + id + ', true)">👍 赞成</button>' +
+                  '<button class="btn btn-small btn-danger" onclick="voteProposal(' + id + ', false)">👎 反对</button>';
+    } else if (state === 2) {
+        // 已通过，可执行
+        actions = '<button class="btn btn-small btn-primary" onclick="executeProposal(' + id + ')">⚡ 执行提案</button>';
+    } else if (state === 3) {
+        // 已执行，检查时间锁
+        actions = '<button class="btn btn-small btn-primary" onclick="executeTimelock(' + id + ')">⏰ 执行时间锁</button>';
+    }
+
+    return '<div class="proposal-card">' +
+        '<div class="proposal-header">' +
+            '<span class="proposal-id">#' + id + '</span>' +
+            '<span class="proposal-type">' + typeName + '</span>' +
+            '<span class="proposal-state ' + stateClass + '">' + stateName + '</span>' +
+        '</div>' +
+        '<div class="proposal-body">' +
+            '<p><b>提议者:</b> ' + p.proposer.substring(0,10) + '...' + p.proposer.substring(p.proposer.length-6) + '</p>' +
+            '<p><b>新值:</b> ' + valuesStr + '</p>' +
+            '<p><b>赞成:</b> ' + parseFloat(forVotes).toFixed(2) + ' ALP-GOV | <b>反对:</b> ' + parseFloat(againstVotes).toFixed(2) + ' ALP-GOV</p>' +
+            '<p><b>投票区块:</b> ' + p.startBlock.toString() + ' ~ ' + p.endBlock.toString() + '</p>' +
+        '</div>' +
+        '<div class="proposal-actions">' + actions + '</div>' +
+    '</div>';
+}
+
+// 投票
+async function voteProposal(id, support) {
+    try {
+        showTxModal('投票中', '请确认交易...');
+        var tx = await C.governance.castVote(id, support);
+        await tx.wait();
+        hideTxModal();
+        showToast(support ? '赞成投票成功！' : '反对投票成功！', 'success');
+        loadProposals();
+    } catch(e) {
+        hideTxModal();
+        var msg = (e.error && e.error.message) || e.message || '';
+        if (msg.indexOf('user rejected') >= 0) showToast('交易已取消', 'warn');
+        else if (msg.indexOf('no voting power') >= 0) showToast('没有投票权，请先委托投票权', 'error');
+        else if (msg.indexOf('already voted') >= 0) showToast('您已经投过票了', 'error');
+        else if (msg.indexOf('not active') >= 0) showToast('提案不在投票期', 'error');
+        else showToast('投票失败: ' + msg.substring(0,80), 'error');
+    }
+}
+
+// 执行提案
+async function executeProposal(id) {
+    try {
+        showTxModal('执行提案中', '请确认交易...');
+        var tx = await C.governance.executeProposal(id);
+        await tx.wait();
+        hideTxModal();
+        showToast('提案执行成功！已加入48小时时间锁', 'success');
+        loadProposals();
+    } catch(e) {
+        hideTxModal();
+        var msg = (e.error && e.error.message) || e.message || '';
+        if (msg.indexOf('user rejected') >= 0) showToast('交易已取消', 'warn');
+        else if (msg.indexOf('not succeeded') >= 0) showToast('提案未通过，无法执行', 'error');
+        else showToast('执行失败: ' + msg.substring(0,80), 'error');
+    }
+}
+
+// 执行时间锁
+async function executeTimelock(id) {
+    try {
+        showTxModal('执行时间锁中', '请确认交易...');
+        var tx = await C.governance.executeTimelock(id);
+        await tx.wait();
+        hideTxModal();
+        showToast('时间锁执行成功！参数已更新', 'success');
+        loadProposals();
+        loadGovernanceParams();
+    } catch(e) {
+        hideTxModal();
+        var msg = (e.error && e.error.message) || e.message || '';
+        if (msg.indexOf('user rejected') >= 0) showToast('交易已取消', 'warn');
+        else if (msg.indexOf('timelock not ready') >= 0) showToast('时间锁未到期，请等待48小时', 'error');
+        else showToast('执行失败: ' + msg.substring(0,80), 'error');
     }
 }
 
@@ -736,7 +1012,7 @@ function copyVaultAddr() {
 //   1 WETH = sqrtPriceX96^2 * 1e12 / 2^192 USDC
 function calcPrice(sqrtPriceX96) {
     var Q192 = ethers.BigNumber.from(2).pow(192);
-    var PRICE_SCALE = ethers.BigNumber.from('1000000000000'); // 1e12 = 1e18 / 1e6
+    var PRICE_SCALE = ethers.BigNumber.from('1000000000000000000'); // 1e18
     var priceSquared = sqrtPriceX96.mul(sqrtPriceX96);
 
     var usdcRawPerWeth;

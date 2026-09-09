@@ -11,42 +11,26 @@ import {AdaptiveGovernance} from "../governance/AdaptiveGovernance.sol";
 /**
  * @title RebalanceIncentives
  * @notice 再平衡执行者激励机制（Variation 1）
- * @dev 任意外部用户/机器人可触发再平衡，系统验证正向收益后发放奖励
  */
 contract RebalanceIncentives is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
-    /// @notice 金库地址
     address public immutable VAULT;
 
-    /// @notice 奖励代币（USDC）
     IERC20 public immutable REWARD_TOKEN;
-
     AdaptiveGovernance public immutable GOVERNANCE;
 
-    /// @notice 激励比例（basis points，从金库收益中扣除）
     uint256 public incentiveBps;
-
-    /// @notice 最小再平衡收益阈值（USDC，6位），低于此值不发奖励
     uint256 public minProfitThreshold;
-
-    /// @notice 再平衡冷却时间（秒）
     uint256 public cooldownPeriod;
-
-    /// @notice 上次再平衡时间
     uint256 public lastRebalanceTime;
-
-    /// @notice 累计发放奖励
     uint256 public totalRewardsPaid;
-
-    /// @notice 每个调用者的奖励记录
     mapping(address => uint256) public rewardsEarned;
 
-    /// @notice 默认参数
-    uint256 public constant DEFAULT_INCENTIVE_BPS = 500;     // 5%的收益作为奖励
-    uint256 public constant DEFAULT_MIN_PROFIT = 1e6;        // 1 USDC
-    uint256 public constant DEFAULT_COOLDOWN = 300;          // 5分钟
-    uint256 public constant MAX_INCENTIVE_BPS = 2000;        // 最高20%
+    uint256 public constant DEFAULT_INCENTIVE_BPS = 500;    
+    uint256 public constant DEFAULT_MIN_PROFIT = 1e6;       
+    uint256 public constant DEFAULT_COOLDOWN = 300;         
+    uint256 public constant MAX_INCENTIVE_BPS = 2000;      
 
     event RebalanceExecuted(
         address indexed executor,
@@ -82,17 +66,17 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
         cooldownPeriod = DEFAULT_COOLDOWN;
     }
 
-    /// @notice 记录再平衡执行并计算奖励（由金库在再平衡成功后调用）
-    /// @param executor 执行者地址
-    /// @param totalValueBefore 再平衡前金库总价值（USDC计价）
-    /// @param totalValueAfter 再平衡后金库总价值（USDC计价）
-    /// @return reward 发放给执行者的奖励金额
+    /**
+     * @notice 记录再平衡执行并计算奖励
+     * @param executor 执行者地址
+     * @param totalValueBefore 再平衡前金库总价值（USDC计价）
+     * @param totalValueAfter 再平衡后金库总价值（USDC计价）
+     */
     function onRebalanceExecuted(
         address executor,
         uint256 totalValueBefore,
         uint256 totalValueAfter
     ) external onlyVault nonReentrant returns (uint256 reward) {
-        // 第一次rebalance（lastRebalanceTime==0）跳过冷却检查
         if (lastRebalanceTime != 0) {
             require(
                 block.timestamp >= lastRebalanceTime + cooldownPeriod,
@@ -100,15 +84,12 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
             );
         }
 
-        // 验证再平衡为正向收益
         require(totalValueAfter > totalValueBefore, "Incentives: not profitable");
         uint256 profit = totalValueAfter - totalValueBefore;
         require(profit >= minProfitThreshold, "Incentives: profit too small");
 
-        // 计算奖励
         reward = FullMath.mulDiv(profit, incentiveBps, 10000);
 
-        // 检查奖励池余额
         uint256 available = REWARD_TOKEN.balanceOf(address(this));
         if (reward > available) {
             reward = available;
@@ -136,6 +117,11 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
     }
 
     /// @notice 查询待领取奖励
+    /**
+     * @notice 查询待领取奖励
+     * @param user 查询的用户地址
+     * @return 待领取奖励数量
+     */
     function pendingReward(address user) external view returns (uint256) {
         return rewardsEarned[user];
     }
@@ -146,7 +132,10 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
         return block.timestamp >= lastRebalanceTime + cooldownPeriod;
     }
 
-    /// @notice 注入奖励资金（由金库或治理调用）
+    /**
+     * @notice 注入奖励资金
+     * @param amount 注入的奖励金额
+     */
     function fundRewards(uint256 amount) external {
         require(amount > 0, "Incentives: zero amount");
         require(msg.sender == address(GOVERNANCE) || msg.sender == VAULT, "Incentives: not authorized");

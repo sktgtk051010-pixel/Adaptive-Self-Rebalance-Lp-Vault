@@ -165,10 +165,68 @@
                     <div class="stat"><label>治理代币 ALP-GOV</label><span id="govBalance" class="stat-value highlight">-</span></div>
                     <div class="stat"><label>金库地址</label><span id="vaultAddr" class="stat-value addr-text" onclick="copyVaultAddr()" style="cursor:pointer">-</span></div>
                 </div>
+                <div class="grid grid-2 mt-4">
+                    <div class="stat"><label>投票权委托</label><span id="delegateStatus" class="stat-value">-</span></div>
+                    <div class="stat"><label>提案门槛</label><span class="stat-value">1000 ALP-GOV</span></div>
+                </div>
+                <div class="btn-group mt-4">
+                    <button class="btn btn-secondary" onclick="delegateVotes()">🗳️ 委托投票权给自己</button>
+                </div>
                 <p class="desc mt-4">治理参数包括 TWAP 窗口、再平衡阈值、激励比例、滑点保护、权重上限、区间范围等，需通过提案投票修改。</p>
             </div>
+
+            <!-- 创建提案 -->
             <div class="card">
-                <h3>📋 当前治理参数</h3>
+                <h3>📝 创建提案</h3>
+                <div class="form-group">
+                    <label>提案类型</label>
+                    <select id="proposalType" onchange="onProposalTypeChange()">
+                        <option value="0">TWAP 窗口（秒）</option>
+                        <option value="1">再平衡阈值（bps）</option>
+                        <option value="2">激励比例（bps）</option>
+                        <option value="3">最大滑点（bps）</option>
+                        <option value="4">权重上限（V2 / V3低 / V3高）</option>
+                        <option value="5">区间范围（窄 / 中 / 宽）</option>
+                    </select>
+                </div>
+                <div id="singleValueGroup" class="form-group">
+                    <label>新值</label>
+                    <input type="number" id="proposalValue1" placeholder="例如：1800（秒）或 500（bps=5%）" class="input">
+                </div>
+                <div id="tripleValueGroup" class="form-group" style="display:none">
+                    <div class="grid grid-3">
+                        <div>
+                            <label id="label1">值1</label>
+                            <input type="number" id="proposalValue1" placeholder="例如：6000" class="input">
+                        </div>
+                        <div>
+                            <label id="label2">值2</label>
+                            <input type="number" id="proposalValue2" placeholder="例如：5000" class="input">
+                        </div>
+                        <div>
+                            <label id="label3">值3</label>
+                            <input type="number" id="proposalValue3" placeholder="例如：7000" class="input">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>提案描述（可选）</label>
+                    <input type="text" id="proposalDesc" placeholder="简要说明提案目的" class="input">
+                </div>
+                <button class="btn btn-primary" onclick="createProposal()">🚀 提交提案</button>
+            </div>
+
+            <!-- 提案列表 -->
+            <div class="card">
+                <h3>📋 提案列表</h3>
+                <div id="proposalList">
+                    <p class="hint">加载中...</p>
+                </div>
+            </div>
+
+            <!-- 当前治理参数 -->
+            <div class="card">
+                <h3>⚙️ 当前治理参数</h3>
                 <div id="govParamsTable"><p class="hint">加载中...</p></div>
             </div>
         </div>

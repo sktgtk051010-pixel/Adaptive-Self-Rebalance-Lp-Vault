@@ -16,25 +16,24 @@ import {FullMath, TickMath, LiquidityAmounts} from "../libraries/UniswapMath.sol
 contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback {
     using SafeERC20 for IERC20;
 
-    /// @notice V3 Pool
     IUniswapV3Pool public immutable POOL;
-
-    /// @notice 金库地址
     address public immutable VAULT;
-
-    /// @notice token0
     address public immutable override TOKEN0;
-
-    /// @notice token1
     address public immutable override TOKEN1;
-
-    /// @notice 费率
     uint24 public immutable FEE;
-
-    /// @notice 适配器类型
     AdapterType public override adapterType;
 
-    /// @notice 仓位信息
+    /**
+     * @notice 仓位信息
+     * @param tickLower 区间下限tick
+     * @param tickUpper 区间上限tick
+     * @param liquidity 流动性数量
+     * @param feeGrowthInside0LastX128 上次记录的token0手续费增长率
+     * @param feeGrowthInside1LastX128 上次记录的token1手续费增长率
+     * @param tokensOwed0 待领取的token0数量
+     * @param tokensOwed1 待领取的token1数量
+     * @param active 仓位是否活跃
+     */
     struct Position {
         int24 tickLower;
         int24 tickUpper;
@@ -46,13 +45,8 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         bool active;
     }
 
-    /// @notice positionId => Position
     mapping(bytes32 => Position) public positions;
-
-    /// @notice 活跃仓位列表
     bytes32[] public activePositionList;
-
-    /// @notice dust阈值
     uint256 public constant DUST_THRESHOLD = 1000;
 
     event V3LiquidityAdded(
@@ -76,6 +70,14 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         _;
     }
 
+    /**
+     * @notice 构造函数
+     * @param _pool Uniswap V3 Pool地址
+     * @param _vault 金库地址
+     * @param _token0 token0地址
+     * @param _token1 token1地址
+     * @param _type 适配器类型（V3低费率或V3高费率）
+     */
     constructor(
         address _pool,
         address _vault,
@@ -95,20 +97,38 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         FEE = IUniswapV3Pool(_pool).fee();
         adapterType = _type;
 
-        // 验证池token匹配
         require(POOL.token0() == _token0 && POOL.token1() == _token1, "V3Adapter: token mismatch");
     }
 
-    /// @notice 生成positionId
+    /**
+     * @notice 生成positionId
+     * @param tickLower 区间下限tick
+     * @param tickUpper 区间上限tick
+     * @return positionId 仓位ID
+     */
     function getPositionId(int24 tickLower, int24 tickUpper) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(tickLower, tickUpper));
     }
 
+    /**
+     * @notice 获取V3 Pool地址
+     * @return V3 Pool地址
+     */
     function pool() external view returns (IUniswapV3Pool) {
         return POOL;
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 添加流动性
+     * @param amount0Desired 期望存入的token0数量
+     * @param amount1Desired 期望存入的token1数量
+     * @param amount0Min 最小token0数量（滑点保护）
+     * @param amount1Min 最小token1数量（滑点保护）
+     * @param data 额外参数，编码为(tickLower, tickUpper)
+     * @return amount0 实际存入的token0数量
+     * @return amount1 实际存入的token1数量
+     * @return liquidityId 流动性位置ID
+     */
     function addLiquidity(
         uint256 amount0Desired,
         uint256 amount1Desired,
@@ -116,20 +136,16 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         uint256 amount1Min,
         bytes calldata data
     ) external onlyVault nonReentrant returns (uint256 amount0, uint256 amount1, bytes32 liquidityId) {
-        // 解析data: tickLower, tickUpper
         (int24 tickLower, int24 tickUpper) = abi.decode(data, (int24, int24));
         _validateTicks(tickLower, tickUpper);
 
         liquidityId = getPositionId(tickLower, tickUpper);
 
-        // 先计算liquidity，为0则跳过（单币种且区间不在价格范围内）
         uint128 liquidity = _calculateLiquidity(tickLower, tickUpper, amount0Desired, amount1Desired);
         if (liquidity == 0) return (0, 0, liquidityId);
 
-        // 从金库转入代币
         _transferFromVault(amount0Desired, amount1Desired);
 
-        // Mint到V3池
         (amount0, amount1) = POOL.mint(
             address(this),
             tickLower,
@@ -140,15 +156,18 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
 
         require(amount0 >= amount0Min && amount1 >= amount1Min, "V3Adapter: slippage");
 
-        // 更新position记录
         _updatePosition(liquidityId, tickLower, tickUpper, liquidity);
 
-        // 返回剩余dust
         _returnDust();
 
         emit V3LiquidityAdded(liquidityId, tickLower, tickUpper, liquidity, amount0, amount1);
     }
 
+    /**
+     * @notice 内部函数：验证tick范围有效性
+     * @param tickLower 区间下限tick
+     * @param tickUpper 区间上限tick
+     */
     function _validateTicks(int24 tickLower, int24 tickUpper) internal view {
         require(tickLower < tickUpper, "V3Adapter: invalid ticks");
         int24 tickSpacing = POOL.tickSpacing();
@@ -156,6 +175,14 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
             "V3Adapter: ticks not aligned");
     }
 
+    /**
+     * @notice 内部函数：计算可添加的流动性数量
+     * @param tickLower 区间下限tick
+     * @param tickUpper 区间上限tick
+     * @param amount0Desired 期望存入的token0数量
+     * @param amount1Desired 期望存入的token1数量
+     * @return 流动性数量
+     */
     function _calculateLiquidity(
         int24 tickLower,
         int24 tickUpper,
@@ -174,6 +201,11 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         );
     }
 
+    /**
+     * @notice 内部函数：从金库转入代币
+     * @param amount0Desired token0数量
+     * @param amount1Desired token1数量
+     */
     function _transferFromVault(uint256 amount0Desired, uint256 amount1Desired) internal {
         if (amount0Desired > 0) {
             IERC20(TOKEN0).safeTransferFrom(VAULT, address(this), amount0Desired);
@@ -183,6 +215,13 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         }
     }
 
+    /**
+     * @notice 内部函数：更新仓位记录
+     * @param liquidityId 流动性位置ID
+     * @param tickLower 区间下限tick
+     * @param tickUpper 区间上限tick
+     * @param liquidity 新增流动性数量
+     */
     function _updatePosition(
         bytes32 liquidityId,
         int24 tickLower,
@@ -203,6 +242,9 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         pos.liquidity += liquidity;
     }
 
+    /**
+     * @notice 内部函数：将剩余dust转回金库
+     */
     function _returnDust() internal {
         uint256 bal0 = IERC20(TOKEN0).balanceOf(address(this));
         uint256 bal1 = IERC20(TOKEN1).balanceOf(address(this));
@@ -210,7 +252,15 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         if (bal1 > 0) IERC20(TOKEN1).safeTransfer(VAULT, bal1);
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 移除流动性
+     * @param liquidityId 流动性位置ID
+     * @param liquidity 需要移除的流动性数量
+     * @param amount0Min token0的最小接收量
+     * @param amount1Min token1的最小接收量
+     * @return amount0 实际收到的token0数量
+     * @return amount1 实际收到的token1数量
+     */
     function removeLiquidity(
         bytes32 liquidityId,
         uint128 liquidity,
@@ -221,11 +271,9 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         require(pos.active, "V3Adapter: position not found");
         require(liquidity > 0 && liquidity <= pos.liquidity, "V3Adapter: invalid liquidity");
 
-        // Burn流动性
         (amount0, amount1) = POOL.burn(pos.tickLower, pos.tickUpper, liquidity);
         require(amount0 >= amount0Min && amount1 >= amount1Min, "V3Adapter: slippage");
 
-        // Collect代币到vault
         (uint128 collected0, uint128 collected1) = POOL.collect(
             VAULT,
             pos.tickLower,
@@ -233,7 +281,7 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
             uint128(amount0) + pos.tokensOwed0,
             uint128(amount1) + pos.tokensOwed1
         );
-        require(collected0 >= amount0Min 
+        require(collected0 >= amount0Min
             && collected1 >= amount1Min, "V3Adapter: collect slippage");
 
         pos.liquidity -= liquidity;
@@ -244,7 +292,6 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         pos.feeGrowthInside0LastX128 = currFee0;
         pos.feeGrowthInside1LastX128 = currFee1;
 
-        // 如果流动性为0，标记为非活跃
         if (pos.liquidity == 0) {
             pos.active = false;
             _removeFromActiveList(liquidityId);
@@ -253,7 +300,12 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         emit V3LiquidityRemoved(liquidityId, liquidity, amount0, amount1);
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 领取手续费
+     * @param liquidityId 流动性位置ID
+     * @return fees0 领取的token0手续费
+     * @return fees1 领取的token1手续费
+     */
     function collectFees(bytes32 liquidityId)
         external
         onlyVault
@@ -263,10 +315,8 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         Position storage pos = positions[liquidityId];
         require(pos.active, "V3Adapter: position not found");
 
-        // 先burn 0流动性来更新手续费
         POOL.burn(pos.tickLower, pos.tickUpper, 0);
 
-        // Collect所有待领手续费
         (uint128 collected0, uint128 collected1) = POOL.collect(
             VAULT,
             pos.tickLower,
@@ -284,19 +334,20 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         pos.feeGrowthInside0LastX128 = currFee0;
         pos.feeGrowthInside1LastX128 = currFee1;
 
-
         emit V3FeesCollected(liquidityId, fees0, fees1);
     }
 
-    /// @notice V3 Mint回调，支付代币给池
+    /**
+     * @notice V3 Mint回调，支付代币给池
+     * @param amount0Owed 应付token0数量
+     * @param amount1Owed 应付token1数量
+     */
     function uniswapV3MintCallback(
         uint256 amount0Owed,
         uint256 amount1Owed,
         bytes calldata /* data */
     ) external override {
         require(msg.sender == address(POOL), "V3Adapter: not pool");
-        // data中编码了vault地址，但我们已经在addLiquidity中转入了代币
-        // 直接从本合约余额支付
         if (amount0Owed > 0) {
             IERC20(TOKEN0).safeTransfer(address(POOL), amount0Owed);
         }
@@ -305,6 +356,10 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         }
     }
 
+    /**
+     * @notice 获取当前总流动性
+     * @return 所有活跃仓位的流动性总和
+     */
     function getLpBalance() external view override returns (uint256) {
         uint256 totalLiquidity = 0;
         for (uint256 i = 0; i < activePositionList.length; i++) {
@@ -315,7 +370,10 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         return totalLiquidity;
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 查询适配器总资产（含未领取手续费）
+     * @return assets 适配器总资产信息
+     */
     function getTotalAssets() external view override returns (AdapterAssets memory assets) {
         for (uint256 i = 0; i < activePositionList.length; i++) {
             bytes32 posId = activePositionList[i];
@@ -330,7 +388,11 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         assets.amount1 += IERC20(TOKEN1).balanceOf(address(this));
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 查询某个仓位的资产
+     * @param liquidityId 流动性位置ID
+     * @return assets 仓位资产信息
+     */
     function getPositionAssets(bytes32 liquidityId)
         external
         view
@@ -340,40 +402,59 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         (assets.amount0, assets.amount1, assets.fees0, assets.fees1) = _calcSinglePosition(liquidityId);
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 返回所有活跃仓位ID
+     * @return 活跃仓位ID列表
+     */
     function getActivePositions() external view override returns (bytes32[] memory) {
         return activePositionList;
     }
 
-    function getPositionInfo(bytes32 liquidityId) 
-        external 
-        view 
+    /**
+     * @notice 获取仓位详细信息
+     * @param liquidityId 流动性位置ID
+     * @return tickLower 区间下限tick
+     * @return tickUpper 区间上限tick
+     * @return liquidity 流动性数量
+     * @return tokensOwed0 待领取token0数量
+     * @return tokensOwed1 待领取token1数量
+     * @return feeGrowthInside0LastX128 上次记录的token0手续费增长率
+     * @return feeGrowthInside1LastX128 上次记录的token1手续费增长率
+     * @return active 仓位是否活跃
+     */
+    function getPositionInfo(bytes32 liquidityId)
+        external
+        view
         returns (
-            int24 tickLower, 
-            int24 tickUpper, 
-            uint128 liquidity, 
-            uint256 tokensOwed0, 
-            uint256 tokensOwed1, 
-            uint256 feeGrowthInside0LastX128, 
-            uint256 feeGrowthInside1LastX128, 
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 tokensOwed0,
+            uint256 tokensOwed1,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
             bool active
         ) {
             Position memory pos = positions[liquidityId];
 
             return (
-                pos.tickLower, 
-                pos.tickUpper, 
-                pos.liquidity, 
-                pos.tokensOwed0, 
-                pos.tokensOwed1, 
-                pos.feeGrowthInside0LastX128, 
-                pos.feeGrowthInside1LastX128, 
+                pos.tickLower,
+                pos.tickUpper,
+                pos.liquidity,
+                pos.tokensOwed0,
+                pos.tokensOwed1,
+                pos.feeGrowthInside0LastX128,
+                pos.feeGrowthInside1LastX128,
                 pos.active
             );
     }
 
-    // ============ 内部函数 ============
-
+    /**
+     * @notice 内部函数：获取仓位区间内的手续费增长率
+     * @param pos 仓位信息
+     * @return feeGrowthInside0X128 token0手续费增长率
+     * @return feeGrowthInside1X128 token1手续费增长率
+     */
     function _getFeeGrowthInside(Position memory pos)
         internal
         view
@@ -402,8 +483,14 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         }
     }
 
-
-    /// @dev 计算单个position对应的资产与手续费，降低外层函数栈深度
+    /**
+     * @notice 内部函数：计算单个仓位对应的资产与手续费
+     * @param posId 仓位ID
+     * @return amount0 仓位对应的token0数量
+     * @return amount1 仓位对应的token1数量
+     * @return fee0 仓位待领取的token0手续费
+     * @return fee1 仓位待领取的token1手续费
+     */
     function _calcSinglePosition(bytes32 posId)
         internal
         view
@@ -426,11 +513,18 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
 
         fee0 = _computeFeesEarned(pos.liquidity, feeGrowthInside0X128, pos.feeGrowthInside0LastX128)
             + pos.tokensOwed0;
-    
+
         fee1 = _computeFeesEarned(pos.liquidity, feeGrowthInside1X128, pos.feeGrowthInside1LastX128)
             + pos.tokensOwed1;
         }
 
+    /**
+     * @notice 内部函数：计算已赚取的手续费
+     * @param liquidity 流动性数量
+     * @param feeGrowthInsideX128 当前手续费增长率
+     * @param feeGrowthInsideLastX128 上次记录的手续费增长率
+     * @return 手续费数量
+     */
     function _computeFeesEarned(
         uint128 liquidity,
         uint256 feeGrowthInsideX128,
@@ -438,13 +532,17 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
     ) internal pure returns (uint256) {
         unchecked {
             return FullMath.mulDiv(
-                uint256(liquidity), 
-                feeGrowthInsideX128 - feeGrowthInsideLastX128, 
+                uint256(liquidity),
+                feeGrowthInsideX128 - feeGrowthInsideLastX128,
                 1 << 128
             );
         }
     }
 
+    /**
+     * @notice 内部函数：从活跃仓位列表中移除仓位
+     * @param id 仓位ID
+     */
     function _removeFromActiveList(bytes32 id) internal {
         for (uint256 i = 0; i < activePositionList.length; i++) {
             if (activePositionList[i] == id) {
@@ -455,9 +553,10 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         }
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 撤出所有流动性并转给vault
+     */
     function withdrawAll() external onlyVault nonReentrant {
-        // 收集所有手续费
         for (uint256 i = 0; i < activePositionList.length; i++) {
             bytes32 id = activePositionList[i];
             Position storage pos = positions[id];
@@ -470,7 +569,6 @@ contract UniswapV3Adapter is ILPAdapter, ReentrancyGuard, IUniswapV3MintCallback
         }
         delete activePositionList;
 
-        // 转移剩余dust
         uint256 bal0 = IERC20(TOKEN0).balanceOf(address(this));
         uint256 bal1 = IERC20(TOKEN1).balanceOf(address(this));
         if (bal0 > 0) IERC20(TOKEN0).safeTransfer(VAULT, bal0);

@@ -17,33 +17,20 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 public constant BPS_SCALE = 10000;
-    uint256 public maxSlippageBps = 100; // 默认1%
+    uint256 public maxSlippageBps = 100;
 
-    /// @notice V2 Router
     IUniswapV2Router02 public immutable ROUTER;
-
-    /// @notice V2 Pair
     IUniswapV2Pair public immutable PAIR;
-
-    /// @notice V2 Factory
     IUniswapV2Factory public immutable FACTORY;
 
-    /// @notice 金库地址（唯一有权调用者）
     address public immutable VAULT;
-
-    /// @notice token0
     address public immutable override TOKEN0;
-
-    /// @notice token1
     address public immutable override TOKEN1;
 
-    /// @notice 适配器类型
     AdapterType public constant override adapterType = AdapterType.UNISWAP_V2;
 
-    /// @notice 唯一仓位ID（V2只有一个全区间仓位）
     bytes32 public constant POSITION_ID = keccak256("UniswapV2Adapter.POSITION");
 
-    /// @notice dust阈值，低于此值的剩余代币视为灰尘
     uint256 public constant DUST_THRESHOLD = 1000;
 
     event LiquidityAdded(uint256 amount0, uint256 amount1, uint256 liquidity);
@@ -55,6 +42,13 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
         _;
     }
 
+    /**
+     * @notice 构造函数
+     * @param _router Uniswap V2 Router地址
+     * @param _vault 金库地址
+     * @param _token0 token0地址
+     * @param _token1 token1地址
+     */
     constructor(
         address _router,
         address _vault,
@@ -71,30 +65,34 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
         TOKEN0 = _token0;
         TOKEN1 = _token1;
 
-        // 获取或创建pair
         address pairAddress = FACTORY.getPair(_token0, _token1);
         if (pairAddress == address(0)) {
             pairAddress = FACTORY.createPair(_token0, _token1);
         }
         PAIR = IUniswapV2Pair(pairAddress);
 
-        // 授权Router无限额度
         IERC20(_token0).forceApprove(_router, type(uint256).max);
         IERC20(_token1).forceApprove(_router, type(uint256).max);
         IERC20(pairAddress).forceApprove(_router, type(uint256).max);
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 添加流动性
+     * @param amount0Desired 期望存入的token0数量
+     * @param amount1Desired 期望存入的token1数量
+     * @return amount0 实际存入的token0数量
+     * @return amount1 实际存入的token1数量
+     * @return liquidityId 流动性位置ID，V2固定为POSITION_ID
+     */
     function addLiquidity(
         uint256 amount0Desired,
         uint256 amount1Desired,
-        uint256 amount0Min,
-        uint256 amount1Min,
+        uint256,
+        uint256,
         bytes calldata /* data */
     ) external onlyVault nonReentrant returns (uint256 amount0, uint256 amount1, bytes32 liquidityId) {
         require(amount0Desired > 0 || amount1Desired > 0, "V2Adapter: zero amounts");
 
-        // 从金库转入代币
         if (amount0Desired > 0) {
             IERC20(TOKEN0).safeTransferFrom(VAULT, address(this), amount0Desired);
         }
@@ -102,7 +100,26 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
             IERC20(TOKEN1).safeTransferFrom(VAULT, address(this), amount1Desired);
         }
 
-        // 添加流动性
+        (uint112 reserve0, uint112 reserve1, ) = PAIR.getReserves();
+        uint256 slippageMin = BPS_SCALE - maxSlippageBps;
+        uint256 amount0Min;
+        uint256 amount1Min;
+
+        if (reserve0 == 0 && reserve1 == 0) {
+            amount0Min = FullMath.mulDiv(amount0Desired, slippageMin, BPS_SCALE);
+            amount1Min = FullMath.mulDiv(amount1Desired, slippageMin, BPS_SCALE);
+        } else {
+            uint256 amount1Optimal = FullMath.mulDiv(amount0Desired, uint256(reserve1), uint256(reserve0));
+            if (amount1Optimal <= amount1Desired) {
+                amount0Min = FullMath.mulDiv(amount0Desired, slippageMin, BPS_SCALE);
+                amount1Min = FullMath.mulDiv(amount1Optimal, slippageMin, BPS_SCALE);
+            } else {
+                uint256 amount0Optimal = FullMath.mulDiv(amount1Desired, uint256(reserve0), uint256(reserve1));
+                amount0Min = FullMath.mulDiv(amount0Optimal, slippageMin, BPS_SCALE);
+                amount1Min = FullMath.mulDiv(amount1Desired, slippageMin, BPS_SCALE);
+            }
+        }
+
         (amount0, amount1, ) = ROUTER.addLiquidity(
             TOKEN0,
             TOKEN1,
@@ -123,7 +140,14 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
         emit LiquidityAdded(amount0, amount1, PAIR.balanceOf(address(this)));
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 移除流动性
+     * @param liquidity 需要移除的LP数量
+     * @param amount0Min token0的最小接收量
+     * @param amount1Min token1的最小接收量
+     * @return amount0 实际收到的token0数量
+     * @return amount1 实际收到的token1数量
+     */
     function removeLiquidity(
         bytes32 /* liquidityId */,
         uint128 liquidity,
@@ -139,17 +163,18 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
             liquidity,
             amount0Min,
             amount1Min,
-            VAULT,  // 直接转给金库
+            VAULT,
             block.timestamp + 600
         );
 
         emit LiquidityRemoved(amount0, amount1, liquidity);
     }
 
-    /// @inheritdoc ILPAdapter
-    /// @dev UniswapV2协议限制：手续费内嵌在LP代币价值内部，
-    /// 无法在不销毁流动性的前提下单独提取手续费。
-    /// 手续费将在removeLiquidity赎回流动性时随同本金一起返回Vault。
+    /**
+     * @notice 领取手续费
+     * @return fees0 领取的token0手续费（固定为0）
+     * @return fees1 领取的token1手续费（固定为0）
+     */
     function collectFees(bytes32 /* liquidityId */)
         external
         onlyVault
@@ -161,12 +186,18 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
         emit FeesCollected(0, 0);
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 查询适配器总资产（含未领取手续费）
+     * @return assets 适配器总资产信息
+     */
     function getTotalAssets() external view override returns (AdapterAssets memory assets) {
         return _getTotalAssets();
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 查询某个仓位的资产
+     * @return assets 仓位资产信息
+     */
     function getPositionAssets(bytes32 /* liquidityId */)
         external
         view
@@ -176,18 +207,26 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
         return _getTotalAssets();
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 返回所有活跃仓位ID
+     * @return positions 活跃仓位ID列表
+     */
     function getActivePositions() external pure override returns (bytes32[] memory positions) {
         positions = new bytes32[](1);
         positions[0] = POSITION_ID;
     }
 
-    /// @notice 获取当前LP余额
+    /**
+     * @notice 获取当前LP余额
+     * @return LP代币数量
+     */
     function getLpBalance() external view override returns (uint256) {
         return PAIR.balanceOf(address(this));
     }
 
-    /// @inheritdoc ILPAdapter
+    /**
+     * @notice 撤出所有流动性并转给vault
+     */
     function withdrawAll() external onlyVault nonReentrant {
         uint256 lpBalance = PAIR.balanceOf(address(this));
 
@@ -203,19 +242,22 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
                 TOKEN0,
                 TOKEN1,
                 lpBalance,
-                amount0Min, 
+                amount0Min,
                 amount1Min,
                 VAULT,
                 block.timestamp + 600
             );
         }
-        // 转移剩余dust
         uint256 bal0 = IERC20(TOKEN0).balanceOf(address(this));
         uint256 bal1 = IERC20(TOKEN1).balanceOf(address(this));
         if (bal0 > 0) IERC20(TOKEN0).safeTransfer(VAULT, bal0);
         if (bal1 > 0) IERC20(TOKEN1).safeTransfer(VAULT, bal1);
     }
 
+    /**
+     * @notice 内部函数：计算适配器总资产
+     * @return assets 适配器总资产信息
+     */
     function _getTotalAssets() internal view returns (AdapterAssets memory assets) {
         uint256 lpBalance = PAIR.balanceOf(address(this));
         if (lpBalance == 0) {
@@ -227,15 +269,12 @@ contract UniswapV2Adapter is ILPAdapter, ReentrancyGuard {
         (uint112 reserve0, uint112 reserve1, ) = PAIR.getReserves();
         uint256 totalSupply = PAIR.totalSupply();
 
-        // LP对应的资产
         assets.amount0 = FullMath.mulDiv(lpBalance, uint256(reserve0), totalSupply);
         assets.amount1 = FullMath.mulDiv(lpBalance, uint256(reserve1), totalSupply);
 
-        // 加上合约上未投资的代币
         assets.amount0 += IERC20(TOKEN0).balanceOf(address(this));
         assets.amount1 += IERC20(TOKEN1).balanceOf(address(this));
 
-        // V2手续费已包含在LP价值中，fees0/fees1设为0
         assets.fees0 = 0;
         assets.fees1 = 0;
     }

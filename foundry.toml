@@ -7,6 +7,7 @@ optimizer = true
 optimizer_runs = 200
 via_ir = true
 evm_version = "cancun"
+coverage = { ignore = ["src/libraries/UniswapMath.sol"] }
 
 remappings = [
     "forge-std/=lib/forge-std/src/",
@@ -22,3 +23,6 @@ sepolia = "${SEPOLIA_RPC_URL}"
 
 [etherscan]
 sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.etherscan.io/api" }
+
+[profile.coverage]
+coverage = { ignore = ["src/libraries/UniswapMath.sol"] }

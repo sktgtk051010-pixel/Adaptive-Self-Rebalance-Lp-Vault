@@ -2,19 +2,38 @@
 pragma solidity ^0.8.24;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IGovernance} from "../interfaces/ICoreInterfaces.sol";
+
+/// @notice 最小同步接口，治理执行时调用各业务合约的参数setter
+interface IGovernanceSyncTarget {
+    function setTWAPWindow(uint32) external;
+    function setRebalanceThreshold(uint256) external;
+    function setIncentiveBps(uint256) external;
+    function setMaxSlippage(uint256) external;
+}
 
 /**
  * @title GovernanceToken
  * @notice 治理代币，金库份额持有者可获得
  */
-contract GovernanceToken is ERC20 {
+contract GovernanceToken is ERC20Votes {
     address public minter;
 
-    constructor() ERC20("Adaptive LP Governance", "ALP-GOV") {
+    constructor() ERC20("Adaptive LP Governance", "ALP") EIP712("Adaptive LP Governance", "1") {
         minter = msg.sender;
+    }
+
+    /// @notice 使用 block.number 作为快照维度
+    function clock() public view override returns (uint48) {
+        return uint48(block.number);
+    }
+
+    function CLOCK_MODE() public pure override returns (string memory) {
+        return "mode=blocknumber&from=default";
     }
 
     modifier onlyMinter() {
@@ -42,26 +61,24 @@ contract GovernanceToken is ERC20 {
  * @dev 治理代币持有者可提案、投票修改策略参数
  */
 contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
-    /// @notice 治理代币
     GovernanceToken public immutable GOV_TOKEN;
 
-    /// @notice 金库地址
     address public vault;
+    address public strategy;
+    address public oracle;
+    address public incentives;
 
-    /// @notice 策略参数
     StrategyParams public params;
 
-    /// @notice 提案状态
     enum ProposalState {
-        Pending,    // 等待投票开始
-        Active,     // 投票中
-        Succeeded,  // 通过
-        Executed,   // 已执行
-        Defeated,   // 未通过
-        Canceled    // 取消
+        Pending,  
+        Active,   
+        Succeeded, 
+        Executed,  
+        Defeated, 
+        Canceled  
     }
 
-    /// @notice 提案类型
     enum ProposalType {
         SET_TWAP_WINDOW,
         SET_REBALANCE_THRESHOLD,
@@ -71,14 +88,14 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         SET_RANGE_BPS
     }
 
-    /// @notice 提案结构
     struct Proposal {
         uint256 id;
         address proposer;
         ProposalType pType;
-        uint256 newValue;      // 单值参数
-        uint256 newValue2;     // 第二值（用于权重等多值参数）
-        uint256 newValue3;     // 第三值
+        uint256 newValue;    
+        uint256 newValue2;   
+        uint256 newValue3;  
+        uint256 snapshot;    
         uint256 startBlock;
         uint256 endBlock;
         uint256 forVotes;
@@ -88,28 +105,16 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         mapping(address => bool) hasVoted;
     }
 
-    /// @notice 提案计数
     uint256 public proposalCount;
 
-    /// @notice 提案映射
     mapping(uint256 => Proposal) public proposals;
 
-    /// @notice 投票延迟（区块数）
     uint256 public votingDelay = 1;  // ~12秒
-
-    /// @notice 投票周期（区块数）
     uint256 public votingPeriod = 28800;  // ~4天 (按12秒/块)
-
-    /// @notice 提案门槛（治理代币数量）
     uint256 public proposalThreshold = 1000e18;  // 1000枚
-
-    /// @notice 法定人数（需要的投票数）
     uint256 public quorumVotes = 10000e18;  // 10000枚
-
-    /// @notice 时间锁延迟（秒）
     uint256 public timelockDelay = 172800;  // 48小时
 
-    /// @notice 待执行操作
     struct TimelockAction {
         uint256 readyTime;
         ProposalType pType;
@@ -133,7 +138,6 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
     constructor(address _govToken) Ownable(msg.sender) {
         GOV_TOKEN = GovernanceToken(_govToken);
 
-        // 默认参数
         params = StrategyParams({
             twapWindow: 1800,           // 30分钟
             rebalanceThreshold: 500,    // 5%
@@ -153,9 +157,31 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         vault = _vault;
     }
 
+    /// @notice 设置策略合约地址
+    function setStrategy(address _strategy) external onlyOwner {
+        strategy = _strategy;
+    }
+
+    /// @notice 设置预言机合约地址
+    function setOracle(address _oracle) external onlyOwner {
+        oracle = _oracle;
+    }
+
+    /// @notice 设置激励合约地址
+    function setIncentives(address _incentives) external onlyOwner {
+        incentives = _incentives;
+    }
+
     // ============ 提案逻辑 ============
 
-    /// @notice 创建提案
+    /**
+     * @notice 创建提案
+     * @param pType 提案类型
+     * @param newValue 新值
+     * @param newValue2 新值2
+     * @param newValue3 新值3
+     * @return 提案ID
+     */
     function propose(
         ProposalType pType,
         uint256 newValue,
@@ -176,6 +202,7 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         p.newValue = newValue;
         p.newValue2 = newValue2;
         p.newValue3 = newValue3;
+        p.snapshot = block.number;
         p.startBlock = block.number + votingDelay;
         p.endBlock = p.startBlock + votingPeriod;
 
@@ -183,14 +210,18 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         return id;
     }
 
-    /// @notice 投票
+    /**
+     * @notice 投票
+     * @param proposalId 提案ID
+     * @param support 支持与否
+     */
     function castVote(uint256 proposalId, bool support) external {
         Proposal storage p = proposals[proposalId];
         require(p.id != 0, "Governance: proposal not found");
         require(block.number >= p.startBlock && block.number <= p.endBlock, "Governance: not active");
         require(!p.hasVoted[msg.sender], "Governance: already voted");
 
-        uint256 votes = GOV_TOKEN.balanceOf(msg.sender);
+        uint256 votes = GOV_TOKEN.getPastVotes(msg.sender, p.snapshot);
         require(votes > 0, "Governance: no voting power");
 
         p.hasVoted[msg.sender] = true;
@@ -203,7 +234,11 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         emit VoteCast(msg.sender, proposalId, support, votes);
     }
 
-    /// @notice 查询提案状态
+    /**
+     * @notice 查询提案状态
+     * @param proposalId 提案id
+     * @return 提案状态
+     */
     function getProposalState(uint256 proposalId) public view returns (ProposalState) {
         Proposal storage p = proposals[proposalId];
         require(p.id != 0, "Governance: proposal not found");
@@ -218,7 +253,10 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         return ProposalState.Defeated;
     }
 
-    /// @notice 执行提案（通过后）
+    /**
+     *  @notice 执行提案（通过后）
+     * @param proposalId 提案ID
+     */
     function executeProposal(uint256 proposalId) external nonReentrant {
         require(getProposalState(proposalId) == ProposalState.Succeeded, "Governance: not succeeded");
 
@@ -237,7 +275,10 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         emit ProposalExecuted(proposalId);
     }
 
-    /// @notice 执行时间锁操作
+    /**
+     * @notice 执行时间锁操作
+     * @param proposalId 提案ID
+     */
     function executeTimelock(uint256 proposalId) external nonReentrant {
         TimelockAction storage action = timelockActions[proposalId];
         require(action.readyTime > 0, "Governance: no timelock");
@@ -249,7 +290,10 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         emit ParamsUpdated(params);
     }
 
-    /// @notice 取消提案
+    /** 
+     * @notice 取消提案
+     * @param proposalId 提案ID
+     */
     function cancelProposal(uint256 proposalId) external {
         Proposal storage p = proposals[proposalId];
         require(msg.sender == p.proposer || msg.sender == owner(), "Governance: not authorized");
@@ -299,15 +343,34 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
 
     // ============ 内部函数 ============
 
+    /**
+     * @notice 根据提案类型应用参数修改
+     * @param pType 提案类型
+     * @param v1 值1
+     * @param v2 值2
+     * @param v3 值3
+     */
     function _applyParam(ProposalType pType, uint256 v1, uint256 v2, uint256 v3) internal {
         if (pType == ProposalType.SET_TWAP_WINDOW) {
             params.twapWindow = uint32(v1);
+            if (oracle != address(0)) {
+                IGovernanceSyncTarget(oracle).setTWAPWindow(uint32(v1));
+            }
         } else if (pType == ProposalType.SET_REBALANCE_THRESHOLD) {
             params.rebalanceThreshold = v1;
+            if (strategy != address(0)) {
+                IGovernanceSyncTarget(strategy).setRebalanceThreshold(v1);
+            }
         } else if (pType == ProposalType.SET_INCENTIVE_BPS) {
             params.incentiveBps = v1;
+            if (incentives != address(0)) {
+                IGovernanceSyncTarget(incentives).setIncentiveBps(v1);
+            }
         } else if (pType == ProposalType.SET_MAX_SLIPPAGE) {
             params.maxSlippageBps = v1;
+            if (vault != address(0)) {
+                IGovernanceSyncTarget(vault).setMaxSlippage(v1);
+            }
         } else if (pType == ProposalType.SET_WEIGHT_CAPS) {
             params.v2WeightCap = v1;
             params.v3LowFeeWeightCap = v2;
@@ -317,5 +380,21 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
             params.mediumRangeBps = v2;
             params.wideRangeBps = v3;
         }
+    }
+    
+    /**
+     * @notice 代理调用其他合约的 onlyOwner 函数
+     * @param target 目标合约地址
+     * @param data 调用数据
+     */
+    function executeAsOwner(address target, bytes calldata data)
+        external
+        onlyOwner
+        returns (bytes memory)
+    {
+        require(target != address(0), "Governance: zero target");
+        (bool success, bytes memory result) = target.call(data);
+        require(success, "Governance: call failed");
+        return result;
     }
 }

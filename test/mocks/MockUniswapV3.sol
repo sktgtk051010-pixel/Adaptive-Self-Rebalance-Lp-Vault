@@ -11,10 +11,6 @@ interface IMintable {
     function mint(address to, uint256 amount) external;
 }
 
-/**
- * @title MockUniswapV3Pool
- * @notice 模拟Uniswap V3 Pool，支持基本mint/burn/collect/observe
- */
 contract MockUniswapV3Pool {
     using SafeERC20 for IERC20;
 
@@ -23,7 +19,6 @@ contract MockUniswapV3Pool {
     uint24 public fee;
     int24 public tickSpacing;
 
-    // slot0
     uint160 public sqrtPriceX96;
     int24 public tick;
     uint16 public observationIndex;
@@ -32,19 +27,17 @@ contract MockUniswapV3Pool {
 
     uint128 public liquidity;
 
-    // Position
     struct PositionInfo {
         uint128 liquidity;
         uint256 feeGrowthInside0LastX128;
         uint256 feeGrowthInside1LastX128;
         uint128 tokensOwed0;
         uint128 tokensOwed1;
-        uint256 amount0Deposited;  // 记录实际存入的token0
-        uint256 amount1Deposited;  // 记录实际存入的token1
+        uint256 amount0Deposited;
+        uint256 amount1Deposited;
     }
     mapping(bytes32 => PositionInfo) public positions;
 
-    // Tick info
     struct TickInfo {
         uint128 liquidityGross;
         int128 liquidityNet;
@@ -57,7 +50,6 @@ contract MockUniswapV3Pool {
     }
     mapping(int24 => TickInfo) public ticks;
 
-    // Observations for TWAP
     struct Observation {
         uint32 blockTimestamp;
         int56 tickCumulative;
@@ -69,7 +61,6 @@ contract MockUniswapV3Pool {
     uint256 public feeGrowthGlobal0X128;
     uint256 public feeGrowthGlobal1X128;
 
-    // 模拟手续费累积
     uint256 public mockFeesPerPosition;
 
     constructor(
@@ -83,7 +74,6 @@ contract MockUniswapV3Pool {
         fee = _fee;
         tickSpacing = _tickSpacing;
 
-        // 初始化observation
         observations.push(Observation({
             blockTimestamp: uint32(block.timestamp),
             tickCumulative: 0,
@@ -93,8 +83,7 @@ contract MockUniswapV3Pool {
         observationCardinality = 1;
         observationCardinalityNext = 1;
 
-        // 默认价格: 1 ETH = 2000 USDC
-        setPrice(2000); // 2000 USDC per ETH
+        setPrice(2000);
     }
 
     function setPrice(uint256 priceUsdcPerEth) public {
@@ -112,7 +101,6 @@ contract MockUniswapV3Pool {
     }
 
     function _isWETH(address token) internal view returns (bool) {
-        // 简单判断：WETH有18位decimals
         try ERC20(token).decimals() returns (uint8 d) {
             return d == 18;
         } catch {
@@ -184,7 +172,6 @@ contract MockUniswapV3Pool {
 
         for (uint256 i = 0; i < secondsAgos.length; i++) {
             if (uint256(secondsAgos[i]) >= block.timestamp) {
-                // 时间早于第一个观察，用当前tick外推（假设价格一直是当前价格）
                 tickCumulatives[i] = currentCum - int56(tick) * int56(uint56(secondsAgos[i]));
             } else {
                 uint32 targetTime = uint32(block.timestamp - secondsAgos[i]);
@@ -195,11 +182,9 @@ contract MockUniswapV3Pool {
         return (tickCumulatives, secLiq);
     }
 
-    /// @notice 获取指定时间点的tickCumulative，使用历史观察插值
     function _getTickCumulativeAt(uint32 targetTime) internal view returns (int56) {
         if (observations.length == 0) return 0;
 
-        // 找到blockTimestamp <= targetTime的最新观察
         int256 beforeIdx = -1;
         for (uint256 j = 0; j < observations.length; j++) {
             if (observations[j].blockTimestamp <= targetTime) {
@@ -208,7 +193,6 @@ contract MockUniswapV3Pool {
         }
 
         if (beforeIdx < 0) {
-            // 目标时间早于第一个观察，用第一个观察外推
             return observations[0].tickCumulative;
         }
 
@@ -217,7 +201,6 @@ contract MockUniswapV3Pool {
             return beforeOrAt.tickCumulative;
         }
 
-        // 找blockTimestamp > targetTime的第一个观察
         int256 afterIdx = -1;
         for (uint256 j = 0; j < observations.length; j++) {
             if (observations[j].blockTimestamp > targetTime) {
@@ -227,12 +210,10 @@ contract MockUniswapV3Pool {
         }
 
         if (afterIdx < 0) {
-            // 没有后续观察，用当前tick外推
             uint32 delta = targetTime - beforeOrAt.blockTimestamp;
             return beforeOrAt.tickCumulative + int56(tick) * int56(uint56(delta));
         }
 
-        // 在两个观察之间插值
         Observation memory atOrAfter = observations[uint256(afterIdx)];
         uint32 timeDelta = atOrAfter.blockTimestamp - beforeOrAt.blockTimestamp;
         uint32 targetDelta = targetTime - beforeOrAt.blockTimestamp;
@@ -265,16 +246,13 @@ contract MockUniswapV3Pool {
             sqrtPriceX96, sqrtRatioAX96, sqrtRatioBX96, amount
         );
 
-        // 回调支付
         IUniswapV3MintCallback(msg.sender).uniswapV3MintCallback(amount0, amount1, data);
 
-        // 更新position
         bytes32 key = _positionKey(recipient, tickLower, tickUpper);
         positions[key].liquidity += amount;
         positions[key].amount0Deposited += amount0;
         positions[key].amount1Deposited += amount1;
 
-        // 更新tick
         ticks[tickLower].liquidityGross += amount;
         ticks[tickLower].liquidityNet += int128(amount);
         ticks[tickLower].initialized = true;
@@ -293,8 +271,6 @@ contract MockUniswapV3Pool {
         bytes32 key = _positionKey(msg.sender, tickLower, tickUpper);
         require(positions[key].liquidity >= amount, "V3: INSUFFICIENT");
 
-        // 按burn比例返回实际存入的本金（mock简化：不模拟无常损失，
-        // 因为没有真实swap改变pool余额，价格变化只影响V3 getAmountsForLiquidity的理论值）
         uint256 ratio = uint256(amount) * 1e18 / uint256(positions[key].liquidity);
         amount0 = positions[key].amount0Deposited * ratio / 1e18;
         amount1 = positions[key].amount1Deposited * ratio / 1e18;
@@ -302,10 +278,8 @@ contract MockUniswapV3Pool {
         positions[key].amount1Deposited -= amount1;
 
         positions[key].liquidity -= amount;
-        // 本金变成tokensOwed（burn后可collect）
         positions[key].tokensOwed0 += uint128(amount0);
         positions[key].tokensOwed1 += uint128(amount1);
-        // 模拟手续费收入（mint额外代币给pool，模拟交易者支付的手续费）
         if (mockFeesPerPosition > 0 && amount > 0) {
             IMintable(token0).mint(address(this), mockFeesPerPosition);
             IMintable(token1).mint(address(this), mockFeesPerPosition);
@@ -331,7 +305,6 @@ contract MockUniswapV3Pool {
         bytes32 key = _positionKey(msg.sender, tickLower, tickUpper);
         PositionInfo storage pos = positions[key];
 
-        // 如果设置了mockFees，在collect时模拟手续费累积
         if (mockFeesPerPosition > 0 && pos.liquidity > 0) {
             IMintable(token0).mint(address(this), mockFeesPerPosition);
             IMintable(token1).mint(address(this), mockFeesPerPosition);
@@ -359,9 +332,6 @@ contract MockUniswapV3Pool {
     }
 }
 
-/**
- * @title MockUniswapV3Factory
- */
 contract MockUniswapV3Factory {
     mapping(address => mapping(address => mapping(uint24 => address))) public getPool;
     int24 public constant tickSpacing = 60;

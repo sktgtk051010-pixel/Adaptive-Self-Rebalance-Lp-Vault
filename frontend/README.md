@@ -1,6 +1,3 @@
-# Adaptive LP Vault Frontend
-
-Web3 交互前端，对标 Gamma UI/UX。
 
 ## 使用方法
 
