@@ -11,6 +11,7 @@ contract RebalanceStrategyTest is BaseTest {
         super.setUp();
     }
 
+    // 测试低波动率（volatility=1000）下的权重分配：V2=10%, V3低=30%, V3高=60%
     function test_CalculateAllocation_LowVolatility() public view {
         (IRebalanceStrategy.AllocationWeights memory alloc,
          IRebalanceStrategy.V3RangeWeights memory ranges) =
@@ -26,6 +27,7 @@ contract RebalanceStrategyTest is BaseTest {
         assertEq(ranges.tightWeight + ranges.mediumWeight + ranges.wideWeight, 10000);
     }
 
+    // 测试中波动率（volatility=3000）下的权重分配：V2=25%, V3低=30%, V3高=45%
     function test_CalculateAllocation_MediumVolatility() public view {
         (IRebalanceStrategy.AllocationWeights memory alloc,
          IRebalanceStrategy.V3RangeWeights memory ranges) =
@@ -41,6 +43,7 @@ contract RebalanceStrategyTest is BaseTest {
         assertEq(ranges.tightWeight + ranges.mediumWeight + ranges.wideWeight, 10000);
     }
 
+    // 测试高波动率（volatility=6000）下的权重分配：V2=50%, V3低=25%, V3高=25%
     function test_CalculateAllocation_HighVolatility() public view {
         (IRebalanceStrategy.AllocationWeights memory alloc,
          IRebalanceStrategy.V3RangeWeights memory ranges) =
@@ -56,6 +59,7 @@ contract RebalanceStrategyTest is BaseTest {
         assertEq(ranges.tightWeight + ranges.mediumWeight + ranges.wideWeight, 10000);
     }
 
+    // 测试getRangeTicks的tight范围：以当前tick为中心，上下约198 tick
     function test_GetRangeTicks_Tight() public view {
         int24 currentTick = -200000;
         (int24 tLower, int24 tUpper, , , , ) =
@@ -65,6 +69,7 @@ contract RebalanceStrategyTest is BaseTest {
         assertLt(tLower, tUpper);
     }
 
+    // 测试getRangeTicks的medium范围：以当前tick为中心，上下约953 tick
     function test_GetRangeTicks_Medium() public view {
         int24 currentTick = -200000;
         (, , int24 mLower, int24 mUpper, , ) =
@@ -73,6 +78,7 @@ contract RebalanceStrategyTest is BaseTest {
         assertApproxEqAbs(int256(mUpper), int256(currentTick + 953), 60, "medium upper");
     }
 
+    // 测试getRangeTicks的wide范围：以当前tick为中心，上下约2624 tick
     function test_GetRangeTicks_Wide() public view {
         int24 currentTick = -200000;
         (, , , , int24 wLower, int24 wUpper) =
@@ -81,6 +87,7 @@ contract RebalanceStrategyTest is BaseTest {
         assertApproxEqAbs(int256(wUpper), int256(currentTick + 2624), 60, "wide upper");
     }
 
+    // 测试getRangeTicks在接近MIN_TICK/MAX_TICK时会钳制边界，不越界
     function test_GetRangeTicks_ClampsAtMinMax() public view {
         int24 nearMin = TickMath.MIN_TICK + 100;
         (int24 tLower, , int24 mLower, , int24 wLower, ) =
@@ -97,6 +104,7 @@ contract RebalanceStrategyTest is BaseTest {
         assertGe(wUpper, TickMath.MAX_TICK, "wideUpper should clamp at MAX_TICK");
     }
 
+    // 测试getRangeTicks返回的所有tick都对齐到tickSpacing(60)
     function test_GetRangeTicks_Aligned() public view {
         int24 currentTick = -200000;
         (int24 tLower, int24 tUpper, int24 mLower, int24 mUpper, int24 wLower, int24 wUpper) =
@@ -109,24 +117,29 @@ contract RebalanceStrategyTest is BaseTest {
         assertEq(int256(wUpper % 60), 0);
     }
 
+    // 测试波动率高于阈值（600>500）时needsRebalance返回true
     function test_NeedsRebalance_AboveThreshold() public view {
         assertTrue(strategy.needsRebalance(600));
     }
 
+    // 测试波动率低于阈值（400<500）时needsRebalance返回false
     function test_NeedsRebalance_BelowThreshold() public view {
         assertFalse(strategy.needsRebalance(400));
     }
 
+    // 测试波动率等于阈值（500）时needsRebalance返回true
     function test_NeedsRebalance_AtThreshold() public view {
         assertTrue(strategy.needsRebalance(500));
     }
 
+    // 测试estimateVolatility在价格相同时返回0
     function test_EstimateVolatility_SamePrice() public view {
         uint160 price = 3000000000000000000000000000;
         uint256 vol = AdaptiveRebalanceStrategy(address(strategy)).estimateVolatility(price, price);
         assertEq(vol, 0);
     }
 
+    // 测试estimateVolatility在价格不同时返回大于0的波动率
     function test_EstimateVolatility_DifferentPrice() public view {
         uint160 price1 = 3000000000000000000000000000;
         uint160 price2 = 4000000000000000000000000000;
@@ -134,11 +147,13 @@ contract RebalanceStrategyTest is BaseTest {
         assertGt(vol, 0);
     }
 
+    // 测试estimateVolatility在目标价格为0时返回0（除零保护）
     function test_EstimateVolatility_ZeroTarget() public view {
         uint256 vol = AdaptiveRebalanceStrategy(address(strategy)).estimateVolatility(1000, 0);
         assertEq(vol, 0);
     }
 
+    // 测试calculateDeviation与estimateVolatility返回值一致
     function test_CalculateDeviation_MatchesVolatility() public view {
         uint160 p1 = 3000000000000000000000000000;
         uint160 p2 = 4000000000000000000000000000;
@@ -147,21 +162,25 @@ contract RebalanceStrategyTest is BaseTest {
         assertEq(dev, vol, "deviation should equal volatility");
     }
 
+    // 测试owner设置再平衡阈值为1000bps成功
     function test_SetRebalanceThreshold_Valid() public {
         strategy.setRebalanceThreshold(1000);
         assertEq(strategy.rebalanceThresholdBps(), 1000);
     }
 
+    // 测试设置再平衡阈值过小（50bps）时revert
     function test_Revert_SetRebalanceThreshold_TooSmall() public {
         vm.expectRevert(bytes("Strategy: invalid threshold"));
         strategy.setRebalanceThreshold(50);
     }
 
+    // 测试设置再平衡阈值过大（6000bps）时revert
     function test_Revert_SetRebalanceThreshold_TooLarge() public {
         vm.expectRevert(bytes("Strategy: invalid threshold"));
         strategy.setRebalanceThreshold(6000);
     }
 
+    // 测试非授权地址调用setRebalanceThreshold时revert
     function test_Revert_SetRebalanceThreshold_NotAuthorized() public {
         vm.prank(alice);
         vm.expectRevert(bytes("Strategy: not authorized"));

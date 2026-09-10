@@ -14,6 +14,7 @@ contract VaultInvariantHandler is BaseTest {
         setUp();
     }
 
+    // 模糊测试动作：Alice存入随机金额的WETH和USDC，验证份额增加
     function depositAlice(uint256 wethAmt, uint256 usdcAmt) public {
         wethAmt = bound(wethAmt, 0.01 ether, 50 ether);
         usdcAmt = bound(usdcAmt, 20e6, 100_000e6);
@@ -30,6 +31,7 @@ contract VaultInvariantHandler is BaseTest {
         depositCount++;
     }
 
+    // 模糊测试动作：Bob存入随机金额的WETH和USDC，验证份额增加
     function depositBob(uint256 wethAmt, uint256 usdcAmt) public {
         wethAmt = bound(wethAmt, 0.01 ether, 50 ether);
         usdcAmt = bound(usdcAmt, 20e6, 100_000e6);
@@ -46,6 +48,7 @@ contract VaultInvariantHandler is BaseTest {
         depositCount++;
     }
 
+    // 模糊测试动作：Charlie存入随机金额的WETH和USDC，验证份额增加
     function depositCharlie(uint256 wethAmt, uint256 usdcAmt) public {
         wethAmt = bound(wethAmt, 0.01 ether, 50 ether);
         usdcAmt = bound(usdcAmt, 20e6, 100_000e6);
@@ -62,6 +65,7 @@ contract VaultInvariantHandler is BaseTest {
         depositCount++;
     }
 
+    // 模糊测试动作：Alice赎回随机比例（1%-50%）的份额，验证代币到账和份额减少
     function withdrawAlice(uint256 sharePct) public {
         uint256 shares = vault.balanceOf(alice);
         if (shares == 0) return;
@@ -83,6 +87,7 @@ contract VaultInvariantHandler is BaseTest {
         withdrawCount++;
     }
 
+    // 模糊测试动作：Bob赎回随机比例（1%-50%）的份额，验证代币到账和份额减少
     function withdrawBob(uint256 sharePct) public {
         uint256 shares = vault.balanceOf(bob);
         if (shares == 0) return;
@@ -104,6 +109,7 @@ contract VaultInvariantHandler is BaseTest {
         withdrawCount++;
     }
 
+    // 模糊测试动作：Charlie赎回随机比例（1%-50%）的份额，验证代币到账和份额减少
     function withdrawCharlie(uint256 sharePct) public {
         uint256 shares = vault.balanceOf(charlie);
         if (shares == 0) return;
@@ -125,6 +131,7 @@ contract VaultInvariantHandler is BaseTest {
         withdrawCount++;
     }
 
+    // 模糊测试动作：跳过700秒后执行再平衡（金库非空时）
     function rebalance() public {
         if (vault.totalSupply() == 0) return;
 
@@ -142,6 +149,7 @@ contract VaultInvariantTest is Test {
         targetContract(address(handler));
     }
 
+    // 不变量：所有用户份额之和始终等于总供应量（份额守恒）
     function invariant_sharesConservation() public view {
         uint256 totalSupply = handler.vault().totalSupply();
         uint256 sumOfBalances =
@@ -152,6 +160,7 @@ contract VaultInvariantTest is Test {
         assertEq(sumOfBalances, totalSupply, "sum of user balances should equal totalSupply");
     }
 
+    // 不变量：所有用户可赎回资产之和不超过金库总资产（偿付能力，无资不抵债）
     function invariant_solvency() public view {
         uint256 totalAssets = handler.vault().totalAssets();
 
@@ -167,6 +176,7 @@ contract VaultInvariantTest is Test {
         );
     }
 
+    // 不变量：convertToShares(totalAssets)始终约等于totalSupply（份额价格稳定，1%误差内）
     function invariant_sharePriceStability() public view {
         uint256 totalSupply = handler.vault().totalSupply();
         if (totalSupply == 0) return;
@@ -182,6 +192,7 @@ contract VaultInvariantTest is Test {
         );
     }
 
+    // 不变量：单个用户的份额不超过总供应量（无超额铸造）
     function invariant_noUserExceedsTotalSupply() public view {
         uint256 totalSupply = handler.vault().totalSupply();
 

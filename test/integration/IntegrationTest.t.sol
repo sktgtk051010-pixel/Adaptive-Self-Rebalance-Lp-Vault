@@ -9,6 +9,7 @@ contract IntegrationTest is BaseTest {
         super.setUp();
     }
 
+    // 测试完整流程：存款→再平衡→累积手续费→再平衡→全额赎回，验证各阶段状态正确
     function test_FullFlow_Deposit_Rebalance_Fees_Withdraw() public {
         uint256 shares = _deposit(alice, 50 ether, 100_000e6);
         assertGt(shares, 0);
@@ -42,6 +43,7 @@ contract IntegrationTest is BaseTest {
         assertEq(vault.totalSupply(), 0);
     }
 
+    // 测试多次再平衡随价格波动调整权重：低波动→中波动→高波动→回调，验证权重自适应
     function test_FullFlow_MultipleRebalances_PriceChanges() public {
         _deposit(alice, 50 ether, 100_000e6);
         uint256 initialAssets = vault.totalAssets();
@@ -81,6 +83,7 @@ contract IntegrationTest is BaseTest {
         assertApproxEqRel(vault.totalAssets(), initialAssets, 0.05e18, "assets conserved");
     }
 
+    // 测试激励完整流程：再平衡盈利→获得激励奖励→领取奖励→验证余额和待领取状态
     function test_FullFlow_IncentiveClaim() public {
         _deposit(alice, 50 ether, 100_000e6);
         vault.rebalance();
@@ -103,6 +106,7 @@ contract IntegrationTest is BaseTest {
         assertEq(incentives.pendingReward(address(this)), 0);
     }
 
+    // 测试三个用户全部赎回后金库清空：总供应量为0，底层资产为0
     function test_AllExit_EmptyVault() public {
         uint256 sharesA = _deposit(alice, 5 ether, 10_000e6);
         uint256 sharesB = _deposit(bob, 5 ether, 10_000e6);
@@ -126,6 +130,7 @@ contract IntegrationTest is BaseTest {
         assertEq(totalU, 0);
     }
 
+    // 测试手续费在多个再平衡周期中持续累积，每个周期累计手续费都增加
     function test_FeesAccumulateOverCycles() public {
         _deposit(alice, 50 ether, 100_000e6);
         vault.rebalance();
@@ -149,6 +154,7 @@ contract IntegrationTest is BaseTest {
         assertEq(vault.rebalanceCount(), 4);
     }
 
+    // 测试治理提案完整流程：发起→投票→通过→时间锁→执行，验证参数变更生效
     function test_MultipleProposalTypes() public {
         govToken.mint(alice, 2000e18);
         govToken.mint(bob, 20000e18);

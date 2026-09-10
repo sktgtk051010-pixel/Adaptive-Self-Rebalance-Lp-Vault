@@ -327,6 +327,80 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 | 4 | 无常损失 | 🟡 中 | 波动率自适应策略 + 三层区间做市 + V2 对冲 |
 | 5 | 女巫攻击激励 | 🟡 中 | 正向收益校验 + 最小阈值 + 冷却期 + 激励上限 |
 
+> 完整的安全风险分析、攻击场景推演和已知限制改进方向，详见 [SECURITY.md](./SECURITY.md)。
+
+---
+
+## 测试覆盖率
+
+### 测试体系架构
+
+项目采用四层测试架构，覆盖从单个函数到完整系统交互的各个层级：
+
+| 测试层级 | 目录 | 测试文件数 | 覆盖目标 |
+|---------|------|-----------|---------|
+| **单元测试** | `test/unit/` | 9 | 单个合约的函数逻辑、边界条件、错误路径 |
+| **集成测试** | `test/integration/` | 1 | 多合约协同工作的完整业务流程 |
+| **不变量测试** | `test/invariant/` | 1 | 系统关键不变量在随机操作序列下始终成立 |
+| **分叉测试** | `test/fork/` | 1 | 基于主网真实状态的端到端验证 |
+
+### 各合约测试覆盖
+
+| 合约 | 对应测试文件 | 覆盖重点 |
+|------|-------------|---------|
+| `AdaptiveLPVault` | `test/unit/vault/`（6个文件） | 存款/取款/再平衡/管理员操作/ERC4626 接口/视图函数 |
+| `UniswapV2Adapter` | `test/unit/UniswapV2AdapterTest.t.sol` | 添加/移除流动性、手续费领取、资产核算 |
+| `UniswapV3Adapter` | `test/unit/UniswapV3AdapterTest.t.sol` | 多区间做市、仓位管理、mint/burn/collect 回调 |
+| `TWAPOracle` | `test/unit/TWAPOracleTest.t.sol` | TWAP 价格读取、波动率计算、观测窗口管理 |
+| `AdaptiveRebalanceStrategy` | `test/unit/RebalanceStrategyTest.t.sol` | 波动率分层、资金配比计算、区间 tick 计算 |
+| `RebalanceIncentives` | `test/unit/IncentivesTest.t.sol` | 奖励计算、冷却期、最低利润阈值、权限控制 |
+| `AdaptiveGovernance` | `test/unit/GovernanceTest.t.sol` | 提案创建/投票/执行、时间锁、参数治理 |
+| `UniswapMath` | `test/unit/UniswapMathTest.t.sol` | TickMath、FullMath、LiquidityAmounts 数学库 |
+
+### 覆盖率统计方式
+
+项目使用 Foundry 内置的覆盖率工具，支持行覆盖率（Line Coverage）和分支覆盖率（Branch Coverage）两种统计维度：
+
+- **行覆盖率**：统计源代码中每一行是否被测试执行过
+- **分支覆盖率**：统计每个条件判断（if/require/&&/||）的 true 和 false 分支是否都被覆盖
+
+### 生成覆盖率报告
+
+```bash
+# 查看覆盖率摘要（每个文件的行覆盖率和分支覆盖率）
+forge coverage --report summary
+
+# 生成 LCOV 格式报告（可用于 VSCode 插件或 CI 集成）
+forge coverage --report lcov
+
+# 生成详细的调试报告（显示未覆盖的具体行号）
+forge coverage --report debug
+```
+
+### 测试设计原则
+
+1. **正向路径覆盖**：每个公开函数至少有一个正常执行路径的测试
+2. **反向路径覆盖**：每个 require/ revert 都有对应的错误触发测试
+3. **边界条件测试**：零值、最大值、临界值等边界场景均有覆盖
+4. **事件校验**：关键状态变更通过事件日志校验
+5. **不变量验证**：系统核心不变量（如总资产守恒、份额净值单调）通过模糊测试验证
+
+### 运行测试
+
+```bash
+# 运行全部测试
+forge test -vvv
+
+# 仅运行单元测试
+forge test --match-path test/unit/ -vvv
+
+# 运行特定合约测试
+forge test --match-contract IncentivesTest -vvv
+
+# 运行主网分叉测试（需要 MAINNET_RPC_URL）
+forge test --match-contract ForkTest -vvv
+```
+
 ---
 
 ## License

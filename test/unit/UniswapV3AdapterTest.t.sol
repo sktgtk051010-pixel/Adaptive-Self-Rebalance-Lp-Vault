@@ -26,6 +26,7 @@ contract UniswapV3AdapterTest is BaseTest {
         upper = aligned + 600;
     }
 
+    // 测试V3适配器在单个价格范围内添加双币流动性成功
     function test_AddLiquidity_SinglePosition() public {
         (int24 lower, int24 upper) = _getValidTicks();
         uint256 amount0 = 1 ether;
@@ -43,6 +44,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertGt(v3HighAdapter.getLpBalance(), 0);
     }
 
+    // 测试V3 positionId由lower和upper tick的keccak256哈希生成
     function test_AddLiquidity_ReturnsPositionId() public {
         (int24 lower, int24 upper) = _getValidTicks();
         bytes32 expectedId = keccak256(abi.encodePacked(lower, upper));
@@ -59,6 +61,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(id, expectedId);
     }
 
+    // 测试在两个不同价格范围分别添加流动性，activePositions返回2个
     function test_AddLiquidity_MultipleRanges() public {
         (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
@@ -82,6 +85,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(positions.length, 2);
     }
 
+    // 测试同一价格范围多次添加流动性会累积，activePositions仍为1个
     function test_AddLiquidity_SameRangeAccumulates() public {
         (int24 lower, int24 upper) = _getValidTicks();
 
@@ -103,6 +107,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(positions.length, 1, "should still be 1 position");
     }
 
+    // 测试lower tick大于upper tick时revert（无效价格范围）
     function test_Revert_AddLiquidity_InvalidTicks() public {
         (int24 lower, int24 upper) = _getValidTicks();
         weth.transfer(address(vault), 1 ether);
@@ -114,6 +119,7 @@ contract UniswapV3AdapterTest is BaseTest {
         v3HighAdapter.addLiquidity(1 ether, 2000e6, 0, 0, data);
     }
 
+    // 测试tick未对齐到tickSpacing时revert
     function test_Revert_AddLiquidity_UnalignedTicks() public {
         (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
         int24 lower = currentTick - 599;
@@ -128,6 +134,7 @@ contract UniswapV3AdapterTest is BaseTest {
         v3HighAdapter.addLiquidity(1 ether, 2000e6, 0, 0, data);
     }
 
+    // 测试非金库地址调用addLiquidity时revert
     function test_Revert_AddLiquidity_NotVault() public {
         (int24 lower, int24 upper) = _getValidTicks();
         bytes memory data = abi.encode(lower, upper);
@@ -136,6 +143,7 @@ contract UniswapV3AdapterTest is BaseTest {
         v3HighAdapter.addLiquidity(1 ether, 2000e6, 0, 0, data);
     }
 
+    // 测试部分撤出V3流动性：撤出一半liquidity后收到对应代币
     function test_RemoveLiquidity_Partial() public {
         (int24 lower, int24 upper) = _getValidTicks();
         bytes32 id = keccak256(abi.encodePacked(lower, upper));
@@ -163,6 +171,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(usdc.balanceOf(address(vault)), vaultUsdcBefore + a1);
     }
 
+    // 测试全部撤出V3流动性后position被停用，activePositions为空
     function test_RemoveLiquidity_All_DeactivatesPosition() public {
         (int24 lower, int24 upper) = _getValidTicks();
         bytes32 id = keccak256(abi.encodePacked(lower, upper));
@@ -187,6 +196,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(positions.length, 0, "position should be deactivated");
     }
 
+    // 测试collectFees收取V3池累积的手续费并转入金库
     function test_CollectFees_TransfersToVault() public {
         (int24 lower, int24 upper) = _getValidTicks();
         bytes32 id = keccak256(abi.encodePacked(lower, upper));
@@ -213,6 +223,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertTrue(wethIncreased || usdcIncreased, "vault should receive fees");
     }
 
+    // 测试getTotalAssets返回所有position的资产之和
     function test_GetTotalAssets_SumOfPositions() public {
         (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
@@ -247,6 +258,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertApproxEqRel(total.amount1, expectedAmount1, 0.01e18, "total amount1 should equal sum of positions");
     }
 
+    // 测试getPositionInfo返回正确的tick范围、liquidity和active状态
     function test_GetPositionInfo_ReturnsCorrectFields() public {
         (int24 lower, int24 upper) = _getValidTicks();
         bytes32 id = keccak256(abi.encodePacked(lower, upper));
@@ -267,6 +279,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertTrue(active);
     }
 
+    // 测试getActivePositions只返回active状态的position，全部撤出后为空
     function test_GetActivePositions_OnlyActive() public {
         (int24 lower, int24 upper) = _getValidTicks();
         bytes32 id = keccak256(abi.encodePacked(lower, upper));
@@ -287,6 +300,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(v3HighAdapter.getActivePositions().length, 0);
     }
 
+    // 测试withdrawAll撤出所有position的全部流动性，所有position停用
     function test_WithdrawAll_AllPositionsBurned() public {
         (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
@@ -320,6 +334,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(v3HighAdapter.getActivePositions().length, 0);
     }
 
+    // 测试高费率和低费率适配器返回正确的adapterType枚举值
     function test_AdapterType() public view {
         assertEq(
             uint256(v3HighAdapter.adapterType()),
@@ -331,6 +346,7 @@ contract UniswapV3AdapterTest is BaseTest {
         );
     }
 
+    // 测试添加流动性金额过小导致liquidity为0时，仍返回有效的positionId
     function test_AddLiquidity_ZeroLiquidity() public {
         int24 tickLower = _alignTick(-100, 60);
         int24 tickUpper = _alignTick(100, 60);
@@ -347,6 +363,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertNotEq(id, bytes32(0));
     }
 
+    // 测试无手续费累积时collectFees返回0
     function test_CollectFees_ZeroFees() public {
         int24 tickLower = _alignTick(-100, 60);
         int24 tickUpper = _alignTick(100, 60);
@@ -362,6 +379,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(fee1, 0);
     }
 
+    // 测试查询不存在的position时active返回false
     function test_GetPositionInfo_NotExists() public view {
         bytes32 fakeId = keccak256("nonexistent_position_id");
 
@@ -379,6 +397,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertFalse(active, "active should be false");
     }
 
+    // 测试仅存入WETH（USDC为0）时添加流动性成功，只投入WETH
     function test_AddLiquidity_OnlyWETH() public {
         int24 tickLower = _alignTick(-100, 60);
         int24 tickUpper = _alignTick(100, 60);
@@ -393,6 +412,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertEq(amount1, 0);
     }
 
+    // 测试仅存入USDC（WETH为0）时添加流动性成功，只投入USDC
     function test_AddLiquidity_OnlyUSDC() public {
         (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
@@ -410,6 +430,7 @@ contract UniswapV3AdapterTest is BaseTest {
         assertGt(amount1, 0);
     }
 
+    // 测试添加流动性时minAmount设置过高导致滑点超限revert
     function test_Revert_AddLiquidity_Slippage() public {
         int24 tickLower = _alignTick(-100, 60);
         int24 tickUpper = _alignTick(100, 60);
@@ -421,6 +442,7 @@ contract UniswapV3AdapterTest is BaseTest {
         v3HighAdapter.addLiquidity(10 ether, 20000e6, 999999e18, 999999e6, data);
     }
 
+    // 测试撤出不存在的position时revert
     function test_Revert_RemoveLiquidity_NotFound() public {
         bytes32 fakeId = keccak256("fake");
         vm.prank(address(vault));
@@ -428,6 +450,7 @@ contract UniswapV3AdapterTest is BaseTest {
         v3HighAdapter.removeLiquidity(fakeId, 100, 0, 0);
     }
 
+    // 测试撤出超过position持有liquidity时revert
     function test_Revert_RemoveLiquidity_InvalidLiquidity() public {
         int24 tickLower = _alignTick(-100, 60);
         int24 tickUpper = _alignTick(100, 60);
@@ -444,6 +467,7 @@ contract UniswapV3AdapterTest is BaseTest {
         v3HighAdapter.removeLiquidity(id, 999999e18, 0, 0);
     }
 
+    // 测试撤出流动性时minAmount设置过高导致滑点超限revert
     function test_Revert_RemoveLiquidity_Slippage() public {
         int24 tickLower = _alignTick(-100, 60);
         int24 tickUpper = _alignTick(100, 60);
@@ -460,6 +484,7 @@ contract UniswapV3AdapterTest is BaseTest {
         v3HighAdapter.removeLiquidity(id, liquidity, 999999e18, 999999e6);
     }
 
+    // 测试对不存在的position收取手续费时revert
     function test_Revert_CollectFees_NotFound() public {
         bytes32 fakeId = keccak256("fake");
 

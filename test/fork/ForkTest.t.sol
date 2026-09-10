@@ -155,6 +155,7 @@ contract ForkTest is Test {
         tickUpper = aligned + tickSpacing * 10;
     }
 
+    // 测试主网分叉环境下所有合约正确部署和初始化
     function test_Fork_Deployment_ContractsInitialized() public view {
         assertTrue(address(vault) != address(0), "vault not deployed");
         assertTrue(address(oracle) != address(0), "oracle not deployed");
@@ -169,6 +170,7 @@ contract ForkTest is Test {
         assertEq(address(vault.ORACLE()), address(oracle), "vault oracle mismatch");
     }
 
+    // 测试主网V3 0.3%池的当前价格可以正常读取
     function test_Fork_Mainnet_V3Pool_PriceReadable() public view {
         (uint160 sqrtPriceX96, int24 tick, , , , , ) = IUniswapV3Pool(MAINNET_V3_POOL_3000).slot0();
         assertGt(sqrtPriceX96, 0, "sqrtPriceX96 should be > 0");
@@ -176,6 +178,7 @@ contract ForkTest is Test {
         console2.log("V3 0.3% pool current tick:", tick);
     }
 
+    // 测试主网环境下预言机可以读取TWAP价格
     function test_Fork_Oracle_GetTWAPPrice() public {
         oracle.ensureObservationCardinality(10);
 
@@ -185,6 +188,7 @@ contract ForkTest is Test {
         console2.log("TWAP tick:", tick);
     }
 
+    // 测试主网环境下完整流程：存款→再平衡→全额赎回
     function test_Fork_Deposit_Rebalance_withdraw() public {
         uint256 shares = _deposit(ALICE, 1 ether, 2000e6);
         assertGt(shares, 0, "shares should be > 0");
@@ -213,6 +217,7 @@ contract ForkTest is Test {
         assertEq(usdc.balanceOf(ALICE), usdcBefore + usdcOut, "usdc balance should increase");
     }
 
+    // 测试主网环境下多用户存款无稀释，Alice赎回不影响Bob的资产价值
     function test_Fork_MultipleUsers_NoUnaffected() public {
         uint256 sharesA = _deposit(ALICE, 10 ether, 20_000e6);
         uint256 assetsPerShareA = vault.totalAssets() * 1e18 / sharesA;
@@ -236,6 +241,7 @@ contract ForkTest is Test {
         assertEq(vault.balanceOf(BOB), bobSharesBefore, "Bob shares should not change");
     }
 
+    // 测试主网环境下V2适配器完整生命周期：添加流动性→部分撤出→全部撤出
     function test_Fork_V2Adapter_FullLifecycle() public {
         weth.transfer(address(vault), 5 ether);
         usdc.transfer(address(vault), 10_000e6);
@@ -275,6 +281,7 @@ contract ForkTest is Test {
         assertEq(v2Adapter.getLpBalance(), 0, "LP balance should be 0 after withdrawAll");
     }
 
+    // 测试主网环境下V3适配器完整生命周期：添加→真实swap产生手续费→收取手续费→部分撤出→全部撤出
     function test_Fork_V3Adapter_FullLifecycle() public {
         (int24 tickLower, int24 tickUpper) = _getV3Tick();
 
@@ -358,6 +365,7 @@ contract ForkTest is Test {
         assertFalse(activeAfterWithdraw, "position should not be active after withdrawAll");
     }
 
+    // 测试主网环境下治理提案完整流程：发起→投票→通过→时间锁→执行
     function test_Fork_Governance_Proposal_Execute() public {
         vm.prank(address(governance));
         govToken.mint(ALICE, 2000e18);
@@ -393,6 +401,7 @@ contract ForkTest is Test {
         assertEq(governance.getParams().twapWindow, 600, "twapWindow should be 600");
     }
 
+    // 测试主网环境下激励合约完整流程：再平衡盈利→获得奖励→冷却期→领取奖励→各种revert场景
     function test_Fork_Incentives_RebalanceReward() public {
         _deposit(ALICE, 20 ether, 40_000e6);
 

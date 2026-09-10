@@ -9,6 +9,7 @@ contract VaultRebalanceTest is BaseTest {
         super.setUp();
     }
 
+    // 测试首次再平衡无冷却期限制，rebalanceCount从0变为1
     function test_Rebalance_FirstTime_NoCooldown() public {
         _deposit(alice, 20 ether, 40_000e6);
         assertEq(vault.rebalanceCount(), 0);
@@ -16,6 +17,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(vault.rebalanceCount(), 1);
     }
 
+    // 测试再平衡后rebalanceCount递增且lastRebalanceTimestamp被更新
     function test_Rebalance_EmitRebalancedEvent() public {
         _deposit(alice, 20 ether, 40_000e6);
         uint256 countBefore = vault.rebalanceCount();
@@ -26,6 +28,7 @@ contract VaultRebalanceTest is BaseTest {
         assertGt(vault.lastRebalanceTimestamp(), 0);
     }
 
+    // 测试价格变动后再平衡会更新V2/V3低/V3高的权重分配，且权重之和为10000
     function test_Rebalance_EmitWeightsUpdated() public {
         _deposit(alice, 20 ether, 40_000e6);
 
@@ -48,6 +51,7 @@ contract VaultRebalanceTest is BaseTest {
         assertGt(v3HighAfter, 0, "v3High weight should be > 0");
     }
 
+    // 测试价格不变时再平衡前后总资产守恒（无无常损失）
     function test_Rebalance_FundsConserved_NoPriceChange() public {
         _deposit(alice, 20 ether, 40_000e6);
         uint256 assetBefore = vault.totalAssets();
@@ -58,6 +62,7 @@ contract VaultRebalanceTest is BaseTest {
         assertApproxEqAbs(assetBefore, assetAfter, 0.01e6);
     }
 
+    // 测试再平衡后lastRebalanceTimestamp被设置为当前区块时间
     function test_Rebalance_UpdatesLastRebalanceTimestamp() public {
         _deposit(alice, 20 ether, 40_000e6);
         assertEq(vault.lastRebalanceTimestamp(), 0);
@@ -68,6 +73,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(vault.lastRebalanceTimestamp(), tsBefore);
     }
 
+    // 测试普通冷却期：首次再平衡后500秒内再次调用revert CooldownActive
     function test_Revert_Rebalance_Cooldown_Normal() public {
         _deposit(alice, 20 ether, 40_000e6);
         vault.rebalance();
@@ -77,6 +83,7 @@ contract VaultRebalanceTest is BaseTest {
         vault.rebalance();
     }
 
+    // 测试普通冷却期过后（601秒）可以正常再次再平衡
     function test_Rebalance_Cooldown_PassesAfter600s() public {
         _deposit(alice, 20 ether, 40_000e6);
         vault.rebalance();
@@ -87,6 +94,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(vault.rebalanceCount(), 2);
     }
 
+    // 测试紧急冷却期：价格大幅波动后700秒内再次再平衡仍revert（紧急冷却更长）
     function test_Revert_Rebalance_EmergencyCooldown() public {
         _deposit(alice, 20 ether, 40_000e6);
         vault.rebalance();
@@ -98,6 +106,7 @@ contract VaultRebalanceTest is BaseTest {
         vault.rebalance();
     }
 
+    // 测试紧急冷却期过后（1801秒）可以正常再次再平衡
     function test_Rebalance_EmergencyCooldown_PassesAfter1800s() public {
         _deposit(alice, 20 ether, 40_000e6);
         vault.rebalance();
@@ -108,6 +117,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(vault.rebalanceCount(), 2);
     }
 
+    // 测试冷却期内再平衡被阻止，但存款功能不受影响
     function test_DepositDuringCooldown() public {
         _deposit(alice, 20 ether, 40_000e6);
         vault.rebalance();
@@ -121,6 +131,7 @@ contract VaultRebalanceTest is BaseTest {
         assertGt(vault.totalSupply(), supplyBefore, "deposit should work during cooldown");
     }
 
+    // 测试低波动率下权重分配：V2=10%, V3低=30%, V3高=60%
     function test_Rebalance_LowVolatility_Allocation() public {
         _deposit(alice, 50 ether, 100_000e6);
         vault.rebalance();
@@ -131,6 +142,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(v3High, 6000, "v3High weight should be 60%");
     }
 
+    // 测试中波动率下权重分配：V2=25%, V3低=30%, V3高=45%
     function test_Rebalance_MediumVolatility_Allocation() public {
         _deposit(alice, 50 ether, 100_000e6);
         vault.rebalance();
@@ -145,6 +157,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(v3High, 4500, "v3High weight should be 45%");
     }
 
+    // 测试高波动率下权重分配：V2=50%, V3低=25%, V3高=25%
     function test_Rebalance_HighVolatility_Allocation() public {
         _deposit(alice, 50 ether, 100_000e6);
         vault.rebalance();
@@ -159,6 +172,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(v3High, 2500, "v3High weight should be 25%");
     }
 
+    // 测试再平衡时收取V3池手续费，cumulativeFeesUSDC增加
     function test_Rebalance_CollectsFees() public {
         _deposit(alice, 50 ether, 100_000e6);
         vault.rebalance();
@@ -175,6 +189,7 @@ contract VaultRebalanceTest is BaseTest {
         assertGt(feesAfter, feesBefore, "cumulative fees should increase");
     }
 
+    // 测试无手续费时总资产不变，有手续费时总资产和累计手续费均增加
     function test_Rebalance_FeesIncreaseTotalAssets() public {
         _deposit(alice, 50 ether, 100_000e6);
         vault.rebalance();
@@ -209,6 +224,7 @@ contract VaultRebalanceTest is BaseTest {
         assertGt(feesAfterWithFees, feesBeforeWithFees, "with fees, cumulative fees should increase");
     }
 
+    // 测试有激励合约且再平衡盈利时，调用者获得激励奖励
     function test_Rebalance_WithIncentives_Profitable() public {
         _deposit(alice, 50 ether, 100_000e6);
         vault.rebalance();
@@ -224,6 +240,7 @@ contract VaultRebalanceTest is BaseTest {
         assertGt(rewardAfter, rewardBefore, "should earn incentive reward");
     }
 
+    // 测试激励合约地址设为0时再平衡仍正常执行（不依赖激励）
     function test_Rebalance_WithZeroIncentives() public {
         _deposit(alice, 20 ether, 40_000e6);
         vault.setIncentives(address(0));
@@ -232,6 +249,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(vault.rebalanceCount(), 1);
     }
 
+    // 测试激励合约调用失败时再平衡不会revert（容错设计，激励失败不阻塞核心逻辑）
     function test_Rebalance_IncentivesFail_DoesNotRevert() public {
         _deposit(alice, 20 ether, 40_000e6);
         vault.rebalance();
@@ -247,6 +265,7 @@ contract VaultRebalanceTest is BaseTest {
         assertEq(vault.rebalanceCount(), 2);
     }
 
+    // 测试暂停状态下再平衡revert，取消暂停后恢复正常
     function test_Revert_Rebalance_WhenPaused() public {
         _deposit(alice, 10 ether, 20_000e6);
         vault.setPaused(true);
