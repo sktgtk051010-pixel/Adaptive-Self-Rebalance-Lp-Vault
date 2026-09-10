@@ -69,7 +69,7 @@ contract ForkTest is Test {
     IERC20 public usdc = IERC20(MAINNET_USDC);
 
     function setUp() public {
-        vm.createSelectFork("https://ethereum-rpc.publicnode.com");
+        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
 
         govToken = new GovernanceToken();
         governance = new AdaptiveGovernance(address(govToken));
