@@ -54,6 +54,12 @@
             <div class="grid grid-2">
                 <div class="card">
                     <h3>📥 存入流动性</h3>
+                    <div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+                        <div style="font-weight:600;color:#92400e;margin-bottom:4px;">⚠️ 重要提示：必须同时存入 WETH 和 USDC</div>
+                        <div style="font-size:13px;color:#78350f;line-height:1.6;">
+                            再平衡时需要将资金分配到 Uniswap V2/V3 流动性池，而 V2 和 V3 区间内做市都要求同时提供两种代币。<b>仅存入单一代币会导致资金停留在闲置区域，无法参与做市赚手续费。</b>建议两种代币按当前价格的等价值存入。
+                        </div>
+                    </div>
                     <div class="input-group">
                         <label>WETH 数量 <span class="balance-hint" id="wethMaxHint"></span></label>
                         <div class="input-wrapper">
