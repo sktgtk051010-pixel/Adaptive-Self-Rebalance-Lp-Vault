@@ -154,7 +154,16 @@
                     <div class="stat"><label>待领取奖励 (USDC)</label><span id="rbRewards" class="stat-value highlight">-</span></div>
                     <div class="stat"><label>激励比例</label><span id="rbIncentiveBps" class="stat-value">-</span></div>
                 </div>
-                <div class="info-box mt-4"><div class="info-row"><span>冷却状态</span><span id="cooldownStatus">-</span></div></div>
+                <div class="info-box mt-4">
+                    <div class="info-row"><span>冷却状态</span><span id="cooldownStatus">-</span></div>
+                    <div class="info-row" id="deviationRow">
+                        <span>价格偏离 TWAP（参考）</span>
+                        <span class="deviation-right">
+                            <span id="deviationPct" class="deviation-pct">--</span>
+                            <span id="deviationBadge" class="deviation-badge neutral">检测中</span>
+                        </span>
+                    </div>
+                </div>
                 <div class="btn-group mt-4">
                     <button class="btn btn-primary" onclick="triggerRebalance()">🔄 触发再平衡</button>
                     <button class="btn btn-secondary" onclick="claimRewards()">💰 领取奖励</button>

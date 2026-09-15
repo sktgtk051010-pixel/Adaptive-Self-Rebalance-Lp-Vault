@@ -13,8 +13,7 @@
   - [2. 重入攻击（Reentrancy）](#2-重入攻击reentrancy)
   - [3. 预言机操纵（Oracle Manipulation）](#3-预言机操纵oracle-manipulation)
   - [4. 无常损失（Impermanent Loss）](#4-无常损失impermanent-loss)
-  - [5. 女巫攻击激励（Sybil Attack on Incentives）](#5-女巫攻击激励sybil-attack-on-incentives)
-  - [6. 治理参数滥用（Governance Parameter Abuse）](#6-治理参数滥用governance-parameter-abuse)
+  - [5. 治理参数滥用（Governance Parameter Abuse）](#5-治理参数滥用governance-parameter-abuse)
 - [已知限制与改进方向](#已知限制与改进方向)
   - [1. V3 再平衡撤出缺少显式滑点保护](#1-v3-再平衡撤出缺少显式滑点保护)
   - [2. V3 存款传入的 minAmount 为 0](#2-v3-存款传入的-minamount-为-0)
@@ -140,30 +139,7 @@ LP 做市本质上存在无常损失风险。当 WETH/USDC 价格发生大幅波
 
 ---
 
-### 5. 女巫攻击激励（Sybil Attack on Incentives）
-
-**风险评级**：🟡 中
-
-#### 攻击场景
-
-系统设计了去中心化再平衡激励机制，任何人触发再平衡并产生正向收益时，可获得 USDC 奖励。攻击者可能：
-
-1. 创建大量地址（女巫攻击）
-2. 用每个地址反复触发小额再平衡
-3. 每次再平衡产生微小正向收益，从而累积大量激励奖励
-4. 激励资金被攻击者榨取，损害真正的再平衡执行者利益
-
-#### 缓解措施
-
-- **正向收益校验**：激励发放前严格校验再平衡操作是否产生正向收益（金库资产净值增加），亏损或零收益的再平衡不发放奖励
-- **最小收益阈值**：设置最小收益阈值，只有再平衡收益超过阈值时才发放激励，防止小额反复操作
-- **冷却期**：同一地址触发再平衡后有冷却期，冷却期内再次触发不获得奖励
-- **激励比例上限**：激励金额为再平衡收益的固定比例（可治理调整），且有单次上限，防止单次操作榨取大量激励
-- **激励资金独立管理**：激励资金存放在独立的 `RebalanceIncentives` 合约中，与金库资产隔离，即使激励被榨取也不影响金库本金
-
----
-
-### 6. 治理参数滥用（Governance Parameter Abuse）
+### 5. 治理参数滥用（Governance Parameter Abuse）
 
 **风险评级**：🟢 低
 

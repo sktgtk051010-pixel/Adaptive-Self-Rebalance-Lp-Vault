@@ -43,6 +43,12 @@ const VAULT_ABI = [
 ];
 const ORACLE_ABI = [
     'function getTWAPPrice() view returns (uint160 sqrtPriceX96, int24 tick)',
+    'function ORACLE_POOL() view returns (address)',
+];
+const STRATEGY_ABI = [
+    'function estimateVolatility(uint160 sqrtPriceX96Spot, uint160 sqrtPriceX96Twap) pure returns (uint256)',
+    'function rebalanceThresholdBps() view returns (uint256)',
+    'function needsRebalance(uint256 currentDeviation) view returns (bool)',
 ];
 const GOV_ABI = [
     'function getParams() view returns (tuple(uint32 twapWindow, uint256 rebalanceThreshold, uint256 incentiveBps, uint256 maxSlippageBps, uint256 v2WeightCap, uint256 v3LowFeeWeightCap, uint256 v3HighFeeWeightCap, uint256 tightRangeBps, uint256 mediumRangeBps, uint256 wideRangeBps))',
@@ -225,6 +231,7 @@ async function connectWallet() {
                 weth: new ethers.Contract(ADDRESSES.weth, ERC20_ABI, signer),
                 usdc: new ethers.Contract(ADDRESSES.usdc, ERC20_ABI, signer),
                 oracle: new ethers.Contract(ADDRESSES.oracle, ORACLE_ABI, signer),
+                strategy: new ethers.Contract(ADDRESSES.strategy, STRATEGY_ABI, signer),
                 governance: new ethers.Contract(ADDRESSES.governance, GOV_ABI, signer),
                 incentives: new ethers.Contract(ADDRESSES.incentives, INCENTIVES_ABI, signer),
                 govToken: new ethers.Contract(ADDRESSES.govToken, GOV_TOKEN_ABI, signer),
@@ -279,6 +286,7 @@ function loadAllData(silent) {
     safeCall(loadGovernanceParams);
     safeCall(loadDistribution);
     safeCall(loadIncentivesData);
+    safeCall(loadDeviation);
     safeCall(loadGovTokenBalance);
 }
 
@@ -493,6 +501,53 @@ async function loadIncentivesData() {
         setText('rbRewards', '-');
         setText('rbIncentiveBps', '-');
         setText('cooldownStatus', '-');
+    }
+}
+
+// 加载价格偏离参考（现货 vs TWAP，供再平衡触发者判断时机）
+async function loadDeviation() {
+    var pctEl = $('deviationPct');
+    var badge = $('deviationBadge');
+    var row = $('deviationRow');
+    try {
+        var twapResult = await C.oracle.getTWAPPrice();
+        if (!twapResult || !twapResult[0] || twapResult[0].isZero()) {
+            pctEl.textContent = '--';
+            badge.textContent = '无数据';
+            badge.className = 'deviation-badge neutral';
+            return;
+        }
+        var poolAddr = await C.oracle.ORACLE_POOL();
+        if (!poolAddr || poolAddr === ethers.constants.AddressZero) {
+            pctEl.textContent = '--';
+            badge.textContent = '未配置';
+            badge.className = 'deviation-badge neutral';
+            return;
+        }
+        var pool = new ethers.Contract(poolAddr, ['function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)'], signer);
+        var slot = await pool.slot0();
+        var vol = await C.strategy.estimateVolatility(slot[0], twapResult[0]);
+        var threshold = await C.strategy.rebalanceThresholdBps();
+        // 调用链上 needsRebalance 判断是否达到建议触发线（偏离 ≥ 阈值）
+        var should = await C.strategy.needsRebalance(vol);
+        var pct = (parseFloat(vol.toString()) / 100).toFixed(2);
+        var thrPct = (parseFloat(threshold.toString()) / 100).toFixed(1);
+        pctEl.textContent = pct + '%';
+        if (should) {
+            badge.textContent = '✅ 偏离度 > ' + thrPct + '%';
+            badge.className = 'deviation-badge ok';
+            if (row) row.classList.add('ok');
+        } else {
+            badge.textContent = '偏离度 < ' + thrPct + '%';
+            badge.className = 'deviation-badge idle';
+            if (row) row.classList.remove('ok');
+        }
+    } catch(e) {
+        console.error('Deviation:', e.message);
+        pctEl.textContent = '--';
+        badge.textContent = '读取失败';
+        badge.className = 'deviation-badge neutral';
+        if (row) row.classList.remove('ok');
     }
 }
 
