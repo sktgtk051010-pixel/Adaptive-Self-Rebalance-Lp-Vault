@@ -20,6 +20,7 @@
 - [项目结构](#项目结构)
 - [核心合约说明](#核心合约说明)
 - [策略逻辑详解](#策略逻辑详解)
+- [核心机制与参数总览](#核心机制与参数总览)
 - [安全分析](#安全分析)
 - [测试覆盖率](#测试覆盖率)
 - [License](#license)
@@ -38,7 +39,7 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 
 - **ERC4626 标准金库**：存款铸币、赎回销毁，份额净值自动累积做市手续费收益
 - **多场所流动性路由**：Uniswap V2 + Uniswap V3 0.05% + Uniswap V3 0.30% 三池联动
-- **TWAP 预言机驱动**：使用 Uniswap V3 时间加权均价，规避瞬时价格操纵和闪电贷攻击
+- **TWAP 预言机驱动**：使用 Uniswap V3 时间加权均价，可缓解瞬时价格操纵和闪电贷攻击
 - **波动率自适应策略**：根据市场波动率动态调整 V2/V3 资金配比和做市区间宽度
 - **三层区间做市**：窄/中/宽三层价格区间分层做市，平衡手续费收益与无常损失
 - **去中心化再平衡激励**：任何人可触发再平衡，正向收益时获得 USDC 奖励
@@ -152,7 +153,7 @@ forge build
 forge test -vvv
 
 # 仅运行单元测试
-forge test --match-path test/unit/ -vvv
+forge test --match-path "test/unit/*.t.sol" -vvv
 
 # 运行主网分叉测试（需要 MAINNET_RPC_URL）
 forge test --match-contract ForkTest -vvv
@@ -263,7 +264,7 @@ Adaptive-Self-Rebalance-Lp-Vault/
 | 合约 | 行数 | 说明 |
 |------|------|------|
 | `AdaptiveLPVault` | ~500 | ERC4626 标准金库，统一管理用户资金，协调再平衡流程，处理存款/取款/份额计算 |
-| `TWAPOracle` | ~150 | Uniswap V3 TWAP 价格读取器，支持时间加权均价计算，规避瞬时价格操纵 |
+| `TWAPOracle` | ~150 | Uniswap V3 TWAP 价格读取器，支持时间加权均价计算，缓解瞬时价格操纵 |
 | `AdaptiveRebalanceStrategy` | ~200 | 波动率自适应策略引擎，根据市场波动率计算 V2/V3 资金配比和三层做市区间 |
 | `UniswapV2Adapter` | ~200 | Uniswap V2 流动性适配器，封装添加/移除流动性、领取手续费等操作 |
 | `UniswapV3Adapter` | ~350 | Uniswap V3 多区间流动性适配器，支持集中流动性做市、多层区间管理 |
@@ -333,6 +334,139 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 > 设计说明：再平衡不设价格偏离门槛，允许执行者在冷却期结束后随时跟价触发；冷却期（10/30 分钟）与"正向收益才发放激励"共同防止频繁触发滥用。
 
 再平衡执行者在操作产生正向收益时，可获得一定比例的 USDC 奖励；亏损或零收益的再平衡不发放奖励。
+
+---
+
+## 核心机制与参数总览
+
+> 本节集中定义系统各核心机制的**代码事实**与**参数数值**，作为全文机制描述的权威参考。
+> 对应评审关注点：再平衡触发、治理代币、波动率口径、激励闭环、手续费归集、赎回产物、存款前置、预言机失效行为。
+
+### 1. 再平衡触发机制
+
+| 项 | 设计 | 数值/范围 | 说明 |
+|----|------|-----------|------|
+| 触发者 | 任何人 | — | `rebalance()` 无权限限制 |
+| 触发条件 | 无价格偏离强制门槛 | — | 唯一约束为冷却期 |
+| 常规冷却期 | 两次再平衡最小间隔 | **600 秒（10 分钟）** | 波动率 ≤ 50% 时生效 |
+| 紧急冷却期 | 高波动后强制等待 | **1800 秒（30 分钟）** | 波动率 > 50%（`PANIC_VOL_THRESHOLD = 5000bps`）时生效 |
+| 波动率实时计算 | 每次触发时计算 | 见[波动率计算机制](#3-波动率计算机制) | 仅用于选择冷却期档位与重新配仓 |
+| 价格偏离参考信号 | `needsRebalance()` | 偏离 ≥ **500bps（5%）** 返回 true | 仅作触发者参考，链上 `rebalance()` 不强制检查 |
+| 触发后行为 | 按波动率三档重新配仓 | — | 全部撤出后按新配比重建仓位 |
+
+**机制说明**：任何人可在冷却期结束后触发再平衡；波动率仅决定冷却时长（常规 10 分钟 / 紧急 30 分钟），不决定"能否触发"。系统不设"最大时间间隔"或"波动率显著变化"自动触发逻辑。
+
+### 2. 治理与治理代币机制
+
+| 项 | 设计 | 数值/范围 | 说明 |
+|----|------|-----------|------|
+| 治理代币 | `GovernanceToken`（符号 **ALP**） | ERC20Votes，18 位小数 | 支持委托投票与区块快照 |
+| 铸币权限 | `onlyMinter` | 部署后 minter = 治理合约 | 只有治理合约可 mint |
+| 实际铸币路径 | 治理 owner 代理执行 | `executeAsOwner(govToken, mint 数据)` | 治理合约自身无直接 mint 函数 |
+| 初始发行 | 部署时**零分发** | 无预挖、无初始供应 | 需部署后按需 mint 给投票人 |
+| 提案门槛 | 创建提案所需代币 | **1000 ALP** | `proposalThreshold` |
+| 法定人数 | 提案通过所需赞成票 | **10000 ALP** | `quorumVotes`，且须 for > against |
+| 投票延迟 | 提案创建到投票开始 | **1 个区块（约 12 秒）** | `votingDelay` |
+| 投票期 | 投票持续时间 | **28800 个区块（约 4 天）** | `votingPeriod` |
+| 时间锁 | 提案执行后生效延迟 | **172800 秒（48 小时）** | `timelockDelay` |
+| 可治理参数 | 6 类提案 | TWAP 窗口 / 再平衡阈值 / 激励比例 / 最大滑点 / 权重上限（3值）/ 区间范围（3值） | 治理执行后同步到各合约 |
+
+### 3. 波动率计算机制
+
+| 项 | 设计 | 数值/范围 | 说明 |
+|----|------|-----------|------|
+| 口径 | **现货价对 TWAP 参考价的偏离度** | bps | 非金融学"收益率标准差" |
+| 公式 | `≈ \|现货价 − TWAP价\| / TWAP价 × 10000` | — | 代码：`diff×(spot+twap)/twap²×10000` |
+| 数据来源 | 部署指定的 V3 WETH/USDC 池 | — | `ORACLE_POOL` |
+| TWAP 窗口 | 时间加权平均窗口 | **1800 秒（30 分钟）**，治理可调 **[300, 86400]** | `twapWindow` |
+| 计算者 | `AdaptiveRebalanceStrategy.estimateVolatility()` | — | 金库 `rebalance()` 时实时调用 |
+| 分层阈值 | 低 / 中 / 高 | **≤20% / 20–50% / >50%**（即 ≤2000 / ≤5000 / >5000 bps） | 决定资金配比与冷却期档位 |
+
+### 4. 再平衡激励机制
+
+| 项 | 设计 | 数值/范围 | 说明 |
+|----|------|-----------|------|
+| 奖励比例 | 正向收益的固定比例 | **500bps = 5%**，治理可调，上限 **2000bps（20%）** | `incentiveBps` |
+| 最小利润 | 发放奖励的最低收益 | **1 USDC**（`1e6`） | `minProfitThreshold` |
+| 激励冷却 | 两次激励计算的最小间隔 | **300 秒**，治理可调 **[60, 86400]** | 独立于金库 10 分钟冷却 |
+| 资金来源 | 手动充值 | 部署默认 **0**（`INCENTIVE_INITIAL_FUND = 0`） | 两种充值方式见下 |
+| 充值方式① | `fundRewards(amount)` | 仅治理合约或金库可调 | 从调用方转入 USDC |
+| 充值方式② | 直接向激励合约转账 | 任意地址 | 领取逻辑按合约 USDC 余额判定，直接转账即生效 |
+| 奖励计算 | `profit × bps / 10000` | — | 要求 `profit ≥ 最小利润` |
+| 余额不足时 | **截断**为合约现有余额 | — | reward 降为可用余额 |
+| 池耗尽/未充值时 | reward = 0 | — | 再平衡照常成功，不记账；`claimReward()` revert `"no rewards"` |
+| 领取 | `claimReward()` | 仅本人 | 领取后清零 `rewardsEarned` |
+
+### 5. 手续费归集机制
+
+| 项 | V2 | V3（0.05% / 0.30%） |
+|----|----|---------------------|
+| 累积方式 | **隐式**：随 LP 价值增长，体现在储备折算中 | **显式**：手续费在仓位中累积（`tokensOwed` + feeGrowth 差值） |
+| 显式领取 | 无（`collectFees()` 返回 0） | `collectFees()` 可领取（仅金库可调） |
+| 领取时机 | — | 金库 `_collectAllFees()`，**仅在 `rebalance()` 时调用** |
+| 是否计入净值 | 计入（含在 LP 价值内） | 计入（`getTotalAssets()` 含未领取手续费） |
+| 是否计入前端"累计手续费" | **否** | **是**：已领取部分按 TWAP 折 USDC 累加至 `cumulativeFeesUSDC`（仅 rebalance 时更新） |
+
+**机制说明**：净值估值始终包含已产生但未领取的 V3 手续费（自动累积）；但**显式领取动作只在再平衡时发生**，无定时或后台触发。
+
+### 6. 份额定价与赎回机制
+
+| 项 | 设计 | 数值 | 说明 |
+|----|------|------|------|
+| 计价资产（asset） | **USDC** | — | ERC4626 标准接口以 USDC 计价 |
+| 份额初始定价 | 首存 1:1 | **1 USDC 价值 = 1 份额** | WETH 按 TWAP 折算为 USDC 计价 |
+| 后续份额定价 | `shares = 存入价值 × totalSupply / totalAssets` | — | 存入价值 = USDC + WETH×TWAP |
+| 净值计算 | `totalAssets / totalSupply` | — | `totalAssets = USDC + WETH×TWAP折USDC` |
+| 自定义赎回 | `withdrawDual(shares, minWETH, minUSDC)` | — | **返回 WETH + USDC 双币**，前端默认路径 |
+| 标准 ERC4626 赎回 | `withdraw/redeem` | — | **仅返回 USDC**，对应 WETH 沉淀金库 |
+| 前端滑点 | 赎回硬编码 **1%** 下限 | 存款 `minShares` 硬编码 **0**（无保护） | 用户不可调 |
+
+### 7. 存款人操作机制
+
+| 项 | 设计 | 数值 | 说明 |
+|----|------|------|------|
+| ERC20 授权 | 前端 `approve(vault, MaxUint256)` | 无限授权 | 授权范围/撤销方式前端无指引 |
+| 灰尘资产阈值 | 低于阈值的金额不投入做市 | WETH **1e12 wei（0.000001）**；USDC **1000（0.001）** | `WETH_DUST_THRESHOLD` / `USDC_DUST_THRESHOLD` |
+| 双币比例 | 无强制校验 | — | V2 按池内储备比例自动调整，V3 按流动性公式分配 |
+| WETH 获取 | 无 wrap 指引 | — | 前端仅要求输入 WETH |
+| 存款入口 | 双币输入 + 必须双币警告 | — | 单币存入资金将闲置，不参与做市 |
+
+### 8. 预言机失效行为（数据不可用）
+
+| 场景 | 行为 |
+|------|------|
+| `getTWAPPrice()` 本身 | **无降级**：池观测数据不足时直接 revert |
+| 净值估值 `totalAssets()` | **有降级**：预言机失败时按纯 USDC 估值（WETH 按 0），不 revert |
+| 存款 `deposit()` | **revert**：内部投资流程依赖 TWAP |
+| 再平衡 `rebalance()` | **revert**：依赖 TWAP 计算波动率 |
+| 自定义双币赎回 `withdrawDual()` | **正常**：不读取预言机 |
+| 标准赎回 `withdraw/redeem` | **可执行但净值低估**：走降级估值 |
+| 补救措施 | `ensureObservationCardinality(n)` 公开可调，扩大池观测基数 |
+
+**机制说明**：新部署池或低流动性池可能无法提供 30 分钟窗口的观测数据；默认窗口 1800 秒，需池至少 30 分钟前有观测记录。
+
+### 参数速查总表
+
+| 参数 | 默认值 | 治理可调 | 位置 |
+|------|--------|---------|------|
+| 再平衡常规冷却 `REBALANCE_COOLDOWN` | 600s | 否 | Vault 常量 |
+| 再平衡紧急冷却 `EMERGENCY_COOLDOWN` | 1800s | 否 | Vault 常量 |
+| 恐慌波动阈值 `PANIC_VOL_THRESHOLD` | 5000bps（50%） | 否 | Vault 常量 |
+| 再平衡参考阈值 `rebalanceThresholdBps` | 500bps（5%） | 是 | Strategy |
+| 波动率低/中/高阈值 | 2000 / 5000 bps | 否 | Strategy 常量 |
+| TWAP 窗口 `twapWindow` | 1800s | 是（[300, 86400]） | Oracle |
+| 提案门槛 `proposalThreshold` | 1000 ALP | 否 | Governance |
+| 法定人数 `quorumVotes` | 10000 ALP | 否 | Governance |
+| 投票延迟 `votingDelay` | 1 块（~12s） | 否 | Governance |
+| 投票期 `votingPeriod` | 28800 块（~4天） | 否 | Governance |
+| 时间锁 `timelockDelay` | 172800s（48h） | 否 | Governance |
+| 激励比例 `incentiveBps` | 500bps（5%） | 是（≤2000） | Incentives |
+| 最小利润 `minProfitThreshold` | 1e6（1 USDC） | 是 | Incentives |
+| 激励冷却 `cooldownPeriod` | 300s | 是（[60, 86400]） | Incentives |
+| WETH 灰尘阈值 | 1e12 wei | 否 | Vault 常量 |
+| USDC 灰尘阈值 | 1000（0.001） | 否 | Vault 常量 |
+| 前端存款滑点 | minShares = 0 | 否（硬编码） | 前端 app.js |
+| 前端赎回滑点 | 1% | 否（硬编码） | 前端 app.js |
 
 ---
 
@@ -406,7 +540,7 @@ forge coverage --report debug
 2. **反向路径覆盖**：每个 require/ revert 都有对应的错误触发测试
 3. **边界条件测试**：零值、最大值、临界值等边界场景均有覆盖
 4. **事件校验**：关键状态变更通过事件日志校验
-5. **不变量验证**：系统核心不变量（如总资产守恒、份额净值单调）通过模糊测试验证
+5. **不变量验证**：系统核心不变量（如总资产守恒、份额价值不被稀释）通过模糊测试验证
 
 ### 运行测试
 
@@ -415,7 +549,7 @@ forge coverage --report debug
 forge test -vvv
 
 # 仅运行单元测试
-forge test --match-path test/unit/ -vvv
+forge test --match-path "test/unit/*.t.sol" -vvv
 
 # 运行特定合约测试
 forge test --match-contract IncentivesTest -vvv

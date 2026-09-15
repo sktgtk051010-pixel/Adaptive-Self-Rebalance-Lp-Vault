@@ -193,36 +193,4 @@ contract BaseTest is Test {
         (, uint256 idleU,, uint256 v2U,, uint256 v3LU,, uint256 v3HU) = vault.getDistribution();
         return (idleU, v2U, v3LU, v3HU);
     }
-
-    function wethIsToken0() internal view returns (bool) {
-        return v3PoolHighFee.token0() == address(weth);
-    }
-
-    function _eventEmitted(bytes32 eventSig) internal view returns (bool) {
-        for (uint256 i = 0; i < vm.getRecordedLogs().length; i++) {
-            if (vm.getRecordedLogs()[i].topics.length > 0 && vm.getRecordedLogs()[i].topics[0] == eventSig) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function _getEventData(bytes32 eventSig) internal view returns (bytes memory) {
-        for (uint256 i = 0; i < vm.getRecordedLogs().length; i++) {
-            if (vm.getRecordedLogs()[i].topics.length > 0 && vm.getRecordedLogs()[i].topics[0] == eventSig) {
-                return vm.getRecordedLogs()[i].data;
-            }
-        }
-        return "";
-    }
-
-    function _countEvents(bytes32 eventSig) internal view returns (uint256) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < vm.getRecordedLogs().length; i++) {
-            if (vm.getRecordedLogs()[i].topics.length > 0 && vm.getRecordedLogs()[i].topics[0] == eventSig) {
-                count++;
-            }
-        }
-        return count;
-    }
 }
