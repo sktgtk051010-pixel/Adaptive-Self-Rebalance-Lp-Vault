@@ -8,6 +8,8 @@
 [![Network: Sepolia](https://img.shields.io/badge/Network-Sepolia-4A4A4A.svg)](https://sepolia.etherscan.io/)
 [![Contracts: Verified](https://img.shields.io/badge/Contracts-9%2F9%20Verified-brightgreen.svg)](#sepolia-测试网部署)
 
+> 📖 **新用户？先看 [用户使用指南](./USER_GUIDE.md)** — 教你怎么存款、赎回、触发再平衡赚奖励
+
 ---
 
 ## 目录
