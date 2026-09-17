@@ -199,6 +199,28 @@ forge script script/Deploy.s.sol:DeployScript \
 - 完成所有合约间的关联设置
 - 自动验证所有合约源码
 
+> **唯一部署方式**：本项目仅支持通过 `forge script script/Deploy.s.sol:DeployScript` 一键部署。部署脚本自动完成全部合约部署、合约间关联设置与所有权转移，产出的权限形态与本文档描述一致。请勿使用其他方式（手动逐合约部署、浏览器部署工具等），否则将导致权限结构与文档不符。
+
+### 部署后权限模型
+
+部署脚本执行完毕后，各合约的所有权归属如下：
+
+| 合约 | owner 归属 | 说明 |
+|------|-----------|------|
+| AdaptiveLPVault（金库） | AdaptiveGovernance | 管理函数（pause、setMaxSlippage 等）由治理控制 |
+| AdaptiveRebalanceStrategy（策略） | AdaptiveGovernance | 同上 |
+| TWAPOracle（预言机） | AdaptiveGovernance | 同上 |
+| RebalanceIncentives（激励） | AdaptiveGovernance | 同上 |
+| AdaptiveGovernance（治理合约） | 部署者 EOA | 过渡阶段，生产环境应移交多签/DAO |
+| GovernanceToken（治理代币） | 治理合约为 minter | 部署者通过治理合约按需铸造 |
+
+**管理函数的两条调用路径：**
+
+1. **治理提案路径**（去中心化）：持有 ALP 治理代币 → 发起提案 → 投票通过 → 48 小时时间锁 → 自动执行。当前治理代币零分发，此路径待激活。
+2. **`executeAsOwner` 代理路径**（过渡阶段）：治理合约的 owner（部署者）可调用 `AdaptiveGovernance.executeAsOwner(address target, bytes data)`，代理执行任意目标合约的任意管理函数。此路径用于部署后初始化与紧急操作，生产环境应随治理代币分发逐步停用。
+
+> **注意**：部署者 EOA 仍为治理合约的 owner，保留 `executeAsOwner` 调用权；这是测试网/开发阶段的过渡形态，主网部署前应将治理合约 owner 移交多签或 DAO。
+
 ---
 
 ## 项目结构
@@ -524,15 +546,17 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 ### 生成覆盖率报告
 
+> ⚠️ **注意**：本项目启用了 `viaIR` 优化，运行覆盖率命令时必须加 `--ir-minimum` 参数，否则会报 "Stack too deep" 编译错误。
+
 ```bash
 # 查看覆盖率摘要（每个文件的行覆盖率和分支覆盖率）
-forge coverage --report summary
+forge coverage --ir-minimum --report summary
 
-# 生成 LCOV 格式报告（可用于 VSCode 插件或 CI 集成）
-forge coverage --report lcov
+# 生成 LCOV 格式报告（可导入 VSCode Coverage Gutters 插件或 CI 集成）
+forge coverage --ir-minimum --report lcov
 
 # 生成详细的调试报告（显示未覆盖的具体行号）
-forge coverage --report debug
+forge coverage --ir-minimum --report debug
 ```
 
 ### 测试设计原则
