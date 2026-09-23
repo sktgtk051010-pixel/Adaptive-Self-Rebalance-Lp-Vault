@@ -309,7 +309,7 @@ Adaptive-Self-Rebalance-Lp-Vault/
 ├── docs/                               # 文档
 │   ├── README.md                       # 项目说明文档
 │   └── SECURITY.md                     # 安全分析文档
-│   └── USER_GUIDE                      # 用户手册文档
+│   └── USER_GUIDE.md                   # 用户手册文档
 ├── foundry.toml                        # Foundry 配置
 ```
 

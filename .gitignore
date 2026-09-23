@@ -19,4 +19,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-*.swp
+
+# Coverage
+lcov.info
+coverage.lcov
+
