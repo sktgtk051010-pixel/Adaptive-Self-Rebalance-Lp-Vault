@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Adaptive LP Vault Frontend v5 (Local Anvil + Sepolia support)
 // ============================================================
 const SEPOLIA_CHAIN_ID = 11155111;
@@ -965,7 +965,27 @@ async function deposit() {
         }
 
         showTxModal('存入中', '请确认存款交易...');
-        var tx = await C.vault.deposit(wethWei, usdcWei, 0);
+        // 读取用户输入的滑点容忍度
+        var slippagePct = parseFloat($('depositSlippage').value) || 1;
+        var slippageBps = Math.floor(slippagePct * 100);
+        // 重新计算预计份额
+        var totalAssetsBN = await C.vault.totalAssets();
+        var totalSupplyBN = await C.vault.totalSupply();
+        var depositValueUSD = usdcWei;
+        if (twapPrice > 0) {
+            var priceScaled = ethers.BigNumber.from(Math.round(twapPrice * 100));
+            var wethValue = wethWei.mul(priceScaled).div(ethers.BigNumber.from("100").mul(ethers.BigNumber.from(10).pow(12)));
+            depositValueUSD = depositValueUSD.add(wethValue);
+        }
+        var estimatedSharesBN;
+        if (totalSupplyBN.isZero() || totalAssetsBN.isZero()) {
+            estimatedSharesBN = depositValueUSD;
+        } else {
+            estimatedSharesBN = depositValueUSD.mul(totalSupplyBN).div(totalAssetsBN);
+        }
+        var minShares = estimatedSharesBN.mul(10000 - slippageBps).div(10000);
+        if (minShares.lt(0)) minShares = ethers.BigNumber.from(0);
+        var tx = await C.vault.deposit(wethWei, usdcWei, minShares);
         showTxModal('等待确认', '交易已提交...');
         await tx.wait();
         hideTxModal();
@@ -998,8 +1018,11 @@ async function withdraw() {
         var outWeth = totalWeth.mul(ratioScaled).div(ratioScale);
         var outUsdc = totalUsdc.mul(ratioScaled).div(ratioScale);
         // 允许1%滑点
-        var minWeth = outWeth.mul(99).div(100);
-        var minUsdc = outUsdc.mul(99).div(100);
+        // 读取用户输入的滑点容忍度
+        var slippagePct = parseFloat($('withdrawSlippage').value) || 1;
+        var slippageBps = Math.floor(slippagePct * 100);
+        var minWeth = outWeth.mul(10000 - slippageBps).div(10000);
+        var minUsdc = outUsdc.mul(10000 - slippageBps).div(10000);
 
         showTxModal('赎回中', '请确认交易...');
         var tx = await C.vault.withdrawDual(sharesWei, minWeth, minUsdc);
