@@ -227,9 +227,10 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
     /**
      * @notice 设置最大滑点保护（basis points）
-     * @param _bps 最大滑点，单位bps，范围0-500（0%-5%）
+     * @param _bps 最大滑点，单位bps，范围10-500（0.1%-5%）
      */
     function setMaxSlippage(uint256 _bps) external onlyOwner {
+        require(_bps >= 10, "Vault: slippage too low"); // min 0.1%
         require(_bps <= 500, "Vault: slippage too high"); // max 5%
         emit SlippageUpdated(maxSlippageBps, _bps);
         maxSlippageBps = _bps;

@@ -20,10 +20,7 @@ contract AdaptiveRebalanceStrategy is IRebalanceStrategy, Ownable {
     uint256 public constant LOW_VOL_THRESHOLD = 2000;   // 价格偏离 ≤20%：低波动
     uint256 public constant MID_VOL_THRESHOLD = 5000;   // 20% < 价格偏离 ≤50%：中波动
 
-    uint256 public rebalanceThresholdBps = 500;
-
     event GovernanceUpdated(address oldGov, address newGov);
-    event ThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
     modifier onlyGovernance() {
         require(msg.sender == governance || msg.sender == owner(), "Strategy: not authorized");
@@ -127,27 +124,6 @@ contract AdaptiveRebalanceStrategy is IRebalanceStrategy, Ownable {
         mediumUpper = _clampTick(mediumUpper);
         wideLower = _clampTick(wideLower);
         wideUpper = _clampTick(wideUpper);
-    }
-
-    /// @inheritdoc IRebalanceStrategy
-
-    /**
-     * @notice 判断是否需要再平衡
-     * @param currentDeviation 当前价格偏离度
-     * @return bool 是否需要再平衡
-     */
-    function needsRebalance(uint256 currentDeviation) external view override returns (bool) {
-        return currentDeviation >= rebalanceThresholdBps;
-    }
-
-    /**
-     * @notice 设置再平衡阈值
-     * @param _bps 再平衡阈值
-     */
-    function setRebalanceThreshold(uint256 _bps) external onlyGovernance {
-        require(_bps >= 100 && _bps <= 5000, "Strategy: invalid threshold");
-        emit ThresholdUpdated(rebalanceThresholdBps, _bps);
-        rebalanceThresholdBps = _bps;
     }
 
     /**

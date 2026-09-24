@@ -11,7 +11,6 @@ import {IGovernance} from "../interfaces/ICoreInterfaces.sol";
 /// @notice 最小同步接口，治理执行时调用各业务合约的参数setter
 interface IGovernanceSyncTarget {
     function setTWAPWindow(uint32) external;
-    function setRebalanceThreshold(uint256) external;
     function setIncentiveBps(uint256) external;
     function setMaxSlippage(uint256) external;
 }
@@ -81,7 +80,6 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
 
     enum ProposalType {
         SET_TWAP_WINDOW,
-        SET_REBALANCE_THRESHOLD,
         SET_INCENTIVE_BPS,
         SET_MAX_SLIPPAGE,
         SET_WEIGHT_CAPS,
@@ -140,7 +138,6 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
 
         params = StrategyParams({
             twapWindow: 1800,           // 30分钟
-            rebalanceThreshold: 500,    // 5%
             incentiveBps: 500,          // 5%
             maxSlippageBps: 100,        // 1%
             v2WeightCap: 6000,          // 60%
@@ -312,11 +309,6 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         emit ParamsUpdated(params);
     }
 
-    function setRebalanceThreshold(uint256 threshold) external override onlyOwner {
-        params.rebalanceThreshold = threshold;
-        emit ParamsUpdated(params);
-    }
-
     function setIncentiveBps(uint256 bps) external override onlyOwner {
         params.incentiveBps = bps;
         emit ParamsUpdated(params);
@@ -355,11 +347,6 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
             params.twapWindow = uint32(v1);
             if (oracle != address(0)) {
                 IGovernanceSyncTarget(oracle).setTWAPWindow(uint32(v1));
-            }
-        } else if (pType == ProposalType.SET_REBALANCE_THRESHOLD) {
-            params.rebalanceThreshold = v1;
-            if (strategy != address(0)) {
-                IGovernanceSyncTarget(strategy).setRebalanceThreshold(v1);
             }
         } else if (pType == ProposalType.SET_INCENTIVE_BPS) {
             params.incentiveBps = v1;

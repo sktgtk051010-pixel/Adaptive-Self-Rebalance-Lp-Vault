@@ -117,21 +117,6 @@ contract RebalanceStrategyTest is BaseTest {
         assertEq(int256(wUpper % 60), 0);
     }
 
-    // 测试波动率高于阈值（600>500）时needsRebalance返回true
-    function test_NeedsRebalance_AboveThreshold() public view {
-        assertTrue(strategy.needsRebalance(600));
-    }
-
-    // 测试波动率低于阈值（400<500）时needsRebalance返回false
-    function test_NeedsRebalance_BelowThreshold() public view {
-        assertFalse(strategy.needsRebalance(400));
-    }
-
-    // 测试波动率等于阈值（500）时needsRebalance返回true
-    function test_NeedsRebalance_AtThreshold() public view {
-        assertTrue(strategy.needsRebalance(500));
-    }
-
     // 测试estimateVolatility在价格相同时返回0
     function test_EstimateVolatility_SamePrice() public view {
         uint160 price = 3000000000000000000000000000;
@@ -160,30 +145,5 @@ contract RebalanceStrategyTest is BaseTest {
         uint256 dev = AdaptiveRebalanceStrategy(address(strategy)).calculateDeviation(p1, p2);
         uint256 vol = AdaptiveRebalanceStrategy(address(strategy)).estimateVolatility(p1, p2);
         assertEq(dev, vol, "deviation should equal volatility");
-    }
-
-    // 测试owner设置再平衡阈值为1000bps成功
-    function test_SetRebalanceThreshold_Valid() public {
-        strategy.setRebalanceThreshold(1000);
-        assertEq(strategy.rebalanceThresholdBps(), 1000);
-    }
-
-    // 测试设置再平衡阈值过小（50bps）时revert
-    function test_Revert_SetRebalanceThreshold_TooSmall() public {
-        vm.expectRevert(bytes("Strategy: invalid threshold"));
-        strategy.setRebalanceThreshold(50);
-    }
-
-    // 测试设置再平衡阈值过大（6000bps）时revert
-    function test_Revert_SetRebalanceThreshold_TooLarge() public {
-        vm.expectRevert(bytes("Strategy: invalid threshold"));
-        strategy.setRebalanceThreshold(6000);
-    }
-
-    // 测试非授权地址调用setRebalanceThreshold时revert
-    function test_Revert_SetRebalanceThreshold_NotAuthorized() public {
-        vm.prank(alice);
-        vm.expectRevert(bytes("Strategy: not authorized"));
-        strategy.setRebalanceThreshold(1000);
     }
 }

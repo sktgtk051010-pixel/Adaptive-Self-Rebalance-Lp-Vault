@@ -318,17 +318,10 @@ contract GovernanceTest is BaseTest {
         assertEq(governance.getParams().twapWindow, 900);
     }
 
-    // 测试owner直接设置再平衡阈值
-    function test_OwnerSetRebalanceThreshold() public {
-        governance.setRebalanceThreshold(1000);
-        assertEq(governance.getParams().rebalanceThreshold, 1000);
-    }
-
     // 测试getParams返回所有默认参数值
     function test_GetParams_ReturnsAll() public view {
         AdaptiveGovernance.StrategyParams memory p = governance.getParams();
         assertEq(p.twapWindow, 1800);
-        assertEq(p.rebalanceThreshold, 500);
         assertEq(p.incentiveBps, 500);
         assertEq(p.maxSlippageBps, 100);
     }
@@ -374,13 +367,6 @@ contract GovernanceTest is BaseTest {
         vm.prank(alice);
         vm.expectRevert();
         governance.setTWAPWindow(3600);
-    }
-
-    // 测试非owner调用setRebalanceThreshold时revert
-    function test_Revert_SetRebalanceThreshold_NotOwner() public {
-        vm.prank(alice);
-        vm.expectRevert();
-        governance.setRebalanceThreshold(1000);
     }
 
     // 测试非owner调用setIncentiveBps时revert
@@ -608,7 +594,6 @@ contract GovernanceTest is BaseTest {
         govToken.mint(alice, 2000e18);
         govToken.mint(bob, 20000e18);
 
-        _testProposalType(AdaptiveGovernance.ProposalType.SET_REBALANCE_THRESHOLD, 800, 0, 0);
         _testProposalType(AdaptiveGovernance.ProposalType.SET_INCENTIVE_BPS, 800, 0, 0);
         _testProposalType(AdaptiveGovernance.ProposalType.SET_MAX_SLIPPAGE, 200, 0, 0);
         _testProposalType(AdaptiveGovernance.ProposalType.SET_WEIGHT_CAPS, 4000, 3000, 5000);
@@ -623,8 +608,6 @@ contract GovernanceTest is BaseTest {
     ) internal {
         if (pType == AdaptiveGovernance.ProposalType.SET_TWAP_WINDOW) {
             oracle.transferOwnership(address(governance));
-        } else if (pType == AdaptiveGovernance.ProposalType.SET_REBALANCE_THRESHOLD) {
-            strategy.transferOwnership(address(governance));
         } else if (pType == AdaptiveGovernance.ProposalType.SET_INCENTIVE_BPS) {
             incentives.transferOwnership(address(governance));
         } else if (pType == AdaptiveGovernance.ProposalType.SET_MAX_SLIPPAGE) {
@@ -644,9 +627,7 @@ contract GovernanceTest is BaseTest {
         governance.executeTimelock(id);
 
         AdaptiveGovernance.StrategyParams memory p = governance.getParams();
-        if (pType == AdaptiveGovernance.ProposalType.SET_REBALANCE_THRESHOLD) {
-            assertEq(p.rebalanceThreshold, v1);
-        } else if (pType == AdaptiveGovernance.ProposalType.SET_INCENTIVE_BPS) {
+        if (pType == AdaptiveGovernance.ProposalType.SET_INCENTIVE_BPS) {
             assertEq(p.incentiveBps, v1);
         } else if (pType == AdaptiveGovernance.ProposalType.SET_MAX_SLIPPAGE) {
             assertEq(p.maxSlippageBps, v1);
@@ -688,9 +669,6 @@ contract GovernanceTest is BaseTest {
     function test_ApplyParam_ZeroAddressNoSync() public {
         governance.setTWAPWindow(900);
         assertEq(governance.getParams().twapWindow, 900);
-
-        governance.setRebalanceThreshold(800);
-        assertEq(governance.getParams().rebalanceThreshold, 800);
 
         governance.setIncentiveBps(800);
         assertEq(governance.getParams().incentiveBps, 800);

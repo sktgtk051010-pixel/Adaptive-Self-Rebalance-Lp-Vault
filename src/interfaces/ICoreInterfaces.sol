@@ -111,13 +111,6 @@ interface IRebalanceStrategy {
         );
 
     /**
-     * @notice 判断是否需要再平衡
-     * @param currentDeviation 当前偏离度 (basis points)
-     * @return 是否需要再平衡
-     */
-    function needsRebalance(uint256 currentDeviation) external view returns (bool);
-
-    /**
      * @notice 估算波动率
      * @param sqrtPriceX96Spot 当前现货价格
      * @param sqrtPriceX96Twap TWAP价格
@@ -142,7 +135,6 @@ interface IGovernance {
     /**
      * @notice 可治理参数
      * @param twapWindow TWAP窗口秒数
-     * @param rebalanceThreshold 再平衡触发阈值 (bps)
      * @param incentiveBps 激励比例 (bps)
      * @param maxSlippageBps 最大滑点 (bps)
      * @param v2WeightCap V2权重上限
@@ -154,7 +146,6 @@ interface IGovernance {
      */
     struct StrategyParams {
         uint32 twapWindow;
-        uint256 rebalanceThreshold;
         uint256 incentiveBps;
         uint256 maxSlippageBps;
         uint256 v2WeightCap;
@@ -176,12 +167,6 @@ interface IGovernance {
      * @param window TWAP窗口秒数
      */
     function setTWAPWindow(uint32 window) external;
-
-    /**
-     * @notice 设置再平衡触发阈值
-     * @param threshold 阈值 (bps)
-     */
-    function setRebalanceThreshold(uint256 threshold) external;
 
     /**
      * @notice 设置激励比例
