@@ -196,3 +196,16 @@ interface IGovernance {
      */
     function setRangeBps(uint256 tight, uint256 medium, uint256 wide) external;
 }
+
+/**
+ * @title ILiquidityMining
+ * @notice 流动性挖矿接口
+ */
+interface ILiquidityMining {
+    /**
+     * @notice Vault 通知用户份额变化
+     * @param user 用户地址
+     * @param newBalance 新的份额
+     */
+    function updateBalance(address user, uint256 newBalance) external;
+}

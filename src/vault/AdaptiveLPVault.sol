@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -10,7 +10,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {ILPAdapter} from "../interfaces/ILPAdapter.sol";
-import {ITWAPOracle, IRebalanceStrategy, IGovernance} from "../interfaces/ICoreInterfaces.sol";
+import {ITWAPOracle, IRebalanceStrategy, IGovernance, ILiquidityMining} from "../interfaces/ICoreInterfaces.sol";
 import {IUniswapV3Pool} from "../interfaces/IUniswapV3.sol";
 import {IWETH} from "../interfaces/ILPAdapter.sol";
 import {TickMath, FullMath, LiquidityAmounts} from "../libraries/UniswapMath.sol";
@@ -91,6 +91,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     // ============ 可变状态 ============
     IGovernance public governance;
     RebalanceIncentives public incentives;
+    ILiquidityMining public liquidityMining;
 
     uint160 public lastRebalanceSqrtPriceX96;
     uint256 public lastRebalanceTimestamp;
@@ -218,6 +219,14 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     }
 
     /**
+     * @notice 设置挖矿合约
+     * @param _liquidityMining 挖矿合约地址
+     */
+    function setLiquidityMining(address _liquidityMining) external onlyOwner {
+        liquidityMining = ILiquidityMining(_liquidityMining);
+    }
+
+    /**
      * @notice 设置治理合约
      * @param _governance 治理合约地址
      */
@@ -284,6 +293,9 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
         _investIdleFunds();
 
+        if (address(liquidityMining) != address(0)) {
+            liquidityMining.updateBalance(msg.sender, balanceOf(msg.sender));
+        }
         emit Deposited(msg.sender, wethAmount, usdcAmount, shares);
     }
 
@@ -306,6 +318,12 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         _mint(receiver, shares);
 
         _investIdleFunds();
+        if (address(liquidityMining) != address(0)) {
+            liquidityMining.updateBalance(receiver, balanceOf(receiver));
+        }
+        if (address(liquidityMining) != address(0)) {
+            liquidityMining.updateBalance(receiver, balanceOf(receiver));
+        }
         emit Deposited(receiver, 0, assets, shares);
     }
 
@@ -326,6 +344,12 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         _mint(receiver, shares);
 
         _investIdleFunds();
+        if (address(liquidityMining) != address(0)) {
+            liquidityMining.updateBalance(receiver, balanceOf(receiver));
+        }
+        if (address(liquidityMining) != address(0)) {
+            liquidityMining.updateBalance(receiver, balanceOf(receiver));
+        }
         emit Deposited(receiver, 0, assets, shares);
     }
 
@@ -371,6 +395,9 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
             IERC20(asset()).safeTransfer(msg.sender, usdcOut);
         }
 
+        if (address(liquidityMining) != address(0)) {
+            liquidityMining.updateBalance(msg.sender, balanceOf(msg.sender));
+        }
         emit Withdrawn(msg.sender, shares, wethOut, usdcOut);
     }
 
@@ -983,3 +1010,4 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         return shares.mulDiv(totalAssetsValue, supply, rounding);
     }
 }
+
