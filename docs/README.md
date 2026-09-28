@@ -1,11 +1,5 @@
-# Adaptive Self-Rebalance LP Vault
-| ALP每次奖励 | 10 ALP | alpRewardPerRebalance | 治理可调（上限1000） |
-| 挖矿初始速率 | ~250万 ALP/年 | INITIAL_RPS | 常量（每1年减半） |
-| 团队悬崖期 | 365天 | CLIFF_PERIOD | 常量 |
-| 团队释放期 | 1095天 | VESTING_PERIOD | 常量 |
-| 代币总量 | 1000万 | CAP | 常量 |
 
-> 去中心化自适应再平衡 Uniswap LP 金库 — 对标 Gamma Strategies，自动管理 V2/V3 多池流动性
+> 去中心化自适应再平衡 Uniswap LP 金库 ，自动管理 V2/V3 多池流动性
 
 [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-3674A5.svg)](https://getfoundry.sh/)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636.svg)](https://soliditylang.org/)
