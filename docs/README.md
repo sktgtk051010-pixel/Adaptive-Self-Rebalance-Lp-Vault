@@ -148,7 +148,7 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **GovernanceToken**（治理代币 ALP-GOV） | `0x91f7Fea94f59d898aAd8e6f4728eC35A2Caf3530` | [查看](https://sepolia.etherscan.io/address/0x91f7Fea94f59d898aAd8e6f4728eC35A2Caf3530) |
+| **GovernanceToken**（治理代币 ALP） | `0x91f7Fea94f59d898aAd8e6f4728eC35A2Caf3530` | [查看](https://sepolia.etherscan.io/address/0x91f7Fea94f59d898aAd8e6f4728eC35A2Caf3530) |
 | **AdaptiveGovernance**（治理模块） | `0xd0b9F7eD49f01790Abe071E838e1eF3550d45EF6` | [查看](https://sepolia.etherscan.io/address/0xd0b9F7eD49f01790Abe071E838e1eF3550d45EF6) |
 
 ### 流动性适配器
@@ -486,7 +486,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 | ALP 奖励池 | **100万 ALP**（部署时一次性转入） |
 | 最小利润门槛 | **1 USDC** |
 | 触发冷却（实际生效） | **正常波动 10 分钟 / 高波动（>50%）30 分钟**，跟随金库 rebalance 动态冷却 |
-| USDC 资金来源 | 手动充值（部署默认 0，需项目方转入） |
+| USDC 资金来源 | 手动充值（部署默认 0，由项目方根据运营需求决定数量） |
 | 奖励池耗尽时 | 对应币种奖励为 0，另一币种照常发放，再平衡照常执行 |
 
 > 说明：激励合约内部另有 5 分钟记账冷却参数（治理可调 60~86400 秒），但因 `onRebalanceExecuted` 仅金库可调用，实际冷却以金库动态冷却为准，该参数不单独生效。
@@ -636,7 +636,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 - 0.05 WETH × 20,000 = 1,000 USDC 价值
 - 总价值 = 1,000 + 1,000 = **2,000 USDC**
-- 金库按 1:1 计价，铸造 **2,000 份** ALP-Vault 份额
+- 金库按 1:1 计价，铸造 **2,000 份** ALP-VAULT 份额
 
 #### 第二步：金库分配资金
 
