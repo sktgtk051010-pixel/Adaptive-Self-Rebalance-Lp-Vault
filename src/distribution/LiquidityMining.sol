@@ -6,7 +6,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {FullMath} from "../libraries/UniswapMath.sol";
-import {AdaptiveGovernance} from "../governance/AdaptiveGovernance.sol";
 
 /**
  * @title LiquidityMining
@@ -18,10 +17,12 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
     // ============ 不可变状态 ============
     IERC20 public immutable REWARD_TOKEN;      // ALP 代币
     address public immutable VAULT;            // 金库地址
-    AdaptiveGovernance public immutable GOVERNANCE;
+    // ============ 常量 ============
+    uint256 public constant HALVING_PERIOD = 365 days;            // 每1年减半
+    uint256 public constant INITIAL_RPS = uint256(2500000 * 1e18) / 365 days;  // 第1年每秒释放量
 
     // ============ 可变状态 ============
-    uint256 public rewardPerSecond;            // 每秒释放多少 ALP
+    uint256 public startTime;                  // 开始时间
     uint256 public lastUpdateTime;             // 上次更新时间
     uint256 public rewardPerShare;             // 每份额累积奖励（乘以 1e18）
     uint256 public totalShares;                 // 总份额
@@ -30,10 +31,10 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
     mapping(address => uint256) public rewardDebt;   // 用户奖励记账
 
     // ============ 事件 ============
+    event MiningStarted(uint256 startTime);
     event RewardDistributed(uint256 amount);
     event RewardClaimed(address indexed user, uint256 amount);
     event BalanceUpdated(address indexed user, uint256 oldBalance, uint256 newBalance);
-    event RewardRateUpdated(uint256 oldRate, uint256 newRate);
 
     // ============ modifier ============
     modifier onlyVault() {
@@ -41,21 +42,29 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
         _;
     }
 
-    constructor(
-        address _rewardToken,
-        address _vault,
-        address _governance,
-        uint256 _rewardPerSecond
-    ) Ownable(msg.sender) {
+    constructor(address _rewardToken, address _vault) Ownable(msg.sender) {
         require(_rewardToken != address(0), "LiquidityMining: zero token");
         require(_vault != address(0), "LiquidityMining: zero vault");
-        require(_governance != address(0), "LiquidityMining: zero governance");
-
         REWARD_TOKEN = IERC20(_rewardToken);
-        VAULT = _vault;
-        GOVERNANCE = AdaptiveGovernance(_governance);
-        rewardPerSecond = _rewardPerSecond;
+        VAULT = _vault;    }
+
+    /**
+     * @notice 开始挖矿（部署后调用一次）
+     */
+    function startMining() external onlyOwner {
+        require(startTime == 0, "LiquidityMining: already started");
+        startTime = block.timestamp;
         lastUpdateTime = block.timestamp;
+        emit MiningStarted(startTime);
+    }
+
+    /**
+     * @notice 计算当前每秒释放量（每1年减半）
+     */
+    function currentRewardPerSecond() public view returns (uint256) {
+        if (startTime == 0) return 0;
+        uint256 periods = (block.timestamp - startTime) / HALVING_PERIOD;
+        return INITIAL_RPS >> periods;  // 右移 = 除以2
     }
 
     /**
@@ -133,8 +142,6 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
 
     /**
      * @notice 结算用户累积的奖励
-     * @param user 用户地址
-     * @return pending 待领取奖励数量
      */
     function _settle(address user) internal returns (uint256 pending) {
         pending = FullMath.mulDiv(balanceOf[user], rewardPerShare, 1e18) - rewardDebt[user];
@@ -149,15 +156,10 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
             return rewardPerShare;
         }
         uint256 timeDelta = block.timestamp - lastUpdateTime;
-        uint256 reward = timeDelta * rewardPerSecond;
+        uint256 reward = timeDelta * currentRewardPerSecond();
         return rewardPerShare + FullMath.mulDiv(reward, 1e18, totalShares);
     }
-
-    // ============ 治理函数 ============
-
-    function setRewardPerSecond(uint256 _rps) external onlyOwner {
-        _distribute();
-        emit RewardRateUpdated(rewardPerSecond, _rps);
-        rewardPerSecond = _rps;
-    }
 }
+
+
+

@@ -9,13 +9,16 @@ import {AdaptiveGovernance, GovernanceToken} from "../src/governance/AdaptiveGov
 import {RebalanceIncentives} from "../src/incentives/RebalanceIncentives.sol";
 import {UniswapV2Adapter} from "../src/adapters/UniswapV2Adapter.sol";
 import {UniswapV3Adapter} from "../src/adapters/UniswapV3Adapter.sol";
+import {LiquidityMining} from "../src/distribution/LiquidityMining.sol";
+import {TeamVesting} from "../src/distribution/TeamVesting.sol";
+import {Treasury} from "../src/distribution/Treasury.sol";
 import {ILPAdapter} from "../src/interfaces/ILPAdapter.sol";
 import {IUniswapV3Factory} from "../src/interfaces/IUniswapV3.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title DeployScript - 一键部署完整系统到 Sepolia 测试网
- * @notice 部署 Adaptive LP Vault 完整系统，包含 V2/V3 全部三个适配器
+ * @notice 部署 Adaptive LP Vault 完整系统，包含 V2/V3 全部三个适配器 + 代币分发体系
  * @dev
  *   前置准备：
  *   1. 确保 .env 文件中有 PRIVATE_KEY、SEPOLIA_RPC_URL、ETHERSCAN_API_KEY
@@ -25,10 +28,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *   部署命令：
  *   forge script script/Deploy.s.sol:DeployScript --rpc-url sepolia --broadcast --verify
  *
- *   部署后操作：
- *   1. 记录所有合约地址
- *   2. （可选）手动给激励合约充值 USDC
- *   3. （可选）给治理代币持有者 mint 治理代币，用于投票
+ *   代币分配（总量 1000 万 ALP）：
+ *   - 500 万 -> LiquidityMining（流动性挖矿，比特币式减半释放）
+ *   - 100 万 -> RebalanceIncentives（再平衡执行者 ALP 奖励）
+ *   - 200 万 -> TeamVesting（团队锁仓，1 年悬崖 + 3 年线性释放）
+ *   - 200 万 -> Treasury（国库，治理提案才能支出）
  */
 contract DeployScript is Script {
     // ============ Sepolia 真实合约地址 ============
@@ -40,6 +44,13 @@ contract DeployScript is Script {
 
     // 给激励合约充值的 USDC 数量（部署者需要有足够的 USDC；如果没有可以设为 0）
     uint256 constant INCENTIVE_INITIAL_FUND = 0; // 设为 0 表示不自动充值，部署后手动充值
+
+    // ============ 代币分配常量 ============
+    uint256 constant TOTAL_SUPPLY = 10_000_000e18;
+    uint256 constant MINING_ALLOCATION = 5_000_000e18;    // 50% 流动性挖矿
+    uint256 constant INCENTIVE_ALLOCATION = 1_000_000e18; // 10% 再平衡奖励
+    uint256 constant TEAM_ALLOCATION = 2_000_000e18;      // 20% 团队锁仓
+    uint256 constant TREASURY_ALLOCATION = 2_000_000e18;  // 20% 国库
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -54,21 +65,20 @@ contract DeployScript is Script {
         // ============ 1. 治理代币 + 治理合约 ============
         GovernanceToken govToken = new GovernanceToken();
         AdaptiveGovernance governance = new AdaptiveGovernance(address(govToken));
-        govToken.setMinter(address(governance));
         console2.log("");
-        console2.log("[1/10] GovernanceToken:", address(govToken));
-        console2.log("[1/10] AdaptiveGovernance:", address(governance));
+        console2.log("[1/13] GovernanceToken:", address(govToken));
+        console2.log("[1/13] AdaptiveGovernance:", address(governance));
 
         // ============ 2. 策略合约 ============
         AdaptiveRebalanceStrategy strategy = new AdaptiveRebalanceStrategy(address(governance));
-        console2.log("[2/10] AdaptiveRebalanceStrategy:", address(strategy));
+        console2.log("[2/13] AdaptiveRebalanceStrategy:", address(strategy));
 
         // ============ 3. 获取 V3 池地址 ============
         IUniswapV3Factory factory = IUniswapV3Factory(UNISWAP_V3_FACTORY);
         address v3Pool500 = factory.getPool(WETH_SEPOLIA, USDC_SEPOLIA, 500);
         address v3Pool3000 = factory.getPool(WETH_SEPOLIA, USDC_SEPOLIA, 3000);
-        console2.log("[3/10] V3 0.05% pool:", v3Pool500);
-        console2.log("[3/10] V3 0.30% pool:", v3Pool3000);
+        console2.log("[3/13] V3 0.05% pool:", v3Pool500);
+        console2.log("[3/13] V3 0.30% pool:", v3Pool3000);
 
         // 选择高费率池作为预言机源；如果高费率池不存在，用低费率池
         address oraclePool = v3Pool3000 != address(0) ? v3Pool3000 : v3Pool500;
@@ -76,30 +86,30 @@ contract DeployScript is Script {
 
         // ============ 4. TWAP 预言机 ============
         TWAPOracle oracle = new TWAPOracle(oraclePool, WETH_SEPOLIA, USDC_SEPOLIA, address(governance));
-        console2.log("[4/10] TWAPOracle:", address(oracle));
+        console2.log("[4/13] TWAPOracle:", address(oracle));
 
         // ============ 5. 金库 ============
         AdaptiveLPVault vault = new AdaptiveLPVault(
-            USDC_SEPOLIA, WETH_SEPOLIA, address(oracle), address(strategy), address(governance),
+            USDC_SEPOLIA, WETH_SEPOLIA, address(oracle), address(strategy),
             "Adaptive LP Vault", "ALP-VAULT"
         );
-        console2.log("[5/10] AdaptiveLPVault:", address(vault));
+        console2.log("[5/13] AdaptiveLPVault:", address(vault));
 
         // ============ 6. 确定 token 顺序 ============
         // V3 池的 token0 是地址较小的那个，token1 是地址较大的那个
         (address token0, address token1) = WETH_SEPOLIA < USDC_SEPOLIA
             ? (WETH_SEPOLIA, USDC_SEPOLIA) : (USDC_SEPOLIA, WETH_SEPOLIA);
-        console2.log("[6/10] token0:", token0);
-        console2.log("[6/10] token1:", token1);
+        console2.log("[6/13] token0:", token0);
+        console2.log("[6/13] token1:", token1);
 
         // ============ 7. V2 适配器 ============
         address v2AdapterAddr = address(0);
         if (UNISWAP_V2_ROUTER != address(0)) {
             v2AdapterAddr = address(new UniswapV2Adapter(
                 UNISWAP_V2_ROUTER, address(vault), USDC_SEPOLIA, WETH_SEPOLIA));
-            console2.log("[7/10] UniswapV2Adapter:", v2AdapterAddr);
+            console2.log("[7/13] UniswapV2Adapter:", v2AdapterAddr);
         } else {
-            console2.log("[7/10] V2 Adapter: skipped (no V2 router on Sepolia)");
+            console2.log("[7/13] V2 Adapter: skipped (no V2 router on Sepolia)");
         }
 
         // ============ 8. V3 适配器 ============
@@ -109,31 +119,30 @@ contract DeployScript is Script {
         if (v3Pool500 != address(0)) {
             v3LowFeeAdapter = address(new UniswapV3Adapter(
                 v3Pool500, address(vault), token0, token1, ILPAdapter.AdapterType.UNISWAP_V3_LOW_FEE));
-            console2.log("[8/10] V3LowFeeAdapter:", v3LowFeeAdapter);
+            console2.log("[8/13] V3LowFeeAdapter:", v3LowFeeAdapter);
         } else {
-            console2.log("[8/10] V3LowFeeAdapter: skipped (no 0.05% pool)");
+            console2.log("[8/13] V3LowFeeAdapter: skipped (no 0.05% pool)");
         }
 
         if (v3Pool3000 != address(0)) {
             v3HighFeeAdapter = address(new UniswapV3Adapter(
                 v3Pool3000, address(vault), token0, token1, ILPAdapter.AdapterType.UNISWAP_V3_HIGH_FEE));
-            console2.log("[8/10] V3HighFeeAdapter:", v3HighFeeAdapter);
+            console2.log("[8/13] V3HighFeeAdapter:", v3HighFeeAdapter);
         } else {
-            console2.log("[8/10] V3HighFeeAdapter: skipped (no 0.30% pool)");
+            console2.log("[8/13] V3HighFeeAdapter: skipped (no 0.30% pool)");
         }
 
         // ============ 9. 设置适配器到金库 ============
         vault.setAdapters(v2AdapterAddr, v3LowFeeAdapter, v3HighFeeAdapter);
-        console2.log("[9/10] Adapters set to vault");
+        console2.log("[9/13] Adapters set to vault");
 
         // ============ 10. 激励合约 + 关联设置 ============
         RebalanceIncentives incentives = new RebalanceIncentives(
-            address(vault), USDC_SEPOLIA, address(governance));
-        console2.log("[10/10] RebalanceIncentives:", address(incentives));
+            address(vault), USDC_SEPOLIA, address(govToken));
+        console2.log("[10/13] RebalanceIncentives:", address(incentives));
 
         // 金库关联设置
         vault.setIncentives(address(incentives));
-        vault.setGovernance(address(governance));
 
         // 治理合约关联设置（用于治理提案执行时同步参数）
         governance.setVault(address(vault));
@@ -141,23 +150,59 @@ contract DeployScript is Script {
         governance.setOracle(address(oracle));
         governance.setIncentives(address(incentives));
 
-        console2.log("");
-        console2.log("========================================");
-        console2.log("All contracts deployed and linked!");
-        console2.log("========================================");
+        // ============ 11. 代币分发合约 ============
+        // 流动性挖矿（奖励 ALP，比特币式减半释放）
+        LiquidityMining liquidityMining = new LiquidityMining(address(govToken), address(vault));
+        console2.log("[11/13] LiquidityMining:", address(liquidityMining));
 
-        // ============ 11. （可选）把各合约 owner 转移给治理合约 ============
-        // 注意：转移后，部署者就不能直接调用 onlyOwner 函数了，需要通过治理提案
-        // 如果你想保留部署者的直接控制权，可以注释掉下面这几行
+        // 团队锁仓（1 年悬崖 + 3 年线性释放）
+        TeamVesting teamVesting = new TeamVesting(address(govToken), deployer);
+        console2.log("[11/13] TeamVesting:", address(teamVesting));
+
+        // 国库（治理提案才能支出）
+        Treasury treasury = new Treasury();
+        console2.log("[11/13] Treasury:", address(treasury));
+        governance.setTreasury(address(treasury));
+
+        // 金库关联挖矿合约
+        vault.setLiquidityMining(address(liquidityMining));
+
+        // 注：分发合约的 owner 都是治理合约，治理可通过 executeAsOwner 直接调用，无需存储地址
+
+        // ============ 12. Mint 1000 万 ALP 并分配 ============
+        console2.log("");
+        console2.log("Minting 10,000,000 ALP and distributing...");
+        govToken.mint(address(liquidityMining), MINING_ALLOCATION);
+        govToken.mint(address(incentives), INCENTIVE_ALLOCATION);
+        govToken.mint(address(teamVesting), TEAM_ALLOCATION);
+        govToken.mint(address(treasury), TREASURY_ALLOCATION);
+        console2.log("  -> LiquidityMining:", MINING_ALLOCATION / 1e18, "ALP");
+        console2.log("  -> RebalanceIncentives:", INCENTIVE_ALLOCATION / 1e18, "ALP");
+        console2.log("  -> TeamVesting:", TEAM_ALLOCATION / 1e18, "ALP");
+        console2.log("  -> Treasury:", TREASURY_ALLOCATION / 1e18, "ALP");
+
+        // 把 minter 转移给治理合约（之后只能通过治理提案 mint）
+        govToken.setMinter(address(governance));
+        console2.log("  -> Minter transferred to Governance");
+
+        // 启动挖矿和锁仓计时
+        liquidityMining.startMining();
+        teamVesting.startVesting();
+        console2.log("  -> Mining and vesting started");
+
+        // ============ 13. 把各合约 owner 转移给治理合约 ============
         console2.log("");
         console2.log("Transferring ownership to Governance contract...");
         strategy.transferOwnership(address(governance));
         oracle.transferOwnership(address(governance));
         vault.transferOwnership(address(governance));
         incentives.transferOwnership(address(governance));
+        liquidityMining.transferOwnership(address(governance));
+        teamVesting.transferOwnership(address(governance));
+        treasury.transferOwnership(address(governance));
         console2.log("Ownership transferred to Governance:", address(governance));
 
-        // ============ 12. （可选）给激励合约充值 USDC ============
+        // ============ （可选）给激励合约充值 USDC ============
         if (INCENTIVE_INITIAL_FUND > 0) {
             uint256 deployerUsdcBalance = IERC20(USDC_SEPOLIA).balanceOf(deployer);
             if (deployerUsdcBalance >= INCENTIVE_INITIAL_FUND) {
@@ -178,13 +223,27 @@ contract DeployScript is Script {
         console2.log("Deployment Complete!");
         console2.log("========================================");
         console2.log("");
+        console2.log("Contract Addresses:");
+        console2.log("  GovernanceToken:", address(govToken));
+        console2.log("  AdaptiveGovernance:", address(governance));
+        console2.log("  AdaptiveRebalanceStrategy:", address(strategy));
+        console2.log("  TWAPOracle:", address(oracle));
+        console2.log("  AdaptiveLPVault:", address(vault));
+        console2.log("  UniswapV2Adapter:", v2AdapterAddr);
+        console2.log("  V3LowFeeAdapter:", v3LowFeeAdapter);
+        console2.log("  V3HighFeeAdapter:", v3HighFeeAdapter);
+        console2.log("  RebalanceIncentives:", address(incentives));
+        console2.log("  LiquidityMining:", address(liquidityMining));
+        console2.log("  TeamVesting:", address(teamVesting));
+        console2.log("  Treasury:", address(treasury));
+        console2.log("");
         console2.log("Next steps:");
         console2.log("1. Save all contract addresses above");
         console2.log("2. (Optional) Fund incentives contract with USDC");
-        console2.log("3. (Optional) Mint governance tokens to voters");
-        console2.log("4. Test deposit/withdraw/rebalance functionality");
+        console2.log("3. Test deposit/withdraw/rebalance functionality");
         console2.log("");
 
         vm.stopBroadcast();
     }
 }
+

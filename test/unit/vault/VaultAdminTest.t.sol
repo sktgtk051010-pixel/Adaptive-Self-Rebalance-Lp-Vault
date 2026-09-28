@@ -129,26 +129,12 @@ contract VaultAdminTest is BaseTest {
         vm.stopPrank();
     }
 
-    // 测试owner设置治理合约地址成功
-    function test_SetGovernance_Valid() public {
-        vault.setGovernance(address(governance));
-        assertEq(address(vault.governance()), address(governance));
-    }
-
-    // 测试非owner调用setGovernance时revert
-    function test_Revert_SetGovernance_NotOwner() public {
-        vm.startPrank(alice);
-        vm.expectRevert();
-        vault.setGovernance(address(governance));
-        vm.stopPrank();
-    }
 
     // 测试构造函数USDC地址为0时revert
     function test_Revert_Constructor_ZeroUSDC() public {
         vm.expectRevert(bytes("Vault: zero USDC"));
         new AdaptiveLPVault(
-            address(0), address(weth), address(oracle), address(strategy),
-            address(governance), "Test", "TEST"
+            address(0), address(weth), address(oracle), address(strategy), "Test", "TEST"
         );
     }
 
@@ -156,8 +142,7 @@ contract VaultAdminTest is BaseTest {
     function test_Revert_Constructor_ZeroWETH() public {
         vm.expectRevert(bytes("Vault: zero WETH"));
         new AdaptiveLPVault(
-            address(usdc), address(0), address(oracle), address(strategy),
-            address(governance), "Test", "TEST"
+            address(usdc), address(0), address(oracle), address(strategy), "Test", "TEST"
         );
     }
 
@@ -165,8 +150,7 @@ contract VaultAdminTest is BaseTest {
     function test_Revert_Constructor_ZeroOracle() public {
         vm.expectRevert(bytes("Vault: zero oracle"));
         new AdaptiveLPVault(
-            address(usdc), address(weth), address(0), address(strategy),
-            address(governance), "Test", "TEST"
+            address(usdc), address(weth), address(0), address(strategy), "Test", "TEST"
         );
     }
 
@@ -174,17 +158,9 @@ contract VaultAdminTest is BaseTest {
     function test_Revert_Constructor_ZeroStrategy() public {
         vm.expectRevert(bytes("Vault: zero strategy"));
         new AdaptiveLPVault(
-            address(usdc), address(weth), address(oracle), address(0),
-            address(governance), "Test", "TEST"
+            address(usdc), address(weth), address(oracle), address(0), "Test", "TEST"
         );
     }
 
-    // 测试构造函数governance地址为0时revert
-    function test_Revert_Constructor_ZeroGovernance() public {
-        vm.expectRevert(bytes("Vault: zero governance"));
-        new AdaptiveLPVault(
-            address(usdc), address(weth), address(oracle), address(strategy),
-            address(0), "Test", "TEST"
-        );
-    }
+
 }

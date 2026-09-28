@@ -15,11 +15,22 @@ interface IGovernanceSyncTarget {
     function setMaxSlippage(uint256) external;
 }
 
+/// @notice 国库接口
+interface ITreasury {
+    function spend(address token, address to, uint256 amount, string memory reason) external;
+}
+
+/// @notice 激励合约扩展接口
+interface IRebalanceIncentivesExt {
+    function setAlpRewardPerRebalance(uint256 _reward) external;
+}
+
 /**
  * @title GovernanceToken
  * @notice 治理代币，金库份额持有者可获得
  */
 contract GovernanceToken is ERC20Votes {
+    uint256 public constant CAP = 10_000_000e18;
     address public minter;
 
     constructor() ERC20("Adaptive LP Governance", "ALP") EIP712("Adaptive LP Governance", "1") {
@@ -46,6 +57,7 @@ contract GovernanceToken is ERC20Votes {
     }
 
     function mint(address to, uint256 amount) external onlyMinter {
+        require(totalSupply() + amount <= CAP, 'GovToken: cap exceeded');
         _mint(to, amount);
     }
 
@@ -66,6 +78,7 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
     address public strategy;
     address public oracle;
     address public incentives;
+    address public treasury;
 
     StrategyParams public params;
 
@@ -83,7 +96,9 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         SET_INCENTIVE_BPS,
         SET_MAX_SLIPPAGE,
         SET_WEIGHT_CAPS,
-        SET_RANGE_BPS
+        SET_RANGE_BPS,
+        SPEND_FROM_TREASURY,
+        SET_ALP_REWARD
     }
 
     struct Proposal {
@@ -170,6 +185,11 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
     }
 
     // ============ 提案逻辑 ============
+
+    /// @notice 设置国库合约地址
+    function setTreasury(address _treasury) external onlyOwner {
+        treasury = _treasury;
+    }
 
     /**
      * @notice 创建提案
@@ -366,6 +386,14 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
             params.tightRangeBps = v1;
             params.mediumRangeBps = v2;
             params.wideRangeBps = v3;
+        } else if (pType == ProposalType.SPEND_FROM_TREASURY) {
+            // v1 = token地址, v2 = 接收方地址, v3 = 金额
+            require(treasury != address(0), "Governance: treasury not set");
+            ITreasury(treasury).spend(address(uint160(v1)), address(uint160(v2)), v3, "");
+        } else if (pType == ProposalType.SET_ALP_REWARD) {
+            // v1 = 新的ALP每次奖励数量
+            require(incentives != address(0), "Governance: incentives not set");
+            IRebalanceIncentivesExt(incentives).setAlpRewardPerRebalance(v1);
         }
     }
     
@@ -385,3 +413,5 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         return result;
     }
 }
+
+

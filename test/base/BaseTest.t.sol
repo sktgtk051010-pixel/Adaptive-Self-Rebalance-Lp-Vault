@@ -90,7 +90,6 @@ contract BaseTest is Test {
             address(weth),
             address(oracle),
             address(strategy),
-            address(governance),
             "Adaptive LP Vault",
             "ALP"
         );

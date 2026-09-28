@@ -1,4 +1,4 @@
-﻿# Security Analysis — Adaptive LP Vault
+# Security Analysis — Adaptive LP Vault
 
 > 安全风险分析与缓解措施文档
 

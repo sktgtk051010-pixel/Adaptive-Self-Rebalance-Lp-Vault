@@ -79,7 +79,7 @@ contract ForkTest is Test {
         oracle = new TWAPOracle(MAINNET_V3_POOL_3000, MAINNET_WETH, MAINNET_USDC, address(governance));
 
         vault = new AdaptiveLPVault(
-            MAINNET_USDC, MAINNET_WETH, address(oracle), address(strategy), address(governance),
+            MAINNET_USDC, MAINNET_WETH, address(oracle), address(strategy),
             "Adaptive LP Vault", "ALP-VAULT"
         );
 
@@ -101,9 +101,8 @@ contract ForkTest is Test {
 
         vault.setMaxSlippage(500);
 
-        incentives = new RebalanceIncentives(address(vault), MAINNET_USDC, address(governance));
+        incentives = new RebalanceIncentives(address(vault), MAINNET_USDC, address(govToken));
         vault.setIncentives(address(incentives));
-        vault.setGovernance(address(governance));
         governance.setVault(address(vault));
 
         _fundUser(ALICE, 50 ether, 100_000e6);

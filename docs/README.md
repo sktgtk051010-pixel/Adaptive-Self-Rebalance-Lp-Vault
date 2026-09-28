@@ -1,4 +1,4 @@
-﻿# Adaptive Self-Rebalance LP Vault
+# Adaptive Self-Rebalance LP Vault
 
 > 去中心化自适应再平衡 Uniswap LP 金库 — 对标 Gamma Strategies，自动管理 V2/V3 多池流动性
 
@@ -263,6 +263,10 @@ Adaptive-Self-Rebalance-Lp-Vault/
 ├── src/
 │   ├── vault/
 │   │   └── AdaptiveLPVault.sol       # 核心金库（ERC4626）
+│   ├── distribution/
+│   │   └──LiquidityMining.sol        # 挖矿合约
+│   │   └──TeamVesting.sol            # 团队锁仓合约
+│   │   └──Treasury.sol               # 国库合约
 │   ├── oracles/
 │   │   └── TWAPOracle.sol             # TWAP 价格预言机
 │   ├── strategies/
