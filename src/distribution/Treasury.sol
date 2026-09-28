@@ -8,7 +8,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /**
  * @title Treasury - 国库合约
  * @notice 管理协议国库资金，所有支出必须通过治理提案执行
- * @dev owner 为 AdaptiveGovernance 治理合约，通过 executeAsOwner 调用 spend()
  */
 contract Treasury is Ownable {
     using SafeERC20 for IERC20;

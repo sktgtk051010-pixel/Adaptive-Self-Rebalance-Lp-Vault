@@ -14,20 +14,16 @@ import {FullMath} from "../libraries/UniswapMath.sol";
 contract TeamVesting is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
-    // ============ 不可变状态 ============
     IERC20 public immutable REWARD_TOKEN;      // ALP 代币
     address public immutable TEAM_WALLET;      // 团队钱包地址
 
-    // ============ 常量 ============
     uint256 public constant CLIFF_PERIOD = 365 days;      // 1年悬崖期
     uint256 public constant VESTING_PERIOD = 1095 days;    // 3年线性释放
     uint256 public constant TOTAL_AMOUNT = 2_000_000e18;  // 总量 200万 ALP
 
-    // ============ 可变状态 ============
     uint256 public startTime;                   // 开始时间
     uint256 public releasedAmount;               // 已领取数量
 
-    // ============ 事件 ============
     event VestingStarted(uint256 startTime);
     event TeamClaimed(address indexed team, uint256 amount);
 
@@ -75,12 +71,11 @@ contract TeamVesting is ReentrancyGuard, Ownable {
         if (startTime == 0) return 0;
 
         uint256 cliffEnd = startTime + CLIFF_PERIOD;
-        if (block.timestamp < cliffEnd) return 0;  // 悬崖期内一分不给
+        if (block.timestamp < cliffEnd) return 0;  
 
         uint256 vestingEnd = cliffEnd + VESTING_PERIOD;
-        if (block.timestamp >= vestingEnd) return TOTAL_AMOUNT;  // 全释放完了
+        if (block.timestamp >= vestingEnd) return TOTAL_AMOUNT;  
 
-        // 线性释放：(现在 - 悬崖结束时间) / 线性期 × 总量
         uint256 elapsed = block.timestamp - cliffEnd;
         return FullMath.mulDiv(TOTAL_AMOUNT, elapsed, VESTING_PERIOD);
     }

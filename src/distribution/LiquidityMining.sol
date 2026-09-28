@@ -14,14 +14,12 @@ import {FullMath} from "../libraries/UniswapMath.sol";
 contract LiquidityMining is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
-    // ============ 不可变状态 ============
     IERC20 public immutable REWARD_TOKEN;      // ALP 代币
     address public immutable VAULT;            // 金库地址
-    // ============ 常量 ============
+
     uint256 public constant HALVING_PERIOD = 365 days;            // 每1年减半
     uint256 public constant INITIAL_RPS = uint256(2500000 * 1e18) / 365 days;  // 第1年每秒释放量
 
-    // ============ 可变状态 ============
     uint256 public startTime;                  // 开始时间
     uint256 public lastUpdateTime;             // 上次更新时间
     uint256 public rewardPerShare;             // 每份额累积奖励（乘以 1e18）
@@ -30,13 +28,11 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
     mapping(address => uint256) public balanceOf;    // 用户份额
     mapping(address => uint256) public rewardDebt;   // 用户奖励记账
 
-    // ============ 事件 ============
     event MiningStarted(uint256 startTime);
     event RewardDistributed(uint256 amount);
     event RewardClaimed(address indexed user, uint256 amount);
     event BalanceUpdated(address indexed user, uint256 oldBalance, uint256 newBalance);
 
-    // ============ modifier ============
     modifier onlyVault() {
         require(msg.sender == VAULT, "LiquidityMining: not vault");
         _;
@@ -75,18 +71,14 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
     function updateBalance(address user, uint256 newBalance) external onlyVault {
         _distribute();
 
-        // 结算用户之前累积的奖励
         uint256 pending = _settle(user);
 
-        // 更新用户份额
         uint256 oldBalance = balanceOf[user];
         balanceOf[user] = newBalance;
         totalShares = totalShares - oldBalance + newBalance;
 
-        // 用新份额重记账
         rewardDebt[user] = FullMath.mulDiv(newBalance, rewardPerShare, 1e18);
 
-        // 如果 pending > 0，自动转给用户
         if (pending > 0) {
             REWARD_TOKEN.safeTransfer(user, pending);
             emit RewardClaimed(user, pending);
