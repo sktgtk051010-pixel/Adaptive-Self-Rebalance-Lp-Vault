@@ -150,7 +150,7 @@ LP 做市本质上存在无常损失风险。当 WETH/USDC 价格发生大幅波
 ERC4626 是单币标准，份额只能赎回一种资产；但本金库装的是 WETH + USDC 两种币。两者存在根本错配：
 
 1. **asset 是 USDC**：按 ERC4626 标准，金库计价资产（asset）设为 USDC
-2. **标准接口仅 USDC 路径**：`deposit()` 只收 USDC，`redeem()` 只返回 USDC（WETH 沉淀在金库中）
+2. **标准接口仅 USDC 路径**：`deposit()` 只收 USDC，`redeem()` 仅返还 USDC，对应份额的 WETH 留存于金库合约，不随赎回转出
 3. **双币操作走自定义接口**：完整的 WETH+USDC 存取通过 `depositDual()` / `withdrawDual()` 实现，前端只暴露这套
 
 #### 影响范围
