@@ -13,6 +13,9 @@ import {UniswapV2Adapter} from "../../src/adapters/UniswapV2Adapter.sol";
 import {UniswapV3Adapter} from "../../src/adapters/UniswapV3Adapter.sol";
 import {ILPAdapter} from "../../src/interfaces/ILPAdapter.sol";
 import {IUniswapV3Pool} from "../../src/interfaces/IUniswapV3.sol";
+import {LiquidityMining} from "../../src/distribution/LiquidityMining.sol";
+import {TeamVesting} from "../../src/distribution/TeamVesting.sol";
+import {Treasury} from "../../src/distribution/Treasury.sol";
 
 interface IUniswapV2RouterSimple {
     function swapExactETHForTokens(
@@ -64,6 +67,10 @@ contract ForkTest is Test {
     UniswapV3Adapter public v3LowAdapter;
     UniswapV3Adapter public v3HighAdapter;
     RebalanceIncentives public incentives;
+    LiquidityMining public mining;
+    TeamVesting public teamVesting;
+    Treasury public treasury;
+    address public teamWallet = address(0xABCDEF);
 
     IERC20 public weth = IERC20(MAINNET_WETH);
     IERC20 public usdc = IERC20(MAINNET_USDC);
@@ -105,13 +112,29 @@ contract ForkTest is Test {
         vault.setIncentives(address(incentives));
         governance.setVault(address(vault));
 
+        mining = new LiquidityMining(address(govToken), address(vault));
+        teamVesting = new TeamVesting(address(govToken), teamWallet);
+        treasury = new Treasury();
+
+        vm.startPrank(address(governance));
+        govToken.mint(address(mining), 5_000_000e18);
+        govToken.mint(address(teamVesting), 2_000_000e18);
+        govToken.mint(address(treasury), 2_000_000e18);
+        govToken.mint(address(incentives), 1_000_000e18);
+        vm.stopPrank();
+
+        mining.startMining();
+        teamVesting.startVesting();
+
+        vault.setLiquidityMining(address(mining));
+
         _fundUser(ALICE, 50 ether, 100_000e6);
         _fundUser(BOB, 50 ether, 100_000e6);
         _fundUser(CHARLIE, 50 ether, 100_000e6);
 
         _fundUser(address(this), 100 ether, 200_000e6);
 
-        usdc.transfer(address(incentives), 10_000e6);
+        usdc.transfer(address(incentives), 100_000e6);
     }
 
     function _fundUser(address user, uint256 wethAmount, uint256 usdcAmount) internal {
@@ -164,9 +187,17 @@ contract ForkTest is Test {
         assertTrue(address(v3LowAdapter) != address(0), "v3LowAdapter not deployed");
         assertTrue(address(v3HighAdapter) != address(0), "v3HighAdapter not deployed");
         assertTrue(address(incentives) != address(0), "incentives not deployed");
+        assertTrue(address(mining) != address(0), "mining not deployed");
+        assertTrue(address(teamVesting) != address(0), "teamVesting not deployed");
+        assertTrue(address(treasury) != address(0), "treasury not deployed");
 
         assertEq(vault.asset(), MAINNET_USDC, "vault asset should be USDC");
         assertEq(address(vault.ORACLE()), address(oracle), "vault oracle mismatch");
+        assertEq(address(vault.liquidityMining()), address(mining), "vault mining mismatch");
+        assertEq(govToken.balanceOf(address(mining)), 5_000_000e18, "mining should have 5M ALP");
+        assertEq(govToken.balanceOf(address(teamVesting)), 2_000_000e18, "teamVesting should have 2M ALP");
+        assertEq(govToken.balanceOf(address(treasury)), 2_000_000e18, "treasury should have 2M ALP");
+        assertEq(govToken.balanceOf(address(incentives)), 1_000_000e18, "incentives should have 1M ALP");
     }
 
     // 测试主网V3 0.3%池的当前价格可以正常读取
@@ -187,23 +218,62 @@ contract ForkTest is Test {
         console2.log("TWAP tick:", tick);
     }
 
-    // 测试主网环境下完整流程：存款→再平衡→全额赎回
-    function test_Fork_Deposit_Rebalance_withdraw() public {
+    // 测试主网环境下完整用户旅程：存款→挖矿份额同步→再平衡→激励双奖励→领取→赎回→挖矿份额归零
+    function test_Fork_FullFlow_Deposit_Rebalance_Claim_Withdraw() public {
+        // ===== 1. 存款，挖矿份额同步 =====
         uint256 shares = _deposit(ALICE, 1 ether, 2000e6);
         assertGt(shares, 0, "shares should be > 0");
         assertEq(vault.balanceOf(ALICE), shares, "alice should have shares");
+        assertEq(mining.balanceOf(ALICE), shares, "mining balance should sync on deposit");
+        assertEq(mining.totalShares(), vault.totalSupply(), "mining totalShares should sync on deposit");
 
         uint256 assetsAfterDeposit = vault.totalAssets();
         assertGt(assetsAfterDeposit, 0, "totalAssets should be > 0");
 
+        // ===== 2. 再平衡（真实主网流程）=====
         vault.rebalance();
         assertEq(vault.rebalanceCount(), 1, "rebalanceCount should be 1");
 
         (uint256 v2Weight, uint256 v3LowWeight, uint256 v3HighWeight) = vault.currentWeights();
         assertGt(v2Weight + v3LowWeight + v3HighWeight, 0, "weights should be set");
-
         assertGt(vault.totalAssets(), 0, "totalAssets should > 0 after rebalance");
 
+        // ===== 3. 激励双奖励：主网再平衡未必盈利，用确定性盈利触发来断言 USDC + ALP =====
+        uint256 usdcPendingBefore = incentives.pendingReward(ALICE);
+        uint256 alpPendingBefore = incentives.pendingAlpReward(ALICE);
+
+        skip(incentives.cooldownPeriod() + 1); // 过激励冷却期
+        uint256 valueBefore = 100_000e6;
+        uint256 valueAfter = 101_000e6;
+        vm.prank(address(vault));
+        incentives.onRebalanceExecuted(ALICE, valueBefore, valueAfter);
+
+        uint256 expectedUsdc = (valueAfter - valueBefore) * incentives.incentiveBps() / 10000;
+        assertEq(incentives.pendingReward(ALICE) - usdcPendingBefore, expectedUsdc, "USDC reward should be 5% of profit");
+        assertEq(incentives.pendingAlpReward(ALICE) - alpPendingBefore, incentives.DEFAULT_ALP_REWARD(), "ALP reward should be fixed 10");
+
+        // ===== 4. 领取激励双奖励 =====
+        uint256 usdcBeforeClaim = usdc.balanceOf(ALICE);
+        uint256 alpBeforeClaim = govToken.balanceOf(ALICE);
+        vm.prank(ALICE);
+        incentives.claimReward();
+        assertEq(usdc.balanceOf(ALICE) - usdcBeforeClaim, expectedUsdc, "should receive USDC reward");
+        assertEq(govToken.balanceOf(ALICE) - alpBeforeClaim, incentives.DEFAULT_ALP_REWARD(), "should receive ALP reward");
+        assertEq(incentives.pendingReward(ALICE), 0, "USDC pending should be 0 after claim");
+        assertEq(incentives.pendingAlpReward(ALICE), 0, "ALP pending should be 0 after claim");
+
+        // ===== 5. 挖矿奖励随时间累积并领取 =====
+        skip(1 days);
+        uint256 pendingMining = mining.pendingReward(ALICE);
+        assertGt(pendingMining, 0, "mining reward should accumulate over time");
+
+        uint256 alpBeforeMining = govToken.balanceOf(ALICE);
+        vm.prank(ALICE);
+        mining.claimReward();
+        assertEq(govToken.balanceOf(ALICE) - alpBeforeMining, pendingMining, "should receive mining reward");
+        assertEq(mining.pendingReward(ALICE), 0, "mining pending should be 0 after claim");
+
+        // ===== 6. 全额赎回，挖矿份额同步归零 =====
         uint256 wethBefore = weth.balanceOf(ALICE);
         uint256 usdcBefore = usdc.balanceOf(ALICE);
 
@@ -214,6 +284,8 @@ contract ForkTest is Test {
         assertGt(usdcOut, 0);
         assertEq(weth.balanceOf(ALICE), wethBefore + wethOut, "weth balance should increase");
         assertEq(usdc.balanceOf(ALICE), usdcBefore + usdcOut, "usdc balance should increase");
+        assertEq(mining.balanceOf(ALICE), 0, "mining balance should be 0 after full withdraw");
+        assertEq(mining.totalShares(), 0, "mining totalShares should be 0 after full withdraw");
     }
 
     // 测试主网环境下多用户存款无稀释，Alice赎回不影响Bob的资产价值
@@ -366,10 +438,12 @@ contract ForkTest is Test {
 
     // 测试主网环境下治理提案完整流程：发起→投票→通过→时间锁→执行
     function test_Fork_Governance_Proposal_Execute() public {
-        vm.prank(address(governance));
+        // setUp 已 mint 满 1000 万（=CAP），先 burn 出 3 万腾出铸造空间
+        vm.startPrank(address(governance));
+        govToken.burn(address(mining), 30_000e18);
         govToken.mint(ALICE, 2000e18);
-        vm.prank(address(governance));
         govToken.mint(BOB, 20000e18);
+        vm.stopPrank();
 
         vm.prank(BOB);
         govToken.delegate(BOB);
@@ -468,4 +542,27 @@ contract ForkTest is Test {
         vm.expectRevert("Incentives: not profitable");
         incentives.onRebalanceExecuted(address(this), totalValueBefore, lossValueAfter);
     }
+
+    // 测试主网环境下国库支出功能
+    function test_Fork_Treasury_Spend() public {
+        uint256 amount = 100e18;
+        uint256 balanceBefore = govToken.balanceOf(BOB);
+
+        treasury.spend(address(govToken), BOB, amount, "test fork spend");
+
+        uint256 balanceAfter = govToken.balanceOf(BOB);
+        assertEq(balanceAfter - balanceBefore, amount, "BOB should receive ALP");
+        assertEq(treasury.getSpendingCount(), 1, "spending count should be 1");
+    }
+
+    // 测试主网环境下团队锁仓：悬崖期内不能领取
+    function test_Fork_TeamVesting_CliffPeriod() public {
+        skip(180 days); 
+        assertEq(teamVesting.vestedAmount(), 0, "no tokens vested during cliff");
+
+        vm.prank(teamWallet);
+        vm.expectRevert(bytes("TeamVesting: nothing to claim"));
+        teamVesting.claim();
+    }
+
 }

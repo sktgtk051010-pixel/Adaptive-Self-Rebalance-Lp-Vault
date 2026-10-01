@@ -51,9 +51,14 @@ contract VaultAdminTest is BaseTest {
     }
 
     // 测试设置最大滑点为0时成功（允许无滑点保护）
-    function test_SetMaxSlippage_Zero() public {
+    function test_Revert_SetMaxSlippage_TooLow() public {
+        vm.expectRevert(bytes("Vault: slippage too low"));
         vault.setMaxSlippage(0);
-        assertEq(vault.maxSlippageBps(), 0);
+    }
+
+    function test_SetMaxSlippage_Min10() public {
+        vault.setMaxSlippage(10);
+        assertEq(vault.maxSlippageBps(), 10);
     }
 
     // 测试设置最大滑点为上限500bps(5%)时成功

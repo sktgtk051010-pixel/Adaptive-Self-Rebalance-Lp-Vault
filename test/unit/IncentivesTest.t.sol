@@ -9,7 +9,7 @@ contract IncentivesTest is BaseTest {
         super.setUp();
     }
 
-    // 测试正常再平衡时奖励计算：利润200USDC，激励比例5%，应奖励10USDC
+    // 测试正常再平衡时 USDC + ALP 双奖励同时发放：利润200USDC，USDC按5%发10，ALP固定发10
     function test_OnRebalanceExecuted_RewardCalculation() public {
         uint256 before = 1000e6;
         uint256 afterValue = 1200e6;
@@ -19,9 +19,10 @@ contract IncentivesTest is BaseTest {
 
         assertEq(reward, 10e6);
         assertEq(incentives.pendingReward(alice), 10e6);
+        assertEq(incentives.pendingAlpReward(alice), 10e18);
     }
 
-    // 测试奖励上限：当计算出的奖励超过合约余额时，奖励被截断为合约实际余额
+    // 测试奖励上限：USDC 奖励超过合约余额时截断为余额，ALP 固定奖励不受影响
     function test_OnRebalanceExecuted_RewardCappedByBalance() public {
         uint256 balance = usdc.balanceOf(address(incentives));
         uint256 before = 0;
@@ -30,7 +31,11 @@ contract IncentivesTest is BaseTest {
         vm.prank(address(vault));
         uint256 reward = incentives.onRebalanceExecuted(alice, before, afterValue);
 
+        // USDC 奖励被截断为合约余额
         assertLe(reward, balance);
+        assertEq(incentives.pendingReward(alice), reward);
+        // ALP 奖励正常发放
+        assertEq(incentives.pendingAlpReward(alice), 10e18);
     }
 
     // 测试权限控制：非金库地址调用 onRebalanceExecuted 应 revert
@@ -188,11 +193,26 @@ contract IncentivesTest is BaseTest {
         incentives.fundRewards(0);
     }
 
-    // 测试未授权注入 revert：普通用户调用 fundRewards 应 revert
-    function test_Revert_FundRewards_NotAuthorized() public {
+    // 测试未授权注入 revert：普通用户没授权时调用 fundRewards 会 revert ERC20InsufficientAllowance
+    function test_Revert_FundRewards_NoAllowance() public {
         vm.prank(alice);
-        vm.expectRevert(bytes("Incentives: not authorized"));
+        vm.expectRevert();
         incentives.fundRewards(100e6);
+    }
+
+    // 测试普通用户授权后可以成功注入资金
+    function test_FundRewards_ByAnyoneWithApproval() public {
+        uint256 amount = 100e6;
+        usdc.mint(alice, amount);
+        vm.prank(alice);
+        usdc.approve(address(incentives), amount);
+
+        uint256 balanceBefore = usdc.balanceOf(address(incentives));
+        vm.prank(alice);
+        incentives.fundRewards(amount);
+        uint256 balanceAfter = usdc.balanceOf(address(incentives));
+
+        assertEq(balanceAfter - balanceBefore, amount);
     }
 
     // 测试设置最低利润阈值：设置新阈值后成功更新
@@ -202,7 +222,7 @@ contract IncentivesTest is BaseTest {
         assertEq(incentives.minProfitThreshold(), newThreshold);
     }
 
-    // 测试零奖励场景：激励比例设为0时奖励为0且不累计到用户和总奖励
+    // 测试零 USDC 奖励场景：激励比例设为0时 USDC 奖励为0，但 ALP 奖励照常发放
     function test_OnRebalanceExecuted_ZeroRewardWhenNoBalance() public {
         incentives.setIncentiveBps(0);
         vm.prank(address(vault));
@@ -210,6 +230,8 @@ contract IncentivesTest is BaseTest {
         assertEq(reward, 0);
         assertEq(incentives.pendingReward(alice), 0);
         assertEq(incentives.totalRewardsPaid(), 0);
+        // ALP 不受 incentiveBps 影响，照常发放
+        assertEq(incentives.pendingAlpReward(alice), 10e18);
     }
 
     // 测试冷却期后 canRebalance：跳过301秒后 canRebalance 应返回 true
@@ -239,5 +261,93 @@ contract IncentivesTest is BaseTest {
         vm.expectRevert();
         incentives.setMinProfitThreshold(5e6);
         vm.stopPrank();
+    }
+
+    // ============ ALP 双奖励测试 ============
+
+
+    // 测试 ALP 奖励被余额截断：ALP 余额不足时按实际余额发放，USDC 奖励不受影响
+    function test_OnRebalanceExecuted_ALPRewardCappedByBalance() public {
+        uint256 alpBalance = govToken.balanceOf(address(incentives));
+        vm.prank(address(incentives));
+        govToken.transfer(alice, alpBalance - 5e18);
+
+        vm.prank(address(vault));
+        incentives.onRebalanceExecuted(alice, 1000e6, 1200e6);
+
+        assertEq(incentives.pendingAlpReward(alice), 5e18);
+        // USDC 奖励照常
+        assertEq(incentives.pendingReward(alice), 10e6);
+    }
+
+    // 测试无 ALP 余额时 ALP 奖励为 0，但 USDC 奖励照常发放
+    function test_OnRebalanceExecuted_NoALPBalance() public {
+        // 把 incentives 的 ALP 全部转走
+        uint256 alpBalance = govToken.balanceOf(address(incentives));
+        vm.prank(address(incentives));
+        govToken.transfer(alice, alpBalance);
+
+        vm.prank(address(vault));
+        uint256 usdcReward = incentives.onRebalanceExecuted(alice, 1000e6, 1200e6);
+
+        // USDC 照常发放
+        assertGt(usdcReward, 0);
+        assertEq(incentives.pendingReward(alice), 10e6);
+        // ALP 为 0
+        assertEq(incentives.pendingAlpReward(alice), 0);
+    }
+
+    // 测试注入 ALP 奖励资金
+    // 测试注入 ALP 奖励资金（BaseTest 已注入100万，这里从合约转出再注入验证 fundAlpRewards）
+    function test_FundAlpRewards() public {
+        uint256 amount = 500e18;
+        // 从 incentives 转出 500 ALP 给测试合约
+        vm.prank(address(incentives));
+        govToken.transfer(address(this), amount);
+        govToken.approve(address(incentives), amount);
+
+        uint256 balanceBefore = govToken.balanceOf(address(incentives));
+        incentives.fundAlpRewards(amount);
+        uint256 balanceAfter = govToken.balanceOf(address(incentives));
+
+        assertEq(balanceAfter - balanceBefore, amount);
+    }
+
+    // 测试注入 0 ALP revert
+    function test_Revert_FundAlpRewards_ZeroAmount() public {
+        vm.expectRevert(bytes("Incentives: zero amount"));
+        incentives.fundAlpRewards(0);
+    }
+
+    // 测试设置 ALP 奖励数量
+    function test_SetAlpReward() public {
+        incentives.setAlpRewardPerRebalance(50e18);
+        assertEq(incentives.alpRewardPerRebalance(), 50e18);
+    }
+
+    // 测试设置 ALP 奖励超过上限 revert
+    function test_Revert_SetAlpReward_TooHigh() public {
+        vm.expectRevert(bytes("Incentives: alp reward too high"));
+        incentives.setAlpRewardPerRebalance(1001e18);
+    }
+
+    // 测试非 owner 设置 ALP 奖励 revert
+    function test_Revert_SetAlpReward_NotOwner() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        incentives.setAlpRewardPerRebalance(50e18);
+    }
+
+    // 测试设置自定义 ALP 奖励后 USDC + ALP 双奖励同时发放
+    function test_OnRebalanceExecuted_CustomALPReward() public {
+        incentives.setAlpRewardPerRebalance(50e18);
+
+        vm.prank(address(vault));
+        incentives.onRebalanceExecuted(alice, 1000e6, 1200e6);
+
+        // USDC 奖励 = 利润 × 5%
+        assertEq(incentives.pendingReward(alice), 10e6);
+        // ALP 奖励 = 自定义 50 ALP
+        assertEq(incentives.pendingAlpReward(alice), 50e18);
     }
 }

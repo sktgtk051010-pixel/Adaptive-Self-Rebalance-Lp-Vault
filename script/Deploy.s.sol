@@ -42,8 +42,7 @@ contract DeployScript is Script {
     // Sepolia 上 Uniswap V2 Router（如果没有部署，传 address(0) 会跳过 V2 适配器）
     address constant UNISWAP_V2_ROUTER = 0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3;
 
-    // 给激励合约充值的 USDC 数量（部署者需要有足够的 USDC；如果没有可以设为 0）
-    uint256 constant INCENTIVE_INITIAL_FUND = 0; // 设为 0 表示不自动充值，部署后手动充值
+    uint256 constant INCENTIVE_INITIAL_FUND = 100_000e6; // 初始注入 10 万 USDC 作为再平衡奖励池；用完后可由 owner 再充值
 
     // ============ 代币分配常量 ============
     uint256 constant TOTAL_SUPPLY = 10_000_000e18;

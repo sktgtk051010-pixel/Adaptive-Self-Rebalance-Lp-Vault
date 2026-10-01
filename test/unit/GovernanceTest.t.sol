@@ -7,6 +7,9 @@ import {GovernanceToken, AdaptiveGovernance} from "../../src/governance/Adaptive
 contract GovernanceTest is BaseTest {
     function setUp() public override {
         super.setUp();
+        // BaseTest 已将 1000 万 ALP 全部分配（= CAP），测试内 mint 会撞上限。
+        // 从挖矿合约 burn 出 100 万腾出铸造空间，供各测试给用户发币。
+        govToken.burn(address(mining), 1_000_000e18);
     }
 
     // 测试minter地址调用mint铸造治理代币成功
@@ -594,10 +597,18 @@ contract GovernanceTest is BaseTest {
         govToken.mint(alice, 2000e18);
         govToken.mint(bob, 20000e18);
 
+        _testProposalType(AdaptiveGovernance.ProposalType.SET_TWAP_WINDOW, 900, 0, 0);
         _testProposalType(AdaptiveGovernance.ProposalType.SET_INCENTIVE_BPS, 800, 0, 0);
         _testProposalType(AdaptiveGovernance.ProposalType.SET_MAX_SLIPPAGE, 200, 0, 0);
         _testProposalType(AdaptiveGovernance.ProposalType.SET_WEIGHT_CAPS, 4000, 3000, 5000);
         _testProposalType(AdaptiveGovernance.ProposalType.SET_RANGE_BPS, 500, 1500, 4000);
+        _testProposalType(
+            AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY,
+            uint256(uint160(address(govToken))),
+            uint256(uint160(bob)),
+            100e18
+        );
+        _testProposalType(AdaptiveGovernance.ProposalType.SET_ALP_REWARD, 50e18, 0, 0);
     }
 
     function _testProposalType(
@@ -607,11 +618,28 @@ contract GovernanceTest is BaseTest {
         uint256 v3
     ) internal {
         if (pType == AdaptiveGovernance.ProposalType.SET_TWAP_WINDOW) {
-            oracle.transferOwnership(address(governance));
+            governance.setOracle(address(oracle));
+            if (oracle.owner() != address(governance)) {
+                oracle.transferOwnership(address(governance));
+            }
         } else if (pType == AdaptiveGovernance.ProposalType.SET_INCENTIVE_BPS) {
-            incentives.transferOwnership(address(governance));
+            if (incentives.owner() != address(governance)) {
+                incentives.transferOwnership(address(governance));
+            }
         } else if (pType == AdaptiveGovernance.ProposalType.SET_MAX_SLIPPAGE) {
-            vault.transferOwnership(address(governance));
+            if (vault.owner() != address(governance)) {
+                vault.transferOwnership(address(governance));
+            }
+        } else if (pType == AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY) {
+            governance.setTreasury(address(treasury));
+            if (treasury.owner() != address(governance)) {
+                treasury.transferOwnership(address(governance));
+            }
+        } else if (pType == AdaptiveGovernance.ProposalType.SET_ALP_REWARD) {
+            governance.setIncentives(address(incentives));
+            if (incentives.owner() != address(governance)) {
+                incentives.transferOwnership(address(governance));
+            }
         }
 
         vm.prank(alice);
@@ -639,6 +667,19 @@ contract GovernanceTest is BaseTest {
             assertEq(p.tightRangeBps, v1);
             assertEq(p.mediumRangeBps, v2);
             assertEq(p.wideRangeBps, v3);
+        } else if (pType == AdaptiveGovernance.ProposalType.SET_TWAP_WINDOW) {
+            assertEq(p.twapWindow, v1);
+            assertEq(oracle.twapWindow(), v1);
+        } else if (pType == AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY) {
+            address to = address(uint160(v2));
+            assertEq(govToken.balanceOf(address(treasury)), 2_000_000e18 - v3);
+            assertEq(govToken.balanceOf(to), 20_000e18 + v3);
+            (address token, address receiver, uint256 amount, , ) = treasury.getSpending(0);
+            assertEq(token, address(uint160(v1)));
+            assertEq(receiver, to);
+            assertEq(amount, v3);
+        } else if (pType == AdaptiveGovernance.ProposalType.SET_ALP_REWARD) {
+            assertEq(incentives.alpRewardPerRebalance(), v1);
         }
     }
 

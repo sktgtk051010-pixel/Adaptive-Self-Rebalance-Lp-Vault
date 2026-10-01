@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // Adaptive LP Vault Frontend v5 (Local Anvil + Sepolia support)
 // ============================================================
 const SEPOLIA_CHAIN_ID = 11155111;
@@ -14,6 +14,9 @@ const SEPOLIA_ADDRESSES = {
     governance: '0xd0b9F7eD49f01790Abe071E838e1eF3550d45EF6',
     incentives: '0xC2f7200cC9bd7c49DF58F2E93baB1C53261ABC4a',
     govToken: '0x91f7Fea94f59d898aAd8e6f4728eC35A2Caf3530',
+    mining: '0x0000000000000000000000000000000000000000', // TODO: 部署后填入
+    teamVesting: '0x0000000000000000000000000000000000000000', // TODO: 部署后填入
+    treasury: '0x0000000000000000000000000000000000000000', // TODO: 部署后填入
 };
 
 // 默认使用Sepolia
@@ -74,6 +77,11 @@ const INCENTIVES_ABI = [
     'function canRebalance() view returns (bool)',
     'function lastRebalanceTime() view returns (uint256)',
     'function cooldownPeriod() view returns (uint256)',
+    'function pendingAlpReward(address) view returns (uint256)',
+    'function alpRewardsEarned(address) view returns (uint256)',
+    'function alpRewardPerRebalance() view returns (uint256)',
+    'function MAX_ALP_REWARD() view returns (uint256)',
+    'function DEFAULT_ALP_REWARD() view returns (uint256)',
 ];
 const GOV_TOKEN_ABI = [
     'function balanceOf(address) view returns (uint256)',
@@ -81,6 +89,33 @@ const GOV_TOKEN_ABI = [
     'function delegates(address account) view returns (address)',
     'function getVotes(address account) view returns (uint256)',
     'function getPastVotes(address account, uint256 blockNumber) view returns (uint256)',
+];
+const MINING_ABI = [
+    'function balanceOf(address) view returns (uint256)',
+    'function pendingReward(address) view returns (uint256)',
+    'function claimReward()',
+    'function totalShares() view returns (uint256)',
+    'function currentRewardPerSecond() view returns (uint256)',
+    'function startTime() view returns (uint256)',
+    'function rewardPerShare() view returns (uint256)',
+    'function HALVING_PERIOD() view returns (uint256)',
+    'function INITIAL_RPS() view returns (uint256)',
+    'function REWARD_TOKEN() view returns (address)',
+    'function VAULT() view returns (address)',
+];
+const TEAMVESTING_ABI = [
+    'function vestedAmount() view returns (uint256)',
+    'function released() view returns (uint256)',
+    'function startTime() view returns (uint256)',
+    'function CLIFF_PERIOD() view returns (uint256)',
+    'function VESTING_PERIOD() view returns (uint256)',
+    'function TOTAL_AMOUNT() view returns (uint256)',
+    'function claim()',
+];
+const TREASURY_ABI = [
+    'function balanceOf(address) view returns (uint256)',
+    'function getSpendingCount() view returns (uint256)',
+    'function spendings(uint256) view returns (uint256 token, address to, uint256 amount, uint256 timestamp, string reason)'
 ];
 
 let provider, signer, account;
@@ -235,6 +270,9 @@ async function connectWallet() {
                 governance: new ethers.Contract(ADDRESSES.governance, GOV_ABI, signer),
                 incentives: new ethers.Contract(ADDRESSES.incentives, INCENTIVES_ABI, signer),
                 govToken: new ethers.Contract(ADDRESSES.govToken, GOV_TOKEN_ABI, signer),
+                mining: new ethers.Contract(ADDRESSES.mining, MINING_ABI, signer),
+                teamVesting: new ethers.Contract(ADDRESSES.teamVesting, TEAMVESTING_ABI, signer),
+                treasury: new ethers.Contract(ADDRESSES.treasury, TREASURY_ABI, signer),
             };
             // 读取token0/token1顺序（与合约逻辑一致）
             try {
@@ -288,6 +326,9 @@ function loadAllData(silent) {
     safeCall(loadIncentivesData);
     safeCall(loadDeviation);
     safeCall(loadGovTokenBalance);
+    safeCall(loadMiningData);
+    safeCall(loadTreasuryData);
+    safeCall(loadTeamVestingData);
 }
 
 function safeCall(fn) {
@@ -460,6 +501,10 @@ async function loadGovernanceParams() {
         setText('paramTwap', p.twapWindow + 's');
         setText('paramTight', pct(p.tightRangeBps));
         setText('paramWide', pct(p.wideRangeBps));
+        var alpReward = await C.incentives.alpRewardPerRebalance();
+        setText('paramAlpReward', parseFloat(ethers.utils.formatEther(alpReward)).toFixed(2) + ' ALP/次');
+        var alpPoolBal = await C.govToken.balanceOf(ADDRESSES.incentives);
+        setText('paramAlpPool', parseFloat(ethers.utils.formatEther(alpPoolBal)).toFixed(0) + ' ALP');
         $('govParamsTable').innerHTML =
             '<div class="param-row"><span>TWAP窗口</span><b>'+p.twapWindow+'s ('+(p.twapWindow/60).toFixed(0)+'min)</b></div>' +
             '<div class="param-row"><span>再平衡阈值</span><b>'+pct(p.rebalanceThreshold)+'</b></div>' +
@@ -470,10 +515,11 @@ async function loadGovernanceParams() {
             '<div class="param-row"><span>V3高费率上限</span><b>'+(p.v3HighFeeWeightCap/100).toFixed(0)+'%</b></div>' +
             '<div class="param-row"><span>窄区间</span><b>±'+(p.tightRangeBps/100).toFixed(0)+'%</b></div>' +
             '<div class="param-row"><span>中区间</span><b>±'+(p.mediumRangeBps/100).toFixed(0)+'%</b></div>' +
+            '<div class="param-row"><span>ALP 再平衡奖励</span><b id="paramAlpReward">-</b></div>' +
             '<div class="param-row"><span>宽区间</span><b>±'+(p.wideRangeBps/100).toFixed(0)+'%</b></div>';
     } catch(e) {
         console.error('Gov params:', e.message);
-        ['paramThreshold','paramIncentive','paramSlippage','paramTwap','paramTight','paramWide'].forEach(function(id){ setText(id,'-'); });
+        ['paramThreshold','paramIncentive','paramSlippage','paramTwap','paramTight','paramWide','paramAlpReward','paramAlpPool'].forEach(function(id){ setText(id,'-'); });
     }
 }
 
@@ -483,6 +529,8 @@ async function loadIncentivesData() {
         var bps = await C.incentives.incentiveBps();
 
         setText('rbRewards', '$' + parseFloat(ethers.utils.formatUnits(rewards,6)).toFixed(4));
+        var alpRewards = await C.incentives.pendingAlpReward(account);
+        setText('rbAlpRewards', parseFloat(ethers.utils.formatEther(alpRewards)).toFixed(2) + ' ALP');
         setText('rbIncentiveBps', (bps/100).toFixed(1) + '%');
 
         // 冷却状态从金库读取（金库的REBALANCE_COOLDOWN=600秒才是真正控制rebalance的）
@@ -569,11 +617,12 @@ async function loadGovTokenBalance() {
 // 提案类型名称映射
 const PROPOSAL_TYPE_NAMES = [
     'TWAP 窗口',
-    '再平衡阈值',
     '激励比例',
     '最大滑点',
     '权重上限',
-    '区间范围'
+    '区间范围',
+    '国库支出',
+    'ALP 再平衡奖励'
 ];
 
 // 提案状态名称映射
@@ -588,26 +637,31 @@ const PROPOSAL_STATE_NAMES = [
 
 // 提案类型改变时，显示/隐藏三值输入框
 function onProposalTypeChange() {
-    var type = parseInt($('proposalType').value);
-    var singleGroup = $('singleValueGroup');
-    var tripleGroup = $('tripleValueGroup');
-    if (type === 4 || type === 5) {
-        // 权重上限(4)和区间范围(5)需要三个值
+    var type = parseInt(document.getElementById('proposalType').value);
+    var singleGroup = document.getElementById('singleValueGroup');
+    var tripleGroup = document.getElementById('tripleValueGroup');
+    var treasuryGroup = document.getElementById('treasuryGroup');
+    if (type === 3 || type === 4) {
         singleGroup.style.display = 'none';
         tripleGroup.style.display = 'block';
-        if (type === 4) {
-            $('label1').textContent = 'V2 权重上限 (bps)';
-            $('label2').textContent = 'V3 低费率上限 (bps)';
-            $('label3').textContent = 'V3 高费率上限 (bps)';
+        treasuryGroup.style.display = 'none';
+        if (type === 3) {
+            document.getElementById('label1').textContent = 'V2 权重上限 (bps)';
+            document.getElementById('label2').textContent = 'V3 低费率上限 (bps)';
+            document.getElementById('label3').textContent = 'V3 高费率上限 (bps)';
         } else {
-            $('label1').textContent = '窄区间 (bps)';
-            $('label2').textContent = '中区间 (bps)';
-            $('label3').textContent = '宽区间 (bps)';
+            document.getElementById('label1').textContent = '窄区间 (bps)';
+            document.getElementById('label2').textContent = '中区间 (bps)';
+            document.getElementById('label3').textContent = '宽区间 (bps)';
         }
+    } else if (type === 5) {
+        singleGroup.style.display = 'none';
+        tripleGroup.style.display = 'none';
+        treasuryGroup.style.display = 'block';
     } else {
-        // 其他类型只需要一个值
         singleGroup.style.display = 'block';
         tripleGroup.style.display = 'none';
+        treasuryGroup.style.display = 'none';
     }
 }
 
@@ -647,16 +701,27 @@ async function delegateVotes() {
 // 创建提案
 async function createProposal() {
     try {
-        var type = parseInt($('proposalType').value);
-        var desc = $('proposalDesc').value || '';
+        var type = parseInt(document.getElementById('proposalType').value);
+        var desc = document.getElementById('proposalDesc').value || '';
         var v1, v2, v3;
 
-        if (type === 4 || type === 5) {
-            v1 = ethers.BigNumber.from($('proposalValue1').value || '0');
-            v2 = ethers.BigNumber.from($('proposalValue2').value || '0');
-            v3 = ethers.BigNumber.from($('proposalValue3').value || '0');
+        if (type === 5) {
+            // 国库支出：代币地址 + 接收方地址 + 金额
+            var tokenAddr = document.getElementById('treasuryTokenAddr').value.trim();
+            var recipient = document.getElementById('treasuryRecipient').value.trim();
+            var amount = document.getElementById('treasuryAmount').value.trim();
+            if (!ethers.utils.isAddress(tokenAddr)) { showToast('请输入有效的代币地址', 'error'); return; }
+            if (!ethers.utils.isAddress(recipient)) { showToast('请输入有效的接收方地址', 'error'); return; }
+            if (!amount || parseFloat(amount) <= 0) { showToast('请输入有效的支出金额', 'error'); return; }
+            v1 = ethers.BigNumber.from(tokenAddr);
+            v2 = ethers.BigNumber.from(recipient);
+            v3 = ethers.BigNumber.from(amount);
+        } else if (type === 3 || type === 4) {
+            v1 = ethers.BigNumber.from(document.getElementById('proposalValue1').value || '0');
+            v2 = ethers.BigNumber.from(document.getElementById('proposalValue2').value || '0');
+            v3 = ethers.BigNumber.from(document.getElementById('proposalValue3').value || '0');
         } else {
-            v1 = ethers.BigNumber.from($('proposalValue1').value || '0');
+            v1 = ethers.BigNumber.from(document.getElementById('proposalValue1').value || '0');
             v2 = ethers.BigNumber.from(0);
             v3 = ethers.BigNumber.from(0);
         }
@@ -666,7 +731,6 @@ async function createProposal() {
         var receipt = await tx.wait();
         hideTxModal();
 
-        // 从事件中获取提案ID
         var proposalId = 0;
         for (var i = 0; i < receipt.logs.length; i++) {
             try {
@@ -724,10 +788,21 @@ function renderProposal(id, p, state) {
 
     // 提案值显示
     var valuesStr = '';
-    if (p.pType === 4 || p.pType === 5) {
-        valuesStr = '[' + p.newValue.toString() + ', ' + p.newValue2.toString() + ', ' + p.newValue3.toString() + ']';
+    if (p.pType === 5) {
+        // 国库支出：代币地址 -> 接收方 -> 金额
+        var tokenAddr = '0x' + p.newValue.toHexString().replace(/^0x0+/, '');
+        tokenAddr = '0x' + tokenAddr.padStart(40, '0');
+        var toAddr = '0x' + p.newValue2.toHexString().replace(/^0x0+/, '');
+        toAddr = '0x' + toAddr.padStart(40, '0');
+        valuesStr = '代币 ' + tokenAddr.substring(0,10) + '... → ' + toAddr.substring(0,10) + '...，金额 ' + p.newValue3.toString() + ' (最小单位)';
+    } else if (p.pType === 3 || p.pType === 4) {
+        valuesStr = '[' + p.newValue.toString() + ', ' + p.newValue2.toString() + ', ' + p.newValue3.toString() + '] (bps)';
+    } else if (p.pType === 6) {
+        valuesStr = p.newValue.toString() + ' ALP（每次再平衡）';
+    } else if (p.pType === 0) {
+        valuesStr = p.newValue.toString() + ' 秒';
     } else {
-        valuesStr = p.newValue.toString();
+        valuesStr = p.newValue.toString() + ' bps';
     }
 
     var forVotes = ethers.utils.formatEther(p.forVotes);
@@ -1111,4 +1186,138 @@ function calcPrice(sqrtPriceX96) {
     var intPart = priceStr.slice(0, -6);
     var decPart = priceStr.slice(-6);
     return parseFloat(intPart + '.' + decPart);
+}
+
+// ============================================================
+// 流动性挖矿
+// ============================================================
+async function loadMiningData() {
+    try {
+        if (ADDRESSES.mining === '0x0000000000000000000000000000000000000000') {
+            setText('miningShares', '未部署');
+            setText('miningPending', '未部署');
+            setText('miningRps', '未部署');
+            setText('miningTotal', '未部署');
+            setText('miningStartTime', '-');
+            setText('halvingNext', '-');
+            return;
+        }
+        var shares = await C.mining.balanceOf(account);
+        var pending = await C.mining.pendingReward(account);
+        var rps = await C.mining.currentRewardPerSecond();
+        var totalShares = await C.mining.totalShares();
+        var startTime = await C.mining.startTime();
+        var halvingPeriod = await C.mining.HALVING_PERIOD();
+
+        setText('miningShares', parseFloat(ethers.utils.formatEther(shares)).toFixed(4) + ' ALP');
+        setText('miningPending', parseFloat(ethers.utils.formatEther(pending)).toFixed(2) + ' ALP');
+        setText('miningTotal', parseFloat(ethers.utils.formatEther(totalShares)).toFixed(4) + ' ALP');
+
+        if (startTime.gt(0)) {
+            var rpsPerYear = rps.mul(365 * 24 * 3600);
+            setText('miningRps', parseFloat(ethers.utils.formatEther(rpsPerYear)).toFixed(0) + ' ALP/年');
+            var now = Math.floor(Date.now()/1000);
+            var elapsed = now - startTime.toNumber();
+            var halvingCount = Math.floor(elapsed / halvingPeriod.toNumber());
+            setText('halvingCount', halvingCount);
+            var nextHalving = startTime.toNumber() + (halvingCount + 1) * halvingPeriod.toNumber();
+            var remain = nextHalving - now;
+            setText('halvingNext', Math.floor(remain / 86400) + ' 天 ' + Math.floor((remain % 86400) / 3600) + ' 小时');
+            setText('miningStartTime', new Date(startTime.toNumber() * 1000).toLocaleDateString());
+        } else {
+            setText('miningRps', '未启动');
+            setText('miningStartTime', '未启动');
+        }
+    } catch(e) {
+        console.error('Mining:', e.message);
+        setText('miningShares', '-');
+        setText('miningPending', '-');
+    }
+}
+
+async function claimMiningRewards() {
+    try {
+        if (ADDRESSES.mining === '0x0000000000000000000000000000000000000000') {
+            showToast('挖矿合约未部署', 'warn');
+            return;
+        }
+        showTxModal('领取挖矿奖励', '请确认交易...');
+        var tx = await C.mining.claimReward();
+        await tx.wait();
+        hideTxModal();
+        showToast('✅ 挖矿奖励领取成功', 'success');
+        loadMiningData();
+        loadGovTokenBalance();
+    } catch(e) {
+        hideTxModal();
+        var msg = (e.error && e.error.message) || e.message || '';
+        if (msg.indexOf('user rejected') >= 0) showToast('交易已取消', 'warn');
+        else showToast('领取失败: ' + msg.substring(0,80), 'error');
+    }
+}
+
+// ============================================================
+// 国库
+// ============================================================
+async function loadTreasuryData() {
+    try {
+        if (ADDRESSES.treasury === '0x0000000000000000000000000000000000000000') {
+            setText('treasuryAlp', '未部署');
+            setText('treasuryUsdc', '未部署');
+            setText('treasurySpendCount', '-');
+            return;
+        }
+        setText('treasuryAddr', ADDRESSES.treasury.slice(0,10) + '...' + ADDRESSES.treasury.slice(-6));
+        var alpBal = await C.treasury.balanceOf(ADDRESSES.govToken);
+        var usdcBal = await C.treasury.balanceOf(ADDRESSES.usdc);
+        var spendCount = await C.treasury.getSpendingCount();
+        setText('treasuryAlp', parseFloat(ethers.utils.formatEther(alpBal)).toFixed(2) + ' ALP');
+        setText('treasuryUsdc', '$' + parseFloat(ethers.utils.formatUnits(usdcBal,6)).toFixed(2));
+        setText('treasurySpendCount', spendCount.toString() + ' 笔');
+    } catch(e) {
+        console.error('Treasury:', e.message);
+        setText('treasuryAlp', '-');
+        setText('treasuryUsdc', '-');
+    }
+}
+
+// ============================================================
+// 团队锁仓
+// ============================================================
+async function loadTeamVestingData() {
+    try {
+        if (ADDRESSES.teamVesting === '0x0000000000000000000000000000000000000000') {
+            setText('vestingStatus', '未部署');
+            setText('vestingReleased', '-');
+            setText('vestingClaimable', '-');
+            return;
+        }
+        var startTime = await C.teamVesting.startTime();
+        var cliff = await C.teamVesting.CLIFF_PERIOD();
+        var released = await C.teamVesting.released();
+        var vested = await C.teamVesting.vestedAmount();
+        var total = await C.teamVesting.TOTAL_AMOUNT();
+
+        if (startTime.eq(0)) {
+            setText('vestingStatus', '⏸️ 未启动（等待部署者开启）');
+            setText('vestingReleased', '0 ALP');
+            setText('vestingClaimable', '0 ALP');
+            return;
+        }
+        var now = Math.floor(Date.now()/1000);
+        var cliffEnd = startTime.toNumber() + cliff.toNumber();
+        if (now < cliffEnd) {
+            var remainDays = Math.ceil((cliffEnd - now) / 86400);
+            setText('vestingStatus', '🔒 悬崖期中，剩余 ' + remainDays + ' 天');
+        } else {
+            setText('vestingStatus', '🔓 已过悬崖期，线性释放中');
+        }
+        setText('vestingReleased', parseFloat(ethers.utils.formatEther(released)).toFixed(0) + ' ALP');
+        var claimable = vested.sub(released);
+        if (claimable.lt(0)) claimable = ethers.BigNumber.from(0);
+        setText('vestingClaimable', parseFloat(ethers.utils.formatEther(claimable)).toFixed(0) + ' ALP');
+    } catch(e) {
+        console.error('TeamVesting:', e.message);
+        setText('vestingStatus', '-');
+    }
 }

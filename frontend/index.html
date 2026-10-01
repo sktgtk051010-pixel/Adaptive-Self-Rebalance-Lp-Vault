@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -47,6 +47,8 @@
             <button class="tab" data-tab="dashboard">📈 数据看板</button>
             <button class="tab" data-tab="rebalance">🔄 再平衡</button>
             <button class="tab" data-tab="governance">🗳️ 治理</button>
+            <button class="tab" data-tab="mining">⛏️ 挖矿</button>
+            <button class="tab" data-tab="treasury">🏛️ 国库与代币</button>
         </div>
 
         <!-- 存取款 -->
@@ -85,6 +87,7 @@
                     </div>
                     <button class="btn btn-primary btn-full" onclick="deposit()">存入流动性</button>
                     <p class="hint">💡 首次存款需要先授权 WETH 和 USDC，授权后自动执行存款</p>
+                    <p class="hint">⛏️ 存入即自动参与 ALP 流动性挖矿，按份额持续获得 ALP 奖励</p>
                 </div>
                 <div class="card">
                     <h3>📤 赎回流动性</h3>
@@ -141,13 +144,15 @@
             </div>
             <div class="card">
                 <h3>⚙️ 策略参数</h3>
-                <div class="grid grid-3">
+                <div class="grid grid-4">
                     <div class="param-item"><label>再平衡阈值</label><span id="paramThreshold">-</span></div>
                     <div class="param-item"><label>激励比例</label><span id="paramIncentive">-</span></div>
                     <div class="param-item"><label>最大滑点</label><span id="paramSlippage">-</span></div>
                     <div class="param-item"><label>TWAP 窗口</label><span id="paramTwap">-</span></div>
                     <div class="param-item"><label>窄区间</label><span id="paramTight">-</span></div>
                     <div class="param-item"><label>宽区间</label><span id="paramWide">-</span></div>
+                    <div class="param-item"><label>ALP 再平衡奖励</label><span id="paramAlpReward">-</span></div>
+                    <div class="param-item"><label>激励池 ALP 余额</label><span id="paramAlpPool">-</span></div>
                 </div>
             </div>
         </div>
@@ -157,10 +162,14 @@
             <div class="card">
                 <h3>🔄 手动再平衡</h3>
                 <p class="desc">任何人可触发再平衡操作。当金库资产偏离目标权重超过阈值时，合约会自动从所有做市头寸撤出资金，根据当前波动率重新计算分配比例，再投入到各池中。</p>
-                <div class="grid grid-3 mt-4">
+                <div class="grid grid-4 mt-4">
                     <div class="stat"><label>累计手续费 (USDC)</label><span id="rbFees" class="stat-value highlight">-</span></div>
-                    <div class="stat"><label>待领取奖励 (USDC)</label><span id="rbRewards" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>待领取 USDC</label><span id="rbRewards" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>待领取 ALP</label><span id="rbAlpRewards" class="stat-value highlight">-</span></div>
                     <div class="stat"><label>激励比例</label><span id="rbIncentiveBps" class="stat-value">-</span></div>
+                </div>
+                <div class="info-box mt-4" style="background:#f0fdf4;border-color:#86efac;">
+                    <div class="info-row"><span>💡 双奖励机制</span><span>触发再平衡且盈利时，执行者同时获得 <b>利润 5% USDC</b> + <b>固定 ALP 奖励</b></span></div>
                 </div>
                 <div class="info-box mt-4">
                     <div class="info-row"><span>冷却状态</span><span id="cooldownStatus">-</span></div>
@@ -197,11 +206,12 @@
                     <label>提案类型</label>
                     <select id="proposalType" onchange="onProposalTypeChange()">
                         <option value="0">TWAP 窗口（秒）</option>
-                        <option value="1">再平衡阈值（bps）</option>
-                        <option value="2">激励比例（bps）</option>
-                        <option value="3">最大滑点（bps）</option>
-                        <option value="4">权重上限（V2 / V3低 / V3高）</option>
-                        <option value="5">区间范围（窄 / 中 / 宽）</option>
+                        <option value="1">激励比例（bps）</option>
+                        <option value="2">最大滑点（bps）</option>
+                        <option value="3">权重上限（V2 / V3低 / V3高）</option>
+                        <option value="4">区间范围（窄 / 中 / 宽）</option>
+                        <option value="5">国库支出（SPEND_FROM_TREASURY）</option>
+                        <option value="6">ALP 再平衡奖励（每次数量）</option>
                     </select>
                 </div>
                 <div id="singleValueGroup" class="form-group">
@@ -218,6 +228,23 @@
                             <label id="label2">值2</label>
                             <input type="number" id="proposalValue2" placeholder="例如：5000" class="input">
                         </div>
+                <div id="treasuryGroup" class="form-group" style="display:none">
+                    <label>国库支出参数（SPEND_FROM_TREASURY）</label>
+                    <div class="grid grid-3">
+                        <div>
+                            <label>代币地址</label>
+                            <input type="text" id="treasuryTokenAddr" placeholder="如 USDC 合约地址" class="input">
+                        </div>
+                        <div>
+                            <label>接收方地址</label>
+                            <input type="text" id="treasuryRecipient" placeholder="收款地址" class="input">
+                        </div>
+                        <div>
+                            <label>支出金额（代币最小单位）</label>
+                            <input type="text" id="treasuryAmount" placeholder="如 1000000（=1 USDC）" class="input">
+                        </div>
+                    </div>
+                </div>
                         <div>
                             <label id="label3">值3</label>
                             <input type="number" id="proposalValue3" placeholder="例如：7000" class="input">
@@ -244,6 +271,73 @@
                 <h3>⚙️ 当前治理参数</h3>
                 <div id="govParamsTable"><p class="hint">加载中...</p></div>
             </div>
+
+        <!-- 挖矿 -->
+        <div id="miningTab" class="tab-content">
+            <div class="card">
+                <h3>⛏️ ALP 流动性挖矿</h3>
+                <p class="desc">存入金库即自动参与挖矿。系统每秒向所有份额持有者发放 ALP 奖励，每 365 天奖励减半（比特币式），份额越多、持有越久，获得的 ALP 越多。</p>
+                <div class="grid grid-4 mt-4">
+                    <div class="stat"><label>我的挖矿份额</label><span id="miningShares" class="stat-value">-</span></div>
+                    <div class="stat"><label>待领取 ALP</label><span id="miningPending" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>当前释放速率</label><span id="miningRps" class="stat-value">-</span></div>
+                    <div class="stat"><label>已累计释放</label><span id="miningTotal" class="stat-value">-</span></div>
+                </div>
+                <div class="info-box mt-4">
+                    <div class="info-row"><span>减半周期</span><span>365 天（已过 <b id="halvingCount">0</b> 次减半）</span></div>
+                    <div class="info-row"><span>下次减半剩余</span><span id="halvingNext">-</span></div>
+                    <div class="info-row"><span>挖矿启动时间</span><span id="miningStartTime">-</span></div>
+                </div>
+                <div class="btn-group mt-4">
+                    <button class="btn btn-primary" onclick="claimMiningRewards()">💰 领取挖矿奖励</button>
+                </div>
+                <p class="hint">💡 领取的 ALP 可用于参与治理投票，也可以继续持有等待增值</p>
+            </div>
+        </div>
+
+        <!-- 国库与代币 -->
+        <div id="treasuryTab" class="tab-content">
+            <div class="card">
+                <h3>🏛️ 代币分配总览</h3>
+                <p class="desc">ALP 治理代币总量 1000 万，分配方案如下：</p>
+                <div class="grid grid-4 mt-4">
+                    <div class="stat"><label>💧 流动性挖矿</label><span class="stat-value">500 万 ALP</span></div>
+                    <div class="stat"><label>🎯 再平衡激励</label><span class="stat-value">100 万 ALP</span></div>
+                    <div class="stat"><label>👥 团队锁仓</label><span class="stat-value">200 万 ALP</span></div>
+                    <div class="stat"><label>🏛️ 国库储备</label><span class="stat-value">200 万 ALP</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🏛️ 国库资产</h3>
+                <div class="grid grid-3 mt-4">
+                    <div class="stat"><label>国库 ALP</label><span id="treasuryAlp" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>国库 USDC</label><span id="treasuryUsdc" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>支出笔数</label><span id="treasurySpendCount" class="stat-value">-</span></div>
+                </div>
+                <div class="info-box mt-4">
+                    <div class="info-row"><span>国库资金用途</span><span>经治理提案投票通过后方可支出（SPEND_FROM_TREASURY）</span></div>
+                    <div class="info-row"><span>国库地址</span><span id="treasuryAddr" class="addr-text">-</span></div>
+                </div>
+                <div class="btn-group mt-4">
+                    <button class="btn btn-secondary" onclick="loadTreasuryData()">🔄 刷新国库数据</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>👥 团队锁仓</h3>
+                <div class="grid grid-3 mt-4">
+                    <div class="stat"><label>悬崖期</label><span class="stat-value">365 天</span></div>
+                    <div class="stat"><label>线性释放期</label><span class="stat-value">1095 天（3年）</span></div>
+                    <div class="stat"><label>团队总配额</label><span class="stat-value">200 万 ALP</span></div>
+                </div>
+                <div class="info-box mt-4">
+                    <div class="info-row"><span>锁仓状态</span><span id="vestingStatus">-</span></div>
+                    <div class="info-row"><span>已释放</span><span id="vestingReleased">-</span></div>
+                    <div class="info-row"><span>可领取</span><span id="vestingClaimable">-</span></div>
+                </div>
+            </div>
+        </div>
         </div>
     </div>
 

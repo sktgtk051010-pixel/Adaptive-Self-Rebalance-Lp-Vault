@@ -281,7 +281,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         _investIdleFunds();
 
         if (address(liquidityMining) != address(0)) {
-            liquidityMining.updateBalance(msg.sender, balanceOf(msg.sender));
+            try liquidityMining.updateBalance(msg.sender, balanceOf(msg.sender)) {} catch {}
         }
         emit Deposited(msg.sender, wethAmount, usdcAmount, shares);
     }
@@ -306,7 +306,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
         _investIdleFunds();
         if (address(liquidityMining) != address(0)) {
-            liquidityMining.updateBalance(receiver, balanceOf(receiver));
+            try liquidityMining.updateBalance(receiver, balanceOf(receiver)) {} catch {}
         }
         emit Deposited(receiver, 0, assets, shares);
     }
@@ -329,7 +329,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
         _investIdleFunds();
         if (address(liquidityMining) != address(0)) {
-            liquidityMining.updateBalance(receiver, balanceOf(receiver));
+            try liquidityMining.updateBalance(receiver, balanceOf(receiver)) {} catch {}
         }
         emit Deposited(receiver, 0, assets, shares);
     }
@@ -377,7 +377,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         }
 
         if (address(liquidityMining) != address(0)) {
-            liquidityMining.updateBalance(msg.sender, balanceOf(msg.sender));
+            try liquidityMining.updateBalance(msg.sender, balanceOf(msg.sender)) {} catch {}
         }
         emit Withdrawn(msg.sender, shares, wethOut, usdcOut);
     }
@@ -406,7 +406,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         _withdrawFromAdapters(sharePct);
 
         if (address(liquidityMining) != address(0)) {
-            liquidityMining.updateBalance(owner, balanceOf(owner));
+            try liquidityMining.updateBalance(owner, balanceOf(owner)) {} catch {}
         }
 
         IERC20(asset()).safeTransfer(receiver, assets);
@@ -438,7 +438,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         _withdrawFromAdapters(sharePct);
 
         if (address(liquidityMining) != address(0)) {
-            liquidityMining.updateBalance(owner, balanceOf(owner));
+            try liquidityMining.updateBalance(owner, balanceOf(owner)) {} catch {}
         }
 
         IERC20(asset()).safeTransfer(receiver, assets);
@@ -498,7 +498,6 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
             try incentives.onRebalanceExecuted(msg.sender, valueBefore, valueAfter) returns (uint256 r) {
                 reward = r;
             } catch {
-                // 激励发放失败不影响rebalance
             }
         }
 

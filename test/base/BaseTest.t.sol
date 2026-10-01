@@ -14,6 +14,9 @@ import {AdaptiveLPVault} from "../../src/vault/AdaptiveLPVault.sol";
 import {RebalanceIncentives} from "../../src/incentives/RebalanceIncentives.sol";
 import {GovernanceToken, AdaptiveGovernance} from "../../src/governance/AdaptiveGovernance.sol";
 import {ILPAdapter} from "../../src/interfaces/ILPAdapter.sol";
+import {LiquidityMining} from "../../src/distribution/LiquidityMining.sol";
+import {TeamVesting} from "../../src/distribution/TeamVesting.sol";
+import {Treasury} from "../../src/distribution/Treasury.sol";
 
 import {MockUniswapV2Factory, MockUniswapV2Router} from "../mocks/MockUniswapV2.sol";
 import {MockUniswapV3Factory, MockUniswapV3Pool} from "../mocks/MockUniswapV3.sol";
@@ -36,6 +39,10 @@ contract BaseTest is Test {
     RebalanceIncentives public incentives;
     GovernanceToken public govToken;
     AdaptiveGovernance public governance;
+    LiquidityMining public mining;
+    TeamVesting public teamVesting;
+    Treasury public treasury;
+    address public teamWallet = makeAddr("teamWallet");
 
     address public owner = address(this);
     address public alice = makeAddr("alice");
@@ -52,6 +59,7 @@ contract BaseTest is Test {
         _deployVaultAndStrategy();
         _deployAdapters();
         _deployIncentives();
+        _deployDistribution();
         _setupUsersAndSkip();
     }
 
@@ -119,11 +127,25 @@ contract BaseTest is Test {
     }
 
     function _deployIncentives() internal {
-        incentives = new RebalanceIncentives(address(vault), address(usdc), address(governance));
+        incentives = new RebalanceIncentives(address(vault), address(usdc), address(govToken));
         vault.setIncentives(address(incentives));
         governance.setVault(address(vault));
     }
 
+
+    function _deployDistribution() internal {
+        mining = new LiquidityMining(address(govToken), address(vault));
+        teamVesting = new TeamVesting(address(govToken), teamWallet);
+        treasury = new Treasury();
+
+        // 给新合约注入资金
+        govToken.mint(address(mining), 5_000_000e18);      // 500万 ALP 挖矿奖励
+        govToken.mint(address(teamVesting), 2_000_000e18);  // 200万 ALP 团队锁仓
+        govToken.mint(address(treasury), 2_000_000e18);     // 200万 ALP 国库
+        govToken.mint(address(incentives), 1_000_000e18);   // 100万 ALP 再平衡奖励
+
+        // 注意：不在这里启动挖矿和锁仓，让测试自己控制开始时间
+    }
     function _setupUsersAndSkip() internal {
         _mintTokens(alice, INITIAL_WETH, INITIAL_USDC);
         _mintTokens(bob, INITIAL_WETH, INITIAL_USDC);
