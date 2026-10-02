@@ -499,9 +499,9 @@ async function loadGovernanceParams() {
         setText('paramTight', pct(p.tightRangeBps));
         setText('paramWide', pct(p.wideRangeBps));
         var alpReward = await C.incentives.alpRewardPerRebalance();
-        setText('paramAlpReward', parseFloat(ethers.utils.formatEther(alpReward)).toFixed(2) + ' ALP/次');
+        var alpRewardStr = parseFloat(ethers.utils.formatEther(alpReward)).toFixed(2) + ' ALP/次';
         var alpPoolBal = await C.govToken.balanceOf(ADDRESSES.incentives);
-        setText('paramAlpPool', parseFloat(ethers.utils.formatEther(alpPoolBal)).toFixed(0) + ' ALP');
+        var alpPoolStr = parseFloat(ethers.utils.formatEther(alpPoolBal)).toFixed(0) + ' ALP';
         $('govParamsTable').innerHTML =
             '<div class="param-row"><span>TWAP窗口</span><b>'+p.twapWindow+'s ('+(p.twapWindow/60).toFixed(0)+'min)</b></div>' +
             '<div class="param-row"><span>激励比例</span><b>'+pct(p.incentiveBps)+'</b></div>' +
@@ -511,7 +511,8 @@ async function loadGovernanceParams() {
             '<div class="param-row"><span>V3高费率上限</span><b>'+(p.v3HighFeeWeightCap/100).toFixed(0)+'%</b></div>' +
             '<div class="param-row"><span>窄区间</span><b>±'+(p.tightRangeBps/100).toFixed(0)+'%</b></div>' +
             '<div class="param-row"><span>中区间</span><b>±'+(p.mediumRangeBps/100).toFixed(0)+'%</b></div>' +
-            '<div class="param-row"><span>ALP 再平衡奖励</span><b id="paramAlpReward">-</b></div>' +
+            '<div class="param-row"><span>ALP 再平衡奖励</span><b>'+alpRewardStr+'</b></div>' +
+            '<div class="param-row"><span>ALP 奖励池余额</span><b>'+alpPoolStr+'</b></div>' +
             '<div class="param-row"><span>宽区间</span><b>±'+(p.wideRangeBps/100).toFixed(0)+'%</b></div>';
     } catch(e) {
         console.error('Gov params:', e.message);
