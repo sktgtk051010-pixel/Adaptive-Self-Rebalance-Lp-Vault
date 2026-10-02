@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adaptive LP Vault - 自适应流动性金库</title>
-    <script src="ethers-5.7.2.umd.min.js?v=4"></script>
-    <link rel="stylesheet" href="style.css?v=4">
+    <script src="ethers-5.7.2.umd.min.js?v=9"></script>
+    <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
     <div id="errBox" style="display:none;position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:10px 20px;z-index:99999;font-size:13px;text-align:center;"></div>
@@ -37,7 +37,7 @@
             <div class="grid grid-4">
                 <div class="stat"><label>WETH 余额</label><span id="wethBalance" class="stat-value">-</span></div>
                 <div class="stat"><label>USDC 余额</label><span id="usdcBalance" class="stat-value">-</span></div>
-                <div class="stat"><label>金库份额 (ALP)</label><span id="vaultShares" class="stat-value">-</span></div>
+                <div class="stat"><label>金库份额 (ALP-VAULT)</label><span id="vaultShares" class="stat-value">-</span></div>
                 <div class="stat"><label>持仓价值 (USDC)</label><span id="totalAssets" class="stat-value highlight">-</span></div>
             </div>
         </div>
@@ -82,7 +82,7 @@
                         <input type="number" id="depositSlippage" value="1" step="0.1" min="0" max="5">
                     </div>
                         <div class="info-row"><span>当前 TWAP 价格</span><span id="depositPrice">-</span></div>
-                        <div class="info-row"><span>预计获得份额</span><span id="estimatedShares" class="highlight">0 ALP</span></div>
+                        <div class="info-row"><span>预计获得份额</span><span id="estimatedShares" class="highlight">0 ALP-VAULT</span></div>
                         <div class="info-row"><span>占金库比例</span><span id="sharePct">0%</span></div>
                     </div>
                     <button class="btn btn-primary btn-full" onclick="deposit()">存入流动性</button>
@@ -92,7 +92,7 @@
                 <div class="card">
                     <h3>📤 赎回流动性</h3>
                     <div class="input-group">
-                        <label>赎回份额 (ALP) <span class="balance-hint" id="sharesMaxHint"></span></label>
+                        <label>赎回份额 (ALP-VAULT) <span class="balance-hint" id="sharesMaxHint"></span></label>
                         <div class="input-wrapper">
                             <input type="number" id="withdrawShares" placeholder="0.0" step="any" min="0">
                             <button class="btn-max" onclick="setMaxShares()">MAX</button>
@@ -145,7 +145,6 @@
             <div class="card">
                 <h3>⚙️ 策略参数</h3>
                 <div class="grid grid-4">
-                    <div class="param-item"><label>再平衡阈值</label><span id="paramThreshold">-</span></div>
                     <div class="param-item"><label>激励比例</label><span id="paramIncentive">-</span></div>
                     <div class="param-item"><label>最大滑点</label><span id="paramSlippage">-</span></div>
                     <div class="param-item"><label>TWAP 窗口</label><span id="paramTwap">-</span></div>
@@ -186,17 +185,17 @@
             <div class="card">
                 <h3>🗳️ 治理中心</h3>
                 <div class="grid grid-2">
-                    <div class="stat"><label>治理代币 ALP-GOV</label><span id="govBalance" class="stat-value highlight">-</span></div>
+                    <div class="stat"><label>治理代币 ALP</label><span id="govBalance" class="stat-value highlight">-</span></div>
                     <div class="stat"><label>金库地址</label><span id="vaultAddr" class="stat-value addr-text" onclick="copyVaultAddr()" style="cursor:pointer">-</span></div>
                 </div>
                 <div class="grid grid-2 mt-4">
                     <div class="stat"><label>投票权委托</label><span id="delegateStatus" class="stat-value">-</span></div>
-                    <div class="stat"><label>提案门槛</label><span class="stat-value">1000 ALP-GOV</span></div>
+                    <div class="stat"><label>提案门槛</label><span class="stat-value">1000 ALP</span></div>
                 </div>
                 <div class="btn-group mt-4">
                     <button class="btn btn-secondary" onclick="delegateVotes()">🗳️ 委托投票权给自己</button>
                 </div>
-                <p class="desc mt-4">治理参数包括 TWAP 窗口、再平衡阈值、激励比例、滑点保护、权重上限、区间范围等，需通过提案投票修改。</p>
+                <p class="desc mt-4">治理参数包括 TWAP 窗口、激励比例、滑点保护、权重上限、区间范围等，需通过提案投票修改。</p>
             </div>
 
             <!-- 创建提案 -->
@@ -271,6 +270,7 @@
                 <h3>⚙️ 当前治理参数</h3>
                 <div id="govParamsTable"><p class="hint">加载中...</p></div>
             </div>
+        </div>
 
         <!-- 挖矿 -->
         <div id="miningTab" class="tab-content">
@@ -338,7 +338,6 @@
                 </div>
             </div>
         </div>
-        </div>
     </div>
 
     <div id="txModal" class="modal hidden">
@@ -366,6 +365,6 @@
         console.error('Promise rejection:',e.reason);
     });
     </script>
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=9"></script>
 </body>
 </html>

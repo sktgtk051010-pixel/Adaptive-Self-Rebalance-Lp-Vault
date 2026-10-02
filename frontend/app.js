@@ -50,11 +50,9 @@ const ORACLE_ABI = [
 ];
 const STRATEGY_ABI = [
     'function estimateVolatility(uint160 sqrtPriceX96Spot, uint160 sqrtPriceX96Twap) pure returns (uint256)',
-    'function rebalanceThresholdBps() view returns (uint256)',
-    'function needsRebalance(uint256 currentDeviation) view returns (bool)',
 ];
 const GOV_ABI = [
-    'function getParams() view returns (tuple(uint32 twapWindow, uint256 rebalanceThreshold, uint256 incentiveBps, uint256 maxSlippageBps, uint256 v2WeightCap, uint256 v3LowFeeWeightCap, uint256 v3HighFeeWeightCap, uint256 tightRangeBps, uint256 mediumRangeBps, uint256 wideRangeBps))',
+    'function getParams() view returns (tuple(uint32 twapWindow, uint256 incentiveBps, uint256 maxSlippageBps, uint256 v2WeightCap, uint256 v3LowFeeWeightCap, uint256 v3HighFeeWeightCap, uint256 tightRangeBps, uint256 mediumRangeBps, uint256 wideRangeBps))',
     'function propose(uint8 pType, uint256 newValue, uint256 newValue2, uint256 newValue3, string description) returns (uint256)',
     'function castVote(uint256 proposalId, bool support)',
     'function getProposalState(uint256 proposalId) view returns (uint8)',
@@ -393,7 +391,7 @@ async function loadVaultData() {
         const totalSupply = await C.vault.totalSupply();
         sharesF = parseFloat(ethers.utils.formatUnits(shares, 6));
         tsF = parseFloat(ethers.utils.formatUnits(totalSupply, 6));
-        setText('vaultShares', sharesF.toFixed(4) + ' ALP');
+        setText('vaultShares', sharesF.toFixed(4) + ' ALP-VAULT');
         setText('sharesMaxHint', '余额: ' + sharesF.toFixed(4));
     } catch(e) {
         console.error('Vault shares:', e.message);
@@ -495,7 +493,6 @@ async function loadGovernanceParams() {
     try {
         var p = await C.governance.getParams();
         function pct(v) { return (v/100).toFixed(1) + '%'; }
-        setText('paramThreshold', pct(p.rebalanceThreshold));
         setText('paramIncentive', pct(p.incentiveBps));
         setText('paramSlippage', pct(p.maxSlippageBps));
         setText('paramTwap', p.twapWindow + 's');
@@ -507,7 +504,6 @@ async function loadGovernanceParams() {
         setText('paramAlpPool', parseFloat(ethers.utils.formatEther(alpPoolBal)).toFixed(0) + ' ALP');
         $('govParamsTable').innerHTML =
             '<div class="param-row"><span>TWAP窗口</span><b>'+p.twapWindow+'s ('+(p.twapWindow/60).toFixed(0)+'min)</b></div>' +
-            '<div class="param-row"><span>再平衡阈值</span><b>'+pct(p.rebalanceThreshold)+'</b></div>' +
             '<div class="param-row"><span>激励比例</span><b>'+pct(p.incentiveBps)+'</b></div>' +
             '<div class="param-row"><span>最大滑点</span><b>'+pct(p.maxSlippageBps)+'</b></div>' +
             '<div class="param-row"><span>V2权重上限</span><b>'+(p.v2WeightCap/100).toFixed(0)+'%</b></div>' +
@@ -553,61 +549,27 @@ async function loadIncentivesData() {
 }
 
 // 加载价格偏离参考（现货 vs TWAP，供再平衡触发者判断时机）
+// 注：rebalanceThresholdBps/needsRebalance 已从策略合约移除，仅显示当前波动率
 async function loadDeviation() {
-    var pctEl = $('deviationPct');
-    var badge = $('deviationBadge');
-    var row = $('deviationRow');
     try {
         var twapResult = await C.oracle.getTWAPPrice();
         if (!twapResult || !twapResult[0] || twapResult[0].isZero()) {
-            pctEl.textContent = '--';
-            badge.textContent = '无数据';
-            badge.className = 'deviation-badge neutral';
+            console.log('[Deviation] TWAP 无数据');
             return;
         }
         var poolAddr = await C.oracle.ORACLE_POOL();
         if (!poolAddr || poolAddr === ethers.constants.AddressZero) {
-            pctEl.textContent = '--';
-            badge.textContent = '未配置';
-            badge.className = 'deviation-badge neutral';
+            console.log('[Deviation] 未配置池');
             return;
         }
         var pool = new ethers.Contract(poolAddr, ['function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)'], signer);
         var slot = await pool.slot0();
         var vol = await C.strategy.estimateVolatility(slot[0], twapResult[0]);
-        var threshold = await C.strategy.rebalanceThresholdBps();
-        // 调用链上 needsRebalance 判断是否达到建议触发线（偏离 ≥ 阈值）
-        var should = await C.strategy.needsRebalance(vol);
-        var pct = (parseFloat(vol.toString()) / 100).toFixed(2);
-        var thrPct = (parseFloat(threshold.toString()) / 100).toFixed(1);
-        pctEl.textContent = pct + '%';
-        if (should) {
-            badge.textContent = '✅ 偏离度 > ' + thrPct + '%';
-            badge.className = 'deviation-badge ok';
-            if (row) row.classList.add('ok');
-        } else {
-            badge.textContent = '偏离度 < ' + thrPct + '%';
-            badge.className = 'deviation-badge idle';
-            if (row) row.classList.remove('ok');
-        }
+        console.log('[Deviation] 当前波动率 =', (parseFloat(vol.toString()) / 100).toFixed(2) + '%');
+        // 页面偏离度展示已随 rebalanceThreshold 移除，仅保留日志
     } catch(e) {
         console.error('Deviation:', e.message);
-        pctEl.textContent = '--';
-        badge.textContent = '读取失败';
-        badge.className = 'deviation-badge neutral';
-        if (row) row.classList.remove('ok');
     }
-}
-
-async function loadGovTokenBalance() {
-    try {
-        var bal = await C.govToken.balanceOf(account);
-        setText('govBalance', ethers.utils.formatEther(bal) + ' ALP-GOV');
-    } catch(e) {
-        setText('govBalance', '0 ALP-GOV');
-    }
-    loadDelegateStatus();
-    loadProposals();
 }
 
 // ============================================================
@@ -662,6 +624,18 @@ function onProposalTypeChange() {
         singleGroup.style.display = 'block';
         tripleGroup.style.display = 'none';
         treasuryGroup.style.display = 'none';
+    }
+}
+
+// 加载治理代币余额与委托状态
+async function loadGovTokenBalance() {
+    try {
+        var bal = await C.govToken.balanceOf(account);
+        setText('govBalance', parseFloat(ethers.utils.formatEther(bal)).toFixed(2) + ' ALP');
+        await loadDelegateStatus();
+    } catch(e) {
+        console.error('GovToken:', e.message);
+        setText('govBalance', '-');
     }
 }
 
@@ -831,7 +805,7 @@ function renderProposal(id, p, state) {
         '<div class="proposal-body">' +
             '<p><b>提议者:</b> ' + p.proposer.substring(0,10) + '...' + p.proposer.substring(p.proposer.length-6) + '</p>' +
             '<p><b>新值:</b> ' + valuesStr + '</p>' +
-            '<p><b>赞成:</b> ' + parseFloat(forVotes).toFixed(2) + ' ALP-GOV | <b>反对:</b> ' + parseFloat(againstVotes).toFixed(2) + ' ALP-GOV</p>' +
+            '<p><b>赞成:</b> ' + parseFloat(forVotes).toFixed(2) + ' ALP | <b>反对:</b> ' + parseFloat(againstVotes).toFixed(2) + ' ALP</p>' +
             '<p><b>投票区块:</b> ' + p.startBlock.toString() + ' ~ ' + p.endBlock.toString() + '</p>' +
         '</div>' +
         '<div class="proposal-actions">' + actions + '</div>' +
@@ -906,7 +880,7 @@ async function updateDepositEstimate() {
     const usdcWei = ethers.utils.parseUnits(usdcAmtText,6);
 
     if(wethWei.isZero() && usdcWei.isZero()){
-        setText('estimatedShares', '0 ALP');
+        setText('estimatedShares', '0 ALP-VAULT');
         setText('sharePct', '0%');
         return;
     }
@@ -929,7 +903,7 @@ async function updateDepositEstimate() {
         }
 
         const newSharesStr = ethers.utils.formatUnits(newSharesBN,6);
-        setText('estimatedShares', parseFloat(newSharesStr).toFixed(4) + ' ALP');
+        setText('estimatedShares', parseFloat(newSharesStr).toFixed(4) + ' ALP-VAULT');
 
         const totalAfter = totalSupplyBN.add(newSharesBN);
         let pct = ethers.BigNumber.from(0);
