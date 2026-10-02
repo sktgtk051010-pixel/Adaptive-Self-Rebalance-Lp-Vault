@@ -244,7 +244,6 @@ ETHERSCAN_API_KEY=你的Etherscan API Key
 forge script script/Deploy.s.sol:DeployScript \
   --rpc-url sepolia \
   --broadcast \
-  --verify \
   -vvvv
 ```
 
@@ -671,7 +670,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 - 冷却期已过
 - 任何人都可以触发 `rebalance()`
 - 系统根据当前波动率（价格偏离度）重新计算资金配比
-- 再平衡产生正向收益时，触发者获得 USDC 奖励；无收益则不发奖励，操作照常执行
+- 再平衡产生正向收益时，触发者获得 USDC + ALP 奖励；无收益则不发奖励，操作照常执行
  
 #### 第四步：用户赎回
 
