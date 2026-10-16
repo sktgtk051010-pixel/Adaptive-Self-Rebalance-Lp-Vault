@@ -208,25 +208,21 @@ contract VaultDepositTest is BaseTest {
 
     // 测试首存1wei+单边捐赠攻击已被虚拟份额缓解：受害者获得正份额，攻击者无法窃取本金
     function test_FirstDeposit_DonationAttack_Mitigated() public {
-        // 1) 攻击者首存 1 wei USDC（单边），拿到 1 份额
         vm.prank(alice);
         uint256 attackerShares = vault.deposit(0, 1, 0);
-        assertEq(attackerShares, 1, "attacker gets 1 share for 1 wei");
+        assertEq(attackerShares, 1);
 
-        // 2) 攻击者直接转账 40 万 USDC 给金库（绕过 deposit，单边捐赠抬高净值）
         vm.prank(alice);
         usdc.transfer(address(vault), 400_000e6);
 
-        // 3) 受害者双币存款 4000 USDC 价值，必须获得正份额（不再被稀释到 0）
         uint256 victimShares = _deposit(bob, 1 ether, 2000e6);
-        assertGt(victimShares, 0, "victim must receive positive shares");
+        assertGt(victimShares, 0);
 
-        // 4) 攻击者全额赎回自己的份额，验证无法窃取本金
         vm.prank(alice);
         (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(attackerShares, 0, 0);
 
-        // 攻击者取回的价值远小于其捐赠的 40 万 USDC（大部分被虚拟份额锁定）
+        // 验证攻击者亏损巨大
         uint256 attackerValue = wethOut * 2000e6 / 1e18 + usdcOut;
-        assertLt(attackerValue, 100_000e6, "attacker must not profit from donation attack");
+        assertLt(attackerValue, 100_000e6);
     }
 }

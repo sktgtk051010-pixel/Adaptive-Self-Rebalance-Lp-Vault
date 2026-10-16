@@ -70,7 +70,7 @@ contract VaultERC4626Test is BaseTest {
         assertEq(actualAssets, previewAssets);
     }
 
-    // 测试标准withdraw已禁用：双币金库按总资产计价却只支付USDC，投资后idle USDC不足必然回滚，须使用withdrawDual
+    // 测试标准withdraw已禁用
     function test_Revert_StandardWithdraw_Disabled() public {
         _deposit(alice, 0, 10_000e6);
 
@@ -81,15 +81,14 @@ contract VaultERC4626Test is BaseTest {
         vault.withdraw(assetsToWithdraw, alice, alice);
     }
 
-    // 测试标准redeem已禁用：双币金库按总资产计价却只支付USDC，投资后idle USDC不足必然回滚，须使用withdrawDual
+    // 测试标准redeem已禁用
     function test_Revert_StandardRedeem_Disabled() public {
         uint256 shares = _deposit(alice, 0, 10_000e6);
         uint256 sharesToRedeem = shares / 2;
 
-        vm.startPrank(alice);
+        vm.prank(alice);
         vm.expectRevert(bytes("Vault: use withdrawDual"));
         vault.redeem(sharesToRedeem, alice, alice);
-        vm.stopPrank();
     }
 
     // 测试maxDeposit返回uint256最大值（无存款上限）

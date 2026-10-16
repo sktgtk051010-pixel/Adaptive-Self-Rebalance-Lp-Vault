@@ -719,7 +719,7 @@ contract GovernanceTest is BaseTest {
         assertEq(governance.getParams().maxSlippageBps, 200);
     }
 
-    // 测试取消已进入时间锁的提案后，时间锁动作被清理（方案A）
+    // 测试取消已进入时间锁的提案后，时间锁动作被清理
     function test_CancelProposal_RemovesTimelockAction() public {
         govToken.mint(alice, 2000e18);
         govToken.mint(bob, 20000e18);
@@ -735,13 +735,13 @@ contract GovernanceTest is BaseTest {
 
         governance.executeProposal(id);
         (uint256 readyTimeBefore, , , , , ) = governance.timelockActions(id);
-        assertGt(readyTimeBefore, 0, "timelock should exist before cancel");
+        assertGt(readyTimeBefore, 0);
 
         vm.prank(alice);
         governance.cancelProposal(id);
 
         (uint256 readyTimeAfter, , , , , ) = governance.timelockActions(id);
-        assertEq(readyTimeAfter, 0, "timelock action should be removed after cancel");
+        assertEq(readyTimeAfter, 0);
     }
 
     // 测试取消已进入时间锁的提案后，即使时间锁到期，executeTimelock也被阻止
@@ -768,7 +768,7 @@ contract GovernanceTest is BaseTest {
         governance.executeTimelock(id);
     }
 
-    // 测试取消国库支出提案后，即使时间锁到期也不会划款（资金安全）
+    // 测试取消国库支出提案后，即使时间锁到期也不会划款
     function test_Cancel_SpendFromTreasury_TimelockRemoved() public {
         governance.setTreasury(address(treasury));
         if (treasury.owner() != address(governance)) {
@@ -804,8 +804,8 @@ contract GovernanceTest is BaseTest {
         vm.expectRevert(bytes("Governance: proposal canceled"));
         governance.executeTimelock(id);
 
-        assertEq(govToken.balanceOf(address(treasury)), treasuryBefore, "treasury balance should not change");
-        assertEq(govToken.balanceOf(bob), bobBefore, "bob balance should not change");
+        assertEq(govToken.balanceOf(address(treasury)), treasuryBefore);
+        assertEq(govToken.balanceOf(bob), bobBefore);
     }
 
     // 测试取消不存在的提案时revert

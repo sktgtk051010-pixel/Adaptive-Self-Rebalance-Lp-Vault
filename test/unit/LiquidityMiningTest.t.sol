@@ -199,16 +199,11 @@ contract LiquidityMiningTest is BaseTest {
     function test_HalvingBoundary_SegmentedSettlement() public {
         mining.startMining();
 
-        // 先把 bob 份额清零，让 alice 独占，避免 BaseTest 里其他用户份额干扰
-        vm.prank(address(vault));
-        mining.updateBalance(bob, 0);
-
         vm.prank(address(vault));
         mining.updateBalance(alice, 100e18);
 
         uint256 balanceBefore = govToken.balanceOf(alice);
 
-        // 时间跨越减半点：365天 + 100秒
         skip(365 days + 100);
 
         vm.prank(address(vault));
@@ -220,6 +215,6 @@ contract LiquidityMiningTest is BaseTest {
         uint256 rps2 = rps1 / 2;
         uint256 expected = 365 days * rps1 + 100 * rps2;
 
-        assertEq(received, expected, "halving boundary should be segmented");
+        assertEq(received, expected);
     }
 }

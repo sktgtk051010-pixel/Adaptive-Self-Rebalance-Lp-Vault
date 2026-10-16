@@ -227,10 +227,10 @@ contract IncentivesTest is BaseTest {
         incentives.setIncentiveBps(0);
         vm.prank(address(vault));
         (uint256 reward, ) = incentives.onRebalanceExecuted(alice, 1000e6, 1100e6);
+        
         assertEq(reward, 0);
         assertEq(incentives.pendingReward(alice), 0);
         assertEq(incentives.totalUsdcRewardsPaid(), 0);
-        // ALP 不受 incentiveBps 影响，照常发放
         assertEq(incentives.pendingAlpReward(alice), 10e18);
         assertEq(incentives.totalAlpRewardsPaid(), 10e18);
     }
@@ -277,7 +277,6 @@ contract IncentivesTest is BaseTest {
         incentives.onRebalanceExecuted(alice, 1000e6, 1200e6);
 
         assertEq(incentives.pendingAlpReward(alice), 5e18);
-        // USDC 奖励照常
         assertEq(incentives.pendingReward(alice), 10e6);
     }
 
@@ -291,18 +290,15 @@ contract IncentivesTest is BaseTest {
         vm.prank(address(vault));
         (uint256 usdcReward, ) = incentives.onRebalanceExecuted(alice, 1000e6, 1200e6);
 
-        // USDC 照常发放
         assertGt(usdcReward, 0);
         assertEq(incentives.pendingReward(alice), 10e6);
-        // ALP 为 0
         assertEq(incentives.pendingAlpReward(alice), 0);
     }
 
-    // 测试注入 ALP 奖励资金
     // 测试注入 ALP 奖励资金（BaseTest 已注入100万，这里从合约转出再注入验证 fundAlpRewards）
     function test_FundAlpRewards() public {
         uint256 amount = 500e18;
-        // 从 incentives 转出 500 ALP 给测试合约
+
         vm.prank(address(incentives));
         govToken.transfer(address(this), amount);
         govToken.approve(address(incentives), amount);
@@ -346,9 +342,7 @@ contract IncentivesTest is BaseTest {
         vm.prank(address(vault));
         incentives.onRebalanceExecuted(alice, 1000e6, 1200e6);
 
-        // USDC 奖励 = 利润 × 5%
         assertEq(incentives.pendingReward(alice), 10e6);
-        // ALP 奖励 = 自定义 50 ALP
         assertEq(incentives.pendingAlpReward(alice), 50e18);
     }
 }
