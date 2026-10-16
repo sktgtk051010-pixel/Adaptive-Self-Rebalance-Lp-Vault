@@ -392,14 +392,14 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     /**
      * @notice 标准接口取款已禁用,完整取款请使用 withdrawDual()
      */
-    function withdraw(uint256, address, address) public override returns (uint256) {
+    function withdraw(uint256, address, address) public pure override returns (uint256) {
         revert("Vault: use withdrawDual");
     }
 
     /**
      * @notice 标准接口取款已禁用,完整取款请使用 withdrawDual()
      */
-    function redeem(uint256, address, address) public override returns (uint256) {
+    function redeem(uint256, address, address) public pure override returns (uint256) {
         revert("Vault: use withdrawDual");
     }
 

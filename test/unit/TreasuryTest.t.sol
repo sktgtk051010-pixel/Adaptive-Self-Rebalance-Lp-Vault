@@ -25,8 +25,8 @@ contract TreasuryTest is BaseTest {
         uint256 balanceBeforeALP = govToken.balanceOf(bob);
         uint256 balanceBeforeUSDC = usdc.balanceOf(bob);
 
-        treasury.spend(address(govToken), bob, amountALP);
-        treasury.spend(address(usdc), bob, amountUSDC);
+        treasury.spend(address(govToken), bob, amountALP, "test");
+        treasury.spend(address(usdc), bob, amountUSDC, "test");
 
         uint256 balanceAfterALP = govToken.balanceOf(bob);
         uint256 balanceAfterUSDC = usdc.balanceOf(bob);

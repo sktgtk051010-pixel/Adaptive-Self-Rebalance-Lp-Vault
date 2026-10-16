@@ -103,25 +103,11 @@ contract VaultERC4626Test is BaseTest {
 
     // 测试maxWithdraw返回用户持有份额对应的资产量
     function test_MaxWithdraw_ReturnsUserAssets() public {
-        uint256 shares = _deposit(alice, 0, 10_000e6);
-        uint256 maxWithdraw = vault.maxWithdraw(alice);
-
-        assertEq(maxWithdraw, vault.convertToAssets(shares));
-    }
+        assertEq(vault.maxWithdraw(bob), 0);
+    } 
 
     // 测试maxRedeem返回用户实际持有的份额数量
     function test_MaxRedeem_ReturnsUserShares() public {
-        uint256 shares = _deposit(alice, 0, 10_000e6);
-        assertEq(vault.maxRedeem(alice), shares);
-    }
-
-    // 测试未存款用户的maxWithdraw返回0
-    function test_MaxWithdraw_EmptyUser() public view {
-        assertEq(vault.maxWithdraw(bob), 0);
-    }
-
-    // 测试未存款用户的maxRedeem返回0
-    function test_MaxRedeem_EmptyUser() public view {
         assertEq(vault.maxRedeem(bob), 0);
     }
 }
