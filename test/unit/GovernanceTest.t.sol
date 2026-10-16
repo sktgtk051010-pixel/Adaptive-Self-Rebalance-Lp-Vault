@@ -365,6 +365,30 @@ contract GovernanceTest is BaseTest {
         assertEq(governance.vault(), address(0x1234));
     }
 
+    // 测试owner设置策略合约地址
+    function test_OwnerSetStrategy() public {
+        governance.setStrategy(address(0x1235));
+        assertEq(governance.strategy(), address(0x1235));
+    }
+
+    // 测试owner设置预言机合约地址
+    function test_OwnerSetOracle() public {
+        governance.setOracle(address(0x1236));
+        assertEq(governance.oracle(), address(0x1236));
+    }
+
+    // 测试owner设置激励合约地址
+    function test_OwnerSetIncentives() public {
+        governance.setIncentives(address(0x1237));
+        assertEq(governance.incentives(), address(0x1237));
+    }
+
+    // 测试owner设置国库合约地址
+    function test_OwnerSetTreasury() public {
+        governance.setTreasury(address(0x1238));
+        assertEq(governance.treasury(), address(0x1238));
+    }
+
     // 测试非owner调用setTWAPWindow时revert
     function test_Revert_SetTWAPWindow_NotOwner() public {
         vm.prank(alice);
@@ -405,6 +429,36 @@ contract GovernanceTest is BaseTest {
         vm.prank(alice);
         vm.expectRevert();
         governance.setVault(address(0x1234));
+    }
+
+    // 测试owner传入零地址设置金库时revert
+    function test_Revert_SetVault_ZeroAddress() public {
+        vm.expectRevert(bytes("Governance: zero vault"));
+        governance.setVault(address(0));
+    }
+
+    // 测试owner传入零地址设置策略合约时revert
+    function test_Revert_SetStrategy_ZeroAddress() public {
+        vm.expectRevert(bytes("Governance: zero strategy"));
+        governance.setStrategy(address(0));
+    }
+
+    // 测试owner传入零地址设置预言机时revert
+    function test_Revert_SetOracle_ZeroAddress() public {
+        vm.expectRevert(bytes("Governance: zero oracle"));
+        governance.setOracle(address(0));
+    }
+
+    // 测试owner传入零地址设置激励合约时revert
+    function test_Revert_SetIncentives_ZeroAddress() public {
+        vm.expectRevert(bytes("Governance: zero incentives"));
+        governance.setIncentives(address(0));
+    }
+
+    // 测试owner传入零地址设置国库合约时revert
+    function test_Revert_SetTreasury_ZeroAddress() public {
+        vm.expectRevert(bytes("Governance: zero treasury"));
+        governance.setTreasury(address(0));
     }
 
     // 测试非提案者调用cancelProposal时revert

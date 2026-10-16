@@ -168,21 +168,25 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
 
     /// @notice 设置金库地址
     function setVault(address _vault) external onlyOwner {
+        require(_vault != address(0), "Governance: zero vault");
         vault = _vault;
     }
 
     /// @notice 设置策略合约地址
     function setStrategy(address _strategy) external onlyOwner {
+        require(_strategy != address(0), "Governance: zero strategy");
         strategy = _strategy;
     }
 
     /// @notice 设置预言机合约地址
     function setOracle(address _oracle) external onlyOwner {
+        require(_oracle != address(0), "Governance: zero oracle");
         oracle = _oracle;
     }
 
     /// @notice 设置激励合约地址
     function setIncentives(address _incentives) external onlyOwner {
+        require(_incentives != address(0), "Governance: zero incentives");
         incentives = _incentives;
     }
 
@@ -190,6 +194,7 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
 
     /// @notice 设置国库合约地址
     function setTreasury(address _treasury) external onlyOwner {
+        require(_treasury != address(0), "Governance: zero treasury");
         treasury = _treasury;
     }
 
