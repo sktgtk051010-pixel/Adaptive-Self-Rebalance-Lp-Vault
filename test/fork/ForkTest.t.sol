@@ -482,7 +482,7 @@ contract ForkTest is Test {
 
         uint256 rewardBefore = incentives.pendingReward(address(this));
         uint256 rewardPoolBefore = usdc.balanceOf(address(incentives));
-        uint256 totalRewardsPaidBefore = incentives.totalRewardsPaid();
+        uint256 totalRewardsPaidBefore = incentives.totalUsdcRewardsPaid();
         uint256 lastRebalanceTimeBefore = incentives.lastRebalanceTime();
 
         uint256 totalValueBefore = 100_000e6;
@@ -497,14 +497,15 @@ contract ForkTest is Test {
         }
 
         vm.prank(address(vault));
-        uint256 actualReward = incentives.onRebalanceExecuted(address(this), totalValueBefore, totalValueAfter);
+        (uint256 actualReward, ) = incentives.onRebalanceExecuted(address(this), totalValueBefore, totalValueAfter);
 
         assertEq(actualReward, expectedReward, "reward should be 5% of profit");
 
         uint256 rewardAfter = incentives.pendingReward(address(this));
         assertEq(rewardAfter - rewardBefore, expectedReward, "pending reward should increase by expected reward");
 
-        assertEq(incentives.totalRewardsPaid(), totalRewardsPaidBefore + expectedReward, "totalRewardsPaid should increase");
+        assertEq(incentives.totalUsdcRewardsPaid(), totalRewardsPaidBefore + expectedReward, "totalUsdcRewardsPaid should increase");
+        assertGt(incentives.totalAlpRewardsPaid(), 0, "totalAlpRewardsPaid should also increase");
 
         assertGt(incentives.lastRebalanceTime(), lastRebalanceTimeBefore, "lastRebalanceTime should be updated");
 

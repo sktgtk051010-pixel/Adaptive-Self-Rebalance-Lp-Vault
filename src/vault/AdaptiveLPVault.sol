@@ -129,7 +129,8 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         address indexed executor,
         uint256 totalValueBefore,
         uint256 totalValueAfter,
-        uint256 reward
+        uint256 usdcReward,
+        uint256 alpReward
     );
     event AdapterUpdated(address indexed adapter, uint8 adapterType);
     event WeightsUpdated(uint256 v2, uint256 v3Low, uint256 v3High);
@@ -249,14 +250,6 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
 
     // ============ 存款 ============
-
-    /**
-     * @notice 双币存款：存入WETH和USDC铸造金库份额
-     * @param wethAmount WETH数量
-     * @param usdcAmount USDC数量
-     * @param minShares 最小份额（滑点保护）
-     * @return shares 铸造的份额
-     */
     /**
      * @notice 首存时铸造虚拟份额到锁定地址，防止首存 1wei + 单边捐赠攻击抬高净值
      */
@@ -266,6 +259,13 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         }
     }
 
+    /**
+     * @notice 双币存款：存入WETH和USDC铸造金库份额
+     * @param wethAmount WETH数量
+     * @param usdcAmount USDC数量
+     * @param minShares 最小份额（滑点保护）
+     * @return shares 铸造的份额
+     */
     function deposit(
         uint256 wethAmount,
         uint256 usdcAmount,
@@ -407,8 +407,6 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         revert("Vault: use withdrawDual");
     }
 
-    /// @notice ERC4626标准redeem
-
     /**
      * @notice ERC4626标准redeem
      * @param shares 要赎回的份额
@@ -427,6 +425,25 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         revert("Vault: use withdrawDual");
     }
 
+    /// @notice 标准接口预览赎回已禁用（避免聚合器/钱包读到虚假可赎回金额）
+    function previewRedeem(uint256) public pure override returns (uint256) {
+        revert("Vault: use withdrawDual");
+    }
+
+    /// @notice 标准接口预览取款已禁用（避免聚合器/钱包读到虚假可取款金额）
+    function previewWithdraw(uint256) public pure override returns (uint256) {
+        revert("Vault: use withdrawDual");
+    }
+
+    /// @notice 标准接口最大可赎回为 0（钱包/聚合器据此不展示赎回按钮）
+    function maxRedeem(address) public pure override returns (uint256) {
+        return 0;
+    }
+
+    /// @notice 标准接口最大可取款为 0（钱包/聚合器据此不展示取款按钮）
+    function maxWithdraw(address) public pure override returns (uint256) {
+        return 0;
+    }
     
     /**
      * @notice 份额变动钩子：任何转账/铸造/销毁后同步流动性挖矿记账
@@ -442,10 +459,14 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
         if (address(liquidityMining) != address(0)) {
             if (from != address(0) && from != DEAD_ADDRESS) {
-                try liquidityMining.updateBalance(from, balanceOf(from)) {} catch {}
+                try liquidityMining.updateBalance(from, balanceOf(from)) {} catch {
+                    /* 挖矿记账失败不影响份额转账本身，下次存取款时再校准 */ 
+                }
             }
             if (to != address(0) && to != DEAD_ADDRESS) {
-                try liquidityMining.updateBalance(to, balanceOf(to)) {} catch {}
+                try liquidityMining.updateBalance(to, balanceOf(to)) {} catch {
+                    /* 挖矿记账失败不影响份额转账本身，下次存取款时再校准 */ 
+                }
             }
         }
     }
@@ -499,15 +520,18 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
         uint256 valueAfter = totalAssets();
 
-        uint256 reward = 0;
+        uint256 usdcReward = 0;
+        uint256 alpReward = 0;
         if (address(incentives) != address(0) && valueAfter > valueBefore) {
-            try incentives.onRebalanceExecuted(msg.sender, valueBefore, valueAfter) returns (uint256 r) {
-                reward = r;
+            try incentives.onRebalanceExecuted(msg.sender, valueBefore, valueAfter) returns (uint256 usdcR, uint256 alpR) {
+                usdcReward = usdcR;
+                alpReward = alpR;
             } catch {
+                 /* 激励记账失败不回滚已完成的再平衡，执行者本次不拿奖励 */
             }
         }
 
-        emit Rebalanced(msg.sender, valueBefore, valueAfter, reward);
+        emit Rebalanced(msg.sender, valueBefore, valueAfter, usdcReward, alpReward);
     }
 
     // ============ 视图函数 ============

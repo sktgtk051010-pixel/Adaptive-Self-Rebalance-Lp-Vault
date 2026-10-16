@@ -68,8 +68,6 @@ contract Treasury is Ownable, ReentrancyGuard {
         require(to != address(0), "Treasury: zero address");
         require(amount > 0, "Treasury: zero amount");
 
-        // Checks-Effects-Interactions：先落盘内部记录与事件，再做外部 token 转账
-        // token 为提案传入地址，可能是带回调的 ERC777 类合约；nonReentrant 防止 transfer 回调中重入
         spendings.push(Spending(token, to, amount, reason, block.timestamp));
         emit FundsSpent(token, to, amount, reason);
 

@@ -162,9 +162,27 @@ contract VaultMiningTest is BaseTest {
 
         assertEq(vault.balanceOf(alice), 0);
     }
-}
 
-// ============ 辅助合约 ============
+    // ============ ERC20 转账同步挖矿份额 ============
+
+    /// @notice ALP-VAULT 直接 transfer 给他人后，from/to 的挖矿记账同步更新
+    function test_Transfer_Shares_SyncsMiningBalance() public {
+        uint256 shares = _deposit(alice, 10 ether, 20_000e6);
+        assertEq(mining.balanceOf(alice), shares);
+        assertEq(mining.balanceOf(bob), 0);
+
+        uint256 send = shares * 40 / 100;
+        vm.prank(alice);
+        vault.transfer(bob, send);
+
+        assertEq(vault.balanceOf(alice), shares - send);
+        assertEq(vault.balanceOf(bob), send);
+
+        assertEq(mining.balanceOf(alice), shares - send);
+        assertEq(mining.balanceOf(bob), send);
+        assertEq(mining.totalShares(), shares);
+    }
+}
 
 /// @notice 模拟挖矿合约运行时报错（bug/revert），用于验证金库 try-catch 容错
 contract MockRevertMining {

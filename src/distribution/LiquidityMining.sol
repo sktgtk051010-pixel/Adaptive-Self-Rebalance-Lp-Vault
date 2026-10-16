@@ -60,7 +60,7 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
     function currentRewardPerSecond() public view returns (uint256) {
         if (startTime == 0) return 0;
         uint256 periods = (block.timestamp - startTime) / HALVING_PERIOD;
-        return INITIAL_RPS >> periods;  // 右移 = 除以2
+        return INITIAL_RPS >> periods; 
     }
 
     /**

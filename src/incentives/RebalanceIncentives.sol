@@ -25,7 +25,8 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
     uint256 public cooldownPeriod;          // 冷却期
     uint256 public alpRewardPerRebalance;   // 每次再平衡的 ALP 奖励
     uint256 public lastRebalanceTime;
-    uint256 public totalRewardsPaid;
+    uint256 public totalUsdcRewardsPaid;   // 累计发放的 USDC 奖励
+    uint256 public totalAlpRewardsPaid;     // 累计发放的 ALP 奖励
 
     mapping(address => uint256) public rewardsEarned;       // USDC 待领
     mapping(address => uint256) public alpRewardsEarned;    // ALP 待领
@@ -82,12 +83,14 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
      * @param executor 执行者地址
      * @param totalValueBefore 再平衡前金库总价值（USDC计价）
      * @param totalValueAfter 再平衡后金库总价值（USDC计价）
+     * @return usdcRewardOut 本次发放的 USDC 奖励数（受池子余额上限截断）
+     * @return alpRewardOut 本次发放的 ALP 奖励数（受池子余额上限截断）
      */
     function onRebalanceExecuted(
         address executor,
         uint256 totalValueBefore,
         uint256 totalValueAfter
-    ) external onlyVault nonReentrant returns (uint256 reward) {
+    ) external onlyVault nonReentrant returns (uint256 usdcRewardOut, uint256 alpRewardOut) {
         if (lastRebalanceTime != 0) {
             require(
                 block.timestamp >= lastRebalanceTime + cooldownPeriod,
@@ -107,7 +110,7 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
         }
         if (usdcReward > 0) {
             rewardsEarned[executor] += usdcReward;
-            totalRewardsPaid += usdcReward;
+            totalUsdcRewardsPaid += usdcReward;
         }
 
         // ALP 奖励：每次固定数量
@@ -118,13 +121,14 @@ contract RebalanceIncentives is ReentrancyGuard, Ownable {
         }
         if (alpReward > 0) {
             alpRewardsEarned[executor] += alpReward;
+            totalAlpRewardsPaid += alpReward;
         }
 
         lastRebalanceTime = block.timestamp;
 
         emit RebalanceExecuted(executor, totalValueBefore, totalValueAfter, usdcReward, alpReward);
 
-        return usdcReward;
+        return (usdcReward, alpReward);
     }
 
     /// @notice 执行者领取奖励（USDC + ALP 一起领）
