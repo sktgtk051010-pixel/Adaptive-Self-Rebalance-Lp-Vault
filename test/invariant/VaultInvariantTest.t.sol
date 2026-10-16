@@ -149,15 +149,17 @@ contract VaultInvariantTest is Test {
         targetContract(address(handler));
     }
 
-    // 不变量：所有用户份额之和始终等于总供应量（份额守恒）
+    // 不变量：所有用户份额之和 + 死份额（DEAD_SHARES=1e6）始终等于总供应量（份额守恒）
     function invariant_sharesConservation() public view {
         uint256 totalSupply = handler.vault().totalSupply();
+        if (totalSupply == 0) return; // 空金库：尚无任何份额（含死份额）
+
         uint256 sumOfBalances =
             handler.vault().balanceOf(handler.alice())
             + handler.vault().balanceOf(handler.bob())
             + handler.vault().balanceOf(handler.charlie());
 
-        assertEq(sumOfBalances, totalSupply, "sum of user balances should equal totalSupply");
+        assertEq(sumOfBalances + 1e6, totalSupply, "sum of user balances + dead shares should equal totalSupply");
     }
 
     // 不变量：所有用户可赎回资产之和不超过金库总资产（偿付能力，无资不抵债）

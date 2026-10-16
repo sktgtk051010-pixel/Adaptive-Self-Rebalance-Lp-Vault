@@ -80,7 +80,7 @@ contract GovernanceTest is BaseTest {
             600, 0, 0, "test"
         );
 
-        (, , , , , , , uint256 startBlock, uint256 endBlock, , , , ) = governance.proposals(id);
+        (, , , , , , , uint256 startBlock, uint256 endBlock, , , , , ) = governance.proposals(id);
         assertEq(startBlock, blockBefore + governance.votingDelay());
         assertEq(endBlock, startBlock + governance.votingPeriod());
     }
@@ -101,7 +101,7 @@ contract GovernanceTest is BaseTest {
         vm.prank(bob);
         governance.castVote(id, true);
 
-        (, , , , , , , , , uint256 forVotes, , , ) = governance.proposals(id);
+        (, , , , , , , , , uint256 forVotes, , , , ) = governance.proposals(id);
         assertEq(forVotes, 20000e18);
     }
 
@@ -121,7 +121,7 @@ contract GovernanceTest is BaseTest {
         vm.prank(bob);
         governance.castVote(id, false);
 
-        (, , , , , , , , , , uint256 againstVotes, , ) = governance.proposals(id);
+        (, , , , , , , , , , uint256 againstVotes, , , ) = governance.proposals(id);
         assertEq(againstVotes, 20000e18);
     }
 
@@ -144,7 +144,7 @@ contract GovernanceTest is BaseTest {
         governance.castVote(id, true);
         vm.stopPrank();
 
-        (, , , , , , , , , uint256 forVotes, , , ) = governance.proposals(id);
+        (, , , , , , , , , uint256 forVotes, , , , ) = governance.proposals(id);
         assertEq(forVotes, 20000e18);
     }
 
@@ -163,7 +163,7 @@ contract GovernanceTest is BaseTest {
         vm.expectRevert(bytes("Governance: not active"));
         governance.castVote(id, true);
 
-        (, , , , , , , , , uint256 forVotes, , , ) = governance.proposals(id);
+        (, , , , , , , , , uint256 forVotes, , , , ) = governance.proposals(id);
         assertEq(forVotes, 0);
     }
 
@@ -185,7 +185,7 @@ contract GovernanceTest is BaseTest {
 
         vm.roll(block.number + governance.votingPeriod() + 1);
 
-        (, , , , , , , , , uint256 forVotes, , , ) = governance.proposals(id);
+        (, , , , , , , , , uint256 forVotes, , , , ) = governance.proposals(id);
         assertGt(forVotes, 10000e18);
 
         assertEq(
@@ -212,7 +212,7 @@ contract GovernanceTest is BaseTest {
 
         vm.roll(block.number + governance.votingPeriod() + 1);
 
-        (, , , , , , , , , uint256 forVotes, , , ) = governance.proposals(id);
+        (, , , , , , , , , uint256 forVotes, , , , ) = governance.proposals(id);
         assertLt(forVotes, 10000e18);
 
         assertEq(
@@ -241,7 +241,7 @@ contract GovernanceTest is BaseTest {
 
         governance.executeProposal(id);
 
-        (uint256 readyTime, , , , ) = governance.timelockActions(id);
+        (uint256 readyTime, , , , , ) = governance.timelockActions(id);
         assertEq(readyTime, block.timestamp + governance.timelockDelay());
     }
 
@@ -674,10 +674,11 @@ contract GovernanceTest is BaseTest {
             address to = address(uint160(v2));
             assertEq(govToken.balanceOf(address(treasury)), 2_000_000e18 - v3);
             assertEq(govToken.balanceOf(to), 20_000e18 + v3);
-            (address token, address receiver, uint256 amount, , ) = treasury.getSpending(0);
+            (address token, address receiver, uint256 amount, string memory reason, ) = treasury.getSpending(0);
             assertEq(token, address(uint160(v1)));
             assertEq(receiver, to);
             assertEq(amount, v3);
+            assertEq(reason, "test", "reason should carry proposal description");
         } else if (pType == AdaptiveGovernance.ProposalType.SET_ALP_REWARD) {
             assertEq(incentives.alpRewardPerRebalance(), v1);
         }
@@ -716,5 +717,133 @@ contract GovernanceTest is BaseTest {
 
         governance.setMaxSlippageBps(200);
         assertEq(governance.getParams().maxSlippageBps, 200);
+    }
+
+    // 测试取消已进入时间锁的提案后，时间锁动作被清理（方案A）
+    function test_CancelProposal_RemovesTimelockAction() public {
+        govToken.mint(alice, 2000e18);
+        govToken.mint(bob, 20000e18);
+
+        vm.prank(alice);
+        uint256 id = governance.propose(
+            AdaptiveGovernance.ProposalType.SET_TWAP_WINDOW, 600, 0, 0, "test"
+        );
+        vm.roll(block.number + governance.votingDelay() + 1);
+        vm.prank(bob);
+        governance.castVote(id, true);
+        vm.roll(block.number + governance.votingPeriod() + 1);
+
+        governance.executeProposal(id);
+        (uint256 readyTimeBefore, , , , , ) = governance.timelockActions(id);
+        assertGt(readyTimeBefore, 0, "timelock should exist before cancel");
+
+        vm.prank(alice);
+        governance.cancelProposal(id);
+
+        (uint256 readyTimeAfter, , , , , ) = governance.timelockActions(id);
+        assertEq(readyTimeAfter, 0, "timelock action should be removed after cancel");
+    }
+
+    // 测试取消已进入时间锁的提案后，即使时间锁到期，executeTimelock也被阻止
+    function test_Revert_ExecuteTimelock_AfterCancel() public {
+        govToken.mint(alice, 2000e18);
+        govToken.mint(bob, 20000e18);
+
+        vm.prank(alice);
+        uint256 id = governance.propose(
+            AdaptiveGovernance.ProposalType.SET_TWAP_WINDOW, 600, 0, 0, "test"
+        );
+        vm.roll(block.number + governance.votingDelay() + 1);
+        vm.prank(bob);
+        governance.castVote(id, true);
+        vm.roll(block.number + governance.votingPeriod() + 1);
+
+        governance.executeProposal(id);
+        skip(governance.timelockDelay() + 1);
+
+        vm.prank(alice);
+        governance.cancelProposal(id);
+
+        vm.expectRevert(bytes("Governance: proposal canceled"));
+        governance.executeTimelock(id);
+    }
+
+    // 测试取消国库支出提案后，即使时间锁到期也不会划款（资金安全）
+    function test_Cancel_SpendFromTreasury_TimelockRemoved() public {
+        governance.setTreasury(address(treasury));
+        if (treasury.owner() != address(governance)) {
+            treasury.transferOwnership(address(governance));
+        }
+
+        govToken.mint(alice, 2000e18);
+        govToken.mint(bob, 20000e18);
+
+        uint256 treasuryBefore = govToken.balanceOf(address(treasury));
+        uint256 bobBefore = govToken.balanceOf(bob);
+
+        vm.prank(alice);
+        uint256 id = governance.propose(
+            AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY,
+            uint256(uint160(address(govToken))),
+            uint256(uint160(bob)),
+            100e18,
+            "test"
+        );
+        vm.roll(block.number + governance.votingDelay() + 1);
+        vm.prank(bob);
+        governance.castVote(id, true);
+        vm.roll(block.number + governance.votingPeriod() + 1);
+
+        governance.executeProposal(id);
+        skip(governance.timelockDelay() + 1);
+
+        vm.prank(alice);
+        governance.cancelProposal(id);
+
+        vm.prank(address(bob));
+        vm.expectRevert(bytes("Governance: proposal canceled"));
+        governance.executeTimelock(id);
+
+        assertEq(govToken.balanceOf(address(treasury)), treasuryBefore, "treasury balance should not change");
+        assertEq(govToken.balanceOf(bob), bobBefore, "bob balance should not change");
+    }
+
+    // 测试取消不存在的提案时revert
+    function test_Revert_CancelProposal_NotFound() public {
+        vm.prank(alice);
+        vm.expectRevert(bytes("Governance: proposal not found"));
+        governance.cancelProposal(999);
+    }
+
+    // 测试SPEND_FROM_TREASURY提案时，token地址参数高位非0应在发起时revert
+    function test_Revert_Propose_SpendBadTokenAddr() public {
+        govToken.mint(alice, 2000e18);
+        uint256 badToken = uint256(type(uint160).max) + 1; 
+
+        vm.prank(alice);
+        vm.expectRevert(bytes("Governance: bad token addr"));
+        governance.propose(
+            AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY,
+            badToken,
+            uint256(uint160(bob)),
+            100e18,
+            "test"
+        );
+    }
+
+    // 测试SPEND_FROM_TREASURY提案时，接收方地址参数高位非0应在发起时revert
+    function test_Revert_Propose_SpendBadToAddr() public {
+        govToken.mint(alice, 2000e18);
+        uint256 badTo = uint256(type(uint160).max) + 1; 
+
+        vm.prank(alice);
+        vm.expectRevert(bytes("Governance: bad to addr"));
+        governance.propose(
+            AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY,
+            uint256(uint160(address(govToken))),
+            badTo,
+            100e18,
+            "test"
+        );
     }
 }

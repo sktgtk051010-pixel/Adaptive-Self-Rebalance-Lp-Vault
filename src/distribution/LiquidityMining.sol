@@ -68,7 +68,7 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
      * @param user 用户地址
      * @param newBalance 新的份额
      */
-    function updateBalance(address user, uint256 newBalance) external onlyVault {
+    function updateBalance(address user, uint256 newBalance) external onlyVault nonReentrant {
         _distribute();
 
         uint256 pending = _settle(user);
@@ -147,9 +147,18 @@ contract LiquidityMining is ReentrancyGuard, Ownable {
         if (totalShares == 0 || block.timestamp == lastUpdateTime) {
             return rewardPerShare;
         }
-        uint256 timeDelta = block.timestamp - lastUpdateTime;
-        uint256 reward = timeDelta * currentRewardPerSecond();
-        return rewardPerShare + FullMath.mulDiv(reward, 1e18, totalShares);
+        uint256 accrued = 0;
+        uint256 t = lastUpdateTime;
+        uint256 end = block.timestamp;
+        while (t < end) {
+            uint256 periods = (t - startTime) / HALVING_PERIOD;
+            uint256 periodEnd = startTime + (periods + 1) * HALVING_PERIOD;
+            uint256 segmentEnd = periodEnd < end ? periodEnd : end;
+            uint256 segmentLen = segmentEnd - t;
+            accrued += segmentLen * (INITIAL_RPS >> periods);
+            t = segmentEnd;
+        }
+        return rewardPerShare + FullMath.mulDiv(accrued, 1e18, totalShares);
     }
 }
 

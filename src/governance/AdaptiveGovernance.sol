@@ -115,6 +115,7 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         uint256 againstVotes;
         bool executed;
         bool canceled;
+        string description;  // 提案描述（发起时传入，执行时作为支出记录 reason）
         mapping(address => bool) hasVoted;
     }
 
@@ -134,6 +135,7 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         uint256 v1;
         uint256 v2;
         uint256 v3;
+        string description;  // 执行时传给 treasury.spend 的 reason
     }
     mapping(uint256 => TimelockAction) public timelockActions;
 
@@ -204,12 +206,17 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         uint256 newValue,
         uint256 newValue2,
         uint256 newValue3,
-        string calldata /* description */
+        string calldata description
     ) external returns (uint256) {
         require(
             GOV_TOKEN.balanceOf(msg.sender) >= proposalThreshold,
             "Governance: below proposal threshold"
         );
+
+        if (pType == ProposalType.SPEND_FROM_TREASURY) {
+            require(newValue <= type(uint160).max, "Governance: bad token addr");
+            require(newValue2 <= type(uint160).max, "Governance: bad to addr");
+        }
 
         uint256 id = ++proposalCount;
         Proposal storage p = proposals[id];
@@ -219,6 +226,7 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         p.newValue = newValue;
         p.newValue2 = newValue2;
         p.newValue3 = newValue3;
+        p.description = description;
         p.snapshot = block.number;
         p.startBlock = block.number + votingDelay;
         p.endBlock = p.startBlock + votingPeriod;
@@ -286,7 +294,8 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
             pType: p.pType,
             v1: p.newValue,
             v2: p.newValue2,
-            v3: p.newValue3
+            v3: p.newValue3,
+            description: p.description
         });
 
         emit ProposalExecuted(proposalId);
@@ -297,11 +306,13 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
      * @param proposalId 提案ID
      */
     function executeTimelock(uint256 proposalId) external nonReentrant {
+        // 方案B：双保险，即使时间锁动作残留也拒绝执行已取消提案
+        require(!proposals[proposalId].canceled, "Governance: proposal canceled");
         TimelockAction storage action = timelockActions[proposalId];
         require(action.readyTime > 0, "Governance: no timelock");
         require(block.timestamp >= action.readyTime, "Governance: timelock not ready");
 
-        _applyParam(action.pType, action.v1, action.v2, action.v3);
+        _applyParam(action.pType, action.v1, action.v2, action.v3, action.description);
         delete timelockActions[proposalId];
 
         emit ParamsUpdated(params);
@@ -313,8 +324,11 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
      */
     function cancelProposal(uint256 proposalId) external {
         Proposal storage p = proposals[proposalId];
+        require(p.id != 0, "Governance: proposal not found");
         require(msg.sender == p.proposer || msg.sender == owner(), "Governance: not authorized");
         p.canceled = true;
+        // 方案A：取消时清理已写入的时间锁动作，防止48h后被任何人执行已取消提案
+        delete timelockActions[proposalId];
         emit ProposalCanceled(proposalId);
     }
 
@@ -361,8 +375,9 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
      * @param v1 值1
      * @param v2 值2
      * @param v3 值3
+     * @param description 描述（仅用于SPEND_FROM_TREASURY提案）
      */
-    function _applyParam(ProposalType pType, uint256 v1, uint256 v2, uint256 v3) internal {
+    function _applyParam(ProposalType pType, uint256 v1, uint256 v2, uint256 v3, string memory description) internal {
         if (pType == ProposalType.SET_TWAP_WINDOW) {
             params.twapWindow = uint32(v1);
             if (oracle != address(0)) {
@@ -387,11 +402,11 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
             params.mediumRangeBps = v2;
             params.wideRangeBps = v3;
         } else if (pType == ProposalType.SPEND_FROM_TREASURY) {
-            // v1 = token地址, v2 = 接收方地址, v3 = 金额
             require(treasury != address(0), "Governance: treasury not set");
-            ITreasury(treasury).spend(address(uint160(v1)), address(uint160(v2)), v3, "");
+            require(v1 <= type(uint160).max, "Governance: bad token addr");
+            require(v2 <= type(uint160).max, "Governance: bad to addr");
+            ITreasury(treasury).spend(address(uint160(v1)), address(uint160(v2)), v3, description);
         } else if (pType == ProposalType.SET_ALP_REWARD) {
-            // v1 = 新的ALP每次奖励数量
             require(incentives != address(0), "Governance: incentives not set");
             IRebalanceIncentivesExt(incentives).setAlpRewardPerRebalance(v1);
         }

@@ -225,7 +225,7 @@ contract ForkTest is Test {
         assertGt(shares, 0, "shares should be > 0");
         assertEq(vault.balanceOf(ALICE), shares, "alice should have shares");
         assertEq(mining.balanceOf(ALICE), shares, "mining balance should sync on deposit");
-        assertEq(mining.totalShares(), vault.totalSupply(), "mining totalShares should sync on deposit");
+        assertEq(mining.totalShares() + 1e6, vault.totalSupply(), "mining totalShares + dead shares should sync on deposit");
 
         uint256 assetsAfterDeposit = vault.totalAssets();
         assertGt(assetsAfterDeposit, 0, "totalAssets should be > 0");

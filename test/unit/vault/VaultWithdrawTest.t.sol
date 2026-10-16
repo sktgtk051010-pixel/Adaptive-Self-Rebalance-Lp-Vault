@@ -27,7 +27,7 @@ contract VaultWithdrawTest is BaseTest {
         assertEq(usdc.balanceOf(alice), usdcBefore + usdcOut, "USDC balance mismatch");
 
         assertEq(vault.balanceOf(alice), 0, "all shares burned");
-        assertEq(vault.totalSupply(), 0, "total supply zero");
+        assertEq(vault.totalSupply(), 1e6, "total supply should equal dead shares only");
     }
 
     // 测试部分赎回：赎回一半份额后，金库剩余底层资产约为原来的一半
@@ -63,9 +63,10 @@ contract VaultWithdrawTest is BaseTest {
         (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(shares, 0, 0);
 
         (, uint256 v2WAfter, uint256 v3LowWAfter, uint256 v3HighWAfter) = _getWethDistribution();
-        assertEq(v2WAfter, 0);
-        assertEq(v3LowWAfter, 0);
-        assertEq(v3HighWAfter, 0);
+        // DEAD 份额对应的极小残渣仍留在适配器（设计使然，不可赎回）
+        assertLt(v2WAfter, 0.001 ether, "only dead share residual remains in V2");
+        assertLt(v3LowWAfter, 0.001 ether, "only dead share residual remains in V3 low");
+        assertLt(v3HighWAfter, 0.001 ether, "only dead share residual remains in V3 high");
 
         assertGt(wethOut, 0);
         assertGt(usdcOut, 0);
@@ -89,7 +90,7 @@ contract VaultWithdrawTest is BaseTest {
         assertGt(wethOut, 0);
         assertGt(usdcOut, 0);
         assertEq(vault.balanceOf(alice), 0);
-        assertEq(vault.totalSupply(), 0);
+        assertEq(vault.totalSupply(), 1e6, "only dead shares remain");
     }
 
     // 测试设置合理的minWETH/minUSDC（预期的90%）时赎回成功通过滑点检查
@@ -207,7 +208,7 @@ contract VaultWithdrawTest is BaseTest {
         vm.prank(bob);
         vault.withdrawDual(sharesB, 0, 0);
 
-        assertEq(vault.totalSupply(), 0);
+        assertEq(vault.totalSupply(), 1e6, "only dead shares remain");
     }
 
     // 测试赎回0份额时revert ZeroAmount

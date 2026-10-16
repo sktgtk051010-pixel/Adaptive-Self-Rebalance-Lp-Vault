@@ -91,6 +91,11 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     RebalanceIncentives public incentives;
     ILiquidityMining public liquidityMining;
 
+    /// @notice 首存虚拟份额数量（防首存 + 单边捐赠攻击）
+    uint256 private constant DEAD_SHARES = 1e6;
+    /// @notice 虚拟份额锁定地址（份额永久锁定，不可赎回）
+    address private constant DEAD_ADDRESS = address(0xdead);
+
     uint160 public lastRebalanceSqrtPriceX96;
     uint256 public lastRebalanceTimestamp;
     uint256 public cumulativeFeesUSDC;
@@ -241,6 +246,8 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         emit PausedStateChanged(_paused);
     }
 
+
+
     // ============ 存款 ============
 
     /**
@@ -250,6 +257,15 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
      * @param minShares 最小份额（滑点保护）
      * @return shares 铸造的份额
      */
+    /**
+     * @notice 首存时铸造虚拟份额到锁定地址，防止首存 1wei + 单边捐赠攻击抬高净值
+     */
+    function _mintDeadSharesOnFirstDeposit() internal {
+        if (totalSupply() == 0) {
+            _mint(DEAD_ADDRESS, DEAD_SHARES);
+        }
+    }
+
     function deposit(
         uint256 wethAmount,
         uint256 usdcAmount,
@@ -262,7 +278,8 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         uint256 totalSupply = totalSupply();
 
         if (totalSupply == 0) {
-            shares = totalValue; 
+            _mintDeadSharesOnFirstDeposit();
+            shares = totalValue;
         } else {
             shares = FullMath.mulDiv(totalValue, totalSupply, totalAssetsBefore);
         }
@@ -280,9 +297,6 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
 
         _investIdleFunds();
 
-        if (address(liquidityMining) != address(0)) {
-            try liquidityMining.updateBalance(msg.sender, balanceOf(msg.sender)) {} catch {}
-        }
         emit Deposited(msg.sender, wethAmount, usdcAmount, shares);
     }
 
@@ -300,14 +314,12 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     {
         if (assets == 0) revert ZeroAmount();
 
+        _mintDeadSharesOnFirstDeposit();
         shares = previewDeposit(assets);
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), assets);
         _mint(receiver, shares);
 
         _investIdleFunds();
-        if (address(liquidityMining) != address(0)) {
-            try liquidityMining.updateBalance(receiver, balanceOf(receiver)) {} catch {}
-        }
         emit Deposited(receiver, 0, assets, shares);
     }
 
@@ -323,14 +335,12 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         whenNotPaused
         returns (uint256 assets)
     {
+        _mintDeadSharesOnFirstDeposit();
         assets = previewMint(shares);
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), assets);
         _mint(receiver, shares);
 
         _investIdleFunds();
-        if (address(liquidityMining) != address(0)) {
-            try liquidityMining.updateBalance(receiver, balanceOf(receiver)) {} catch {}
-        }
         emit Deposited(receiver, 0, assets, shares);
     }
 
@@ -376,9 +386,6 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
             IERC20(asset()).safeTransfer(msg.sender, usdcOut);
         }
 
-        if (address(liquidityMining) != address(0)) {
-            try liquidityMining.updateBalance(msg.sender, balanceOf(msg.sender)) {} catch {}
-        }
         emit Withdrawn(msg.sender, shares, wethOut, usdcOut);
     }
 
@@ -394,22 +401,10 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         address receiver,
         address owner
     ) public override nonReentrant returns (uint256 shares) {
-        shares = previewWithdraw(assets);
-
-        if(msg.sender != owner) {
-            _spendAllowance(owner, msg.sender, shares);
-        }
-
-        uint256 sharePct = FullMath.mulDiv(shares, WAD, totalSupply());
-
-        _burn(owner, shares);
-        _withdrawFromAdapters(sharePct);
-
-        if (address(liquidityMining) != address(0)) {
-            try liquidityMining.updateBalance(owner, balanceOf(owner)) {} catch {}
-        }
-
-        IERC20(asset()).safeTransfer(receiver, assets);
+        // 标准接口取款已禁用：金库资产为 WETH+USDC 双币，标准接口按总资产计价却只支付 USDC，
+        // 资金投资后 idle USDC 不足必然回滚（非"少拿WETH"，而是整笔失败）。
+        // 完整取款请使用 withdrawDual()。
+        revert("Vault: use withdrawDual");
     }
 
     /// @notice ERC4626标准redeem
@@ -426,22 +421,33 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         address receiver,
         address owner
     ) public override nonReentrant returns (uint256 assets) {
-        assets = previewRedeem(shares);
+        // 标准接口赎回已禁用：金库资产为 WETH+USDC 双币，标准接口按总资产计价却只支付 USDC，
+        // 资金投资后 idle USDC 不足必然回滚（非"少拿WETH"，而是整笔失败）。
+        // 完整赎回请使用 withdrawDual()。
+        revert("Vault: use withdrawDual");
+    }
 
-        if(msg.sender != owner) {
-            _spendAllowance(owner, msg.sender, shares);
-        }
-
-        uint256 sharePct = FullMath.mulDiv(shares, WAD, totalSupply());
-
-        _burn(owner, shares);
-        _withdrawFromAdapters(sharePct);
+    
+    /**
+     * @notice 份额变动钩子：任何转账/铸造/销毁后同步流动性挖矿记账
+     * @param from 转出方（铸造时为 address(0)）
+     * @param to 接收方（销毁时为 address(0)）
+     * @param amount 份额数量
+     */
+    function _update(address from, address to, uint256 amount)
+        internal
+        override
+    {
+        super._update(from, to, amount);
 
         if (address(liquidityMining) != address(0)) {
-            try liquidityMining.updateBalance(owner, balanceOf(owner)) {} catch {}
+            if (from != address(0) && from != DEAD_ADDRESS) {
+                try liquidityMining.updateBalance(from, balanceOf(from)) {} catch {}
+            }
+            if (to != address(0) && to != DEAD_ADDRESS) {
+                try liquidityMining.updateBalance(to, balanceOf(to)) {} catch {}
+            }
         }
-
-        IERC20(asset()).safeTransfer(receiver, assets);
     }
 
     // ============ 再平衡 ============
@@ -998,6 +1004,7 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
         return shares.mulDiv(totalAssetsValue, supply, rounding);
     }
 }
+
 
 
 

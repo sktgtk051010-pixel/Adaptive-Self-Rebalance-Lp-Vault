@@ -25,10 +25,10 @@ contract VaultDepositTest is BaseTest {
 
         assertGt(shares, 0, "shares should be > 0");
         assertEq(vault.balanceOf(alice), shares, "alice should have shares");
-        assertEq(vault.totalSupply(), shares, "total supply should equal shares");
+        assertEq(vault.totalSupply(), shares + 1e6, "total supply should equal shares + dead shares");
 
         assertGt(vault.totalAssets(), totalAssetsBefore, "total assets should increase");
-        assertEq(vault.totalAssets(), vault.totalSupply());
+        assertEq(vault.totalSupply(), vault.totalAssets() + 1e6, "1:1 anchoring with dead shares");
     }
 
     // 测试双币存款状态变更：用户份额、总供应量、底层WETH/USDC总量均正确累加
@@ -43,7 +43,7 @@ contract VaultDepositTest is BaseTest {
 
         assertGt(shares, 0);
         assertEq(vault.balanceOf(alice), sharesBefore + shares);
-        assertEq(vault.totalSupply(), supplyBefore + shares);
+        assertEq(vault.totalSupply(), supplyBefore + shares + 1e6, "total supply includes dead shares");
         (uint256 totalW, uint256 totalU) = _getTotalUnderlying();
         assertEq(totalW, totalWBefore + wethAmt);
         assertEq(totalU, totalUBefore + usdcAmt);
@@ -103,23 +103,23 @@ contract VaultDepositTest is BaseTest {
         assertApproxEqRel(shares, 4000e6, 0.01e18);
     }
 
-    // 测试第二个等金额存款者获得与第一个存款者相同数量的份额（无稀释）
+    // 测试第二个等金额存款者份额 = 首存份额 + 虚拟份额基数（无稀释，含死份额）
     function test_Deposit_SecondDepositor_SharesProportional() public {
         uint256 sharesA = _deposit(alice, 10 ether, 20_000e6);
         uint256 totalAssetsAfterA = vault.totalAssets();
 
         uint256 sharesB = _deposit(bob, 10 ether, 20_000e6);
 
-        assertEq(sharesB, sharesA);
+        assertEq(sharesB, sharesA + 1e6);
         assertGt(vault.totalAssets(), totalAssetsAfterA);
-        assertEq(vault.totalSupply(), sharesA + sharesB);
+        assertEq(vault.totalSupply(), sharesA + sharesB + 1e6);
     }
 
     // 测试多用户先后存款不会稀释已有用户的每份资产净值
     function test_Deposit_MultipleUsers_NoDilution() public {
         uint256 sharesA = _deposit(alice, 10 ether, 20_000e6);
         uint256 assetsPerShareBefore = vault.totalAssets() * 1e18 / vault.totalSupply();
-        assertEq(sharesA, vault.totalSupply());
+        assertEq(sharesA + 1e6, vault.totalSupply());
 
         _deposit(bob, 20 ether, 40_000e6);
 
@@ -204,5 +204,29 @@ contract VaultDepositTest is BaseTest {
 
         assertGt(v2WAfter + v3LowWAfter + v3HighWAfter, v2WBefore + v3LowWBefore + v3HighWBefore);
         assertGt(v2UAfter + v3LowUAfter + v3HighUAfter, v2UBefore + v3LowUBefore + v3HighUBefore);
+    }
+
+    // 测试首存1wei+单边捐赠攻击已被虚拟份额缓解：受害者获得正份额，攻击者无法窃取本金
+    function test_FirstDeposit_DonationAttack_Mitigated() public {
+        // 1) 攻击者首存 1 wei USDC（单边），拿到 1 份额
+        vm.prank(alice);
+        uint256 attackerShares = vault.deposit(0, 1, 0);
+        assertEq(attackerShares, 1, "attacker gets 1 share for 1 wei");
+
+        // 2) 攻击者直接转账 40 万 USDC 给金库（绕过 deposit，单边捐赠抬高净值）
+        vm.prank(alice);
+        usdc.transfer(address(vault), 400_000e6);
+
+        // 3) 受害者双币存款 4000 USDC 价值，必须获得正份额（不再被稀释到 0）
+        uint256 victimShares = _deposit(bob, 1 ether, 2000e6);
+        assertGt(victimShares, 0, "victim must receive positive shares");
+
+        // 4) 攻击者全额赎回自己的份额，验证无法窃取本金
+        vm.prank(alice);
+        (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(attackerShares, 0, 0);
+
+        // 攻击者取回的价值远小于其捐赠的 40 万 USDC（大部分被虚拟份额锁定）
+        uint256 attackerValue = wethOut * 2000e6 / 1e18 + usdcOut;
+        assertLt(attackerValue, 100_000e6, "attacker must not profit from donation attack");
     }
 }

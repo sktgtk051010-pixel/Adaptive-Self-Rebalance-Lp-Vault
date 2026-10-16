@@ -4,12 +4,13 @@ pragma solidity ^0.8.24;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title Treasury - 国库合约
  * @notice 管理协议国库资金，所有支出必须通过治理提案执行
  */
-contract Treasury is Ownable {
+contract Treasury is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // ============ 数据结构 ============
@@ -63,14 +64,16 @@ contract Treasury is Ownable {
      * @param amount 支出金额
      * @param reason 支出原因
      */
-    function spend(address token, address to, uint256 amount, string memory reason) external onlyOwner {
+    function spend(address token, address to, uint256 amount, string memory reason) external onlyOwner nonReentrant {
         require(to != address(0), "Treasury: zero address");
         require(amount > 0, "Treasury: zero amount");
 
-        IERC20(token).safeTransfer(to, amount);
+        // Checks-Effects-Interactions：先落盘内部记录与事件，再做外部 token 转账
+        // token 为提案传入地址，可能是带回调的 ERC777 类合约；nonReentrant 防止 transfer 回调中重入
         spendings.push(Spending(token, to, amount, reason, block.timestamp));
-
         emit FundsSpent(token, to, amount, reason);
+
+        IERC20(token).safeTransfer(to, amount);
     }
 
     // ============ 查询函数 ============

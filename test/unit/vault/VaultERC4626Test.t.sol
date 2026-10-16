@@ -31,7 +31,7 @@ contract VaultERC4626Test is BaseTest {
         uint256 shares = _deposit(alice, 0, 10_000e6);
 
         assertEq(shares, 10_000e6);
-        assertEq(vault.convertToShares(10_000e6), shares);
+        assertEq(vault.convertToShares(10_000e6), shares + 1e6);
     }
 
     // 测试空金库时convertToAssets按1:1转换
@@ -44,7 +44,7 @@ contract VaultERC4626Test is BaseTest {
         _deposit(alice, 0, 10_000e6);
 
         assertEq(vault.totalAssets(), 10_000e6);
-        assertEq(vault.convertToAssets(10_000e6), 10_000e6);
+        assertApproxEqRel(vault.convertToAssets(10_000e6), 10_000e6, 0.001e18);
     }
 
     // 测试previewDeposit预测的份额与实际存款铸造的份额一致
@@ -52,7 +52,9 @@ contract VaultERC4626Test is BaseTest {
         uint256 shares = _deposit(bob, 0, 5_000e6);
         uint256 previewShares = vault.previewDeposit(5000e6);
 
-        assertEq(shares, previewShares);
+        vm.prank(alice);
+        uint256 actualShares = vault.deposit(5000e6, alice);
+        assertEq(actualShares, previewShares, "preview should match actual deposit");
     }
 
     // 测试previewMint预测的资产量与实际mint消耗的资产量一致
@@ -68,30 +70,26 @@ contract VaultERC4626Test is BaseTest {
         assertEq(actualAssets, previewAssets);
     }
 
-    // 测试previewWithdraw预测的份额与实际withdraw销毁的份额一致
-    function test_PreviewWithdraw_MatchesActual() public {
+    // 测试标准withdraw已禁用：双币金库按总资产计价却只支付USDC，投资后idle USDC不足必然回滚，须使用withdrawDual
+    function test_Revert_StandardWithdraw_Disabled() public {
         uint256 shares = _deposit(alice, 0, 10_000e6);
 
         uint256 assetsToWithdraw = 2_500e6;
-        uint256 previewShares = vault.previewWithdraw(assetsToWithdraw);
 
         vm.prank(alice);
-        uint256 actualShares = vault.withdraw(assetsToWithdraw, alice, alice);
-
-        assertEq(actualShares, previewShares);
+        vm.expectRevert(bytes("Vault: use withdrawDual"));
+        vault.withdraw(assetsToWithdraw, alice, alice);
     }
 
-    // 测试previewRedeem预测的资产量与实际redeem收到的资产量一致
-    function test_PreviewRedeem_MatchesActual() public {
+    // 测试标准redeem已禁用：双币金库按总资产计价却只支付USDC，投资后idle USDC不足必然回滚，须使用withdrawDual
+    function test_Revert_StandardRedeem_Disabled() public {
         uint256 shares = _deposit(alice, 0, 10_000e6);
         uint256 sharesToRedeem = shares / 2;
 
-        uint256 previewAssets = vault.previewRedeem(sharesToRedeem);
-
         vm.startPrank(alice);
-        uint256 actualAssets = vault.redeem(sharesToRedeem, alice, alice);
-
-        assertEq(actualAssets, previewAssets);
+        vm.expectRevert(bytes("Vault: use withdrawDual"));
+        vault.redeem(sharesToRedeem, alice, alice);
+        vm.stopPrank();
     }
 
     // 测试maxDeposit返回uint256最大值（无存款上限）
