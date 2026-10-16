@@ -6,17 +6,17 @@ const LOCAL_CHAIN_ID = 31337;
 
 // Sepolia 地址
 const SEPOLIA_ADDRESSES = {
-    vault: '0x36C5Fc2bf3967BF5d8Cb29a7841157B5E7A4719B',
+    vault: '0x22ecc87bb664ec2bfcb0531915c6f2d1c4bf76ab',
     weth: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14',
     usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
-    oracle: '0x93B2D37D005a7492BA986D40dce24D7Ef50AA058',
-    strategy: '0xADC8614bDe4897A101C84f1a0e7c18feE5AaF129',
-    governance: '0x0659ca9b72B5FB89ACd7cF72aACDd730Ae7e95E6',
-    incentives: '0xa4B90b64432C1b106FB7986450775598f1A79FD0',
-    govToken: '0xf82c63d1097218486101c80ECf3dB36D9ABFd8d8',
-    mining: '0x24E1bC61551CDA72fcD253C434E29c97Ec7d53db', 
-    teamVesting: '0xCe2bDA4143f4b6466AcAA4D1b0684AB03396c5d7', 
-    treasury: '0xd0285D31097Dc8d8Bb616e8e251b415527953CDe', 
+    oracle: '0x36c5fc2bf3967bf5d8cb29a7841157b5e7a4719b',
+    strategy: '0x93b2d37d005a7492ba986d40dce24d7ef50aa058',
+    governance: '0xadc8614bde4897a101c84f1a0e7c18fee5aaf129',
+    incentives: '0xc3791fc14c5e2fb1d77b44d16f8276537dd1b6e8',
+    govToken: '0x0659ca9b72b5fb89acd7cf72aacdd730ae7e95e6',
+    mining: '0xce2bda4143f4b6466acaa4d1b0684ab03396c5d7', 
+    teamVesting: '0xd0285d31097dc8d8bb616e8e251b415527953cde', 
+    treasury: '0x41e8c430cb14696ada9c91098235ec200ec4e138', 
 };
 
 // 默认使用Sepolia
