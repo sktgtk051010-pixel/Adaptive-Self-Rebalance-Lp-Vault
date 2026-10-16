@@ -390,38 +390,16 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice ERC4626标准取款（仅USDC）
-     * @param assets 要取款的资产数量
-     * @param receiver 接收者地址
-     * @param owner 所有者地址
-     * @return shares 赎回的份额
+     * @notice 标准接口取款已禁用,完整取款请使用 withdrawDual()
      */
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public override nonReentrant returns (uint256 shares) {
-        // 标准接口取款已禁用：金库资产为 WETH+USDC 双币，标准接口按总资产计价却只支付 USDC，
-        // 资金投资后 idle USDC 不足必然回滚（非"少拿WETH"，而是整笔失败）。
-        // 完整取款请使用 withdrawDual()。
+    function withdraw(uint256, address, address) public override nonReentrant returns (uint256) {
         revert("Vault: use withdrawDual");
     }
 
     /**
-     * @notice ERC4626标准redeem
-     * @param shares 要赎回的份额
-     * @param receiver 接收者地址
-     * @param owner 所有者地址
-     * @return assets 赎回的资产数量
+     * @notice 标准接口取款已禁用,完整取款请使用 withdrawDual()
      */
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public override nonReentrant returns (uint256 assets) {
-        // 标准接口赎回已禁用：金库资产为 WETH+USDC 双币，标准接口按总资产计价却只支付 USDC，
-        // 资金投资后 idle USDC 不足必然回滚（非"少拿WETH"，而是整笔失败）。
-        // 完整赎回请使用 withdrawDual()。
+    function redeem(uint256, address, address) public override nonReentrant returns (uint256) {
         revert("Vault: use withdrawDual");
     }
 
@@ -472,7 +450,6 @@ contract AdaptiveLPVault is ERC4626, ReentrancyGuard, Ownable {
     }
 
     // ============ 再平衡 ============
-
     /**
      * @notice 触发再平衡（任何人可调用，符合条件可获奖励）
      */

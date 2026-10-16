@@ -58,7 +58,7 @@ contract TreasuryTest is BaseTest {
     // ============ balanceOf ============
 
     // 测试查询 ALP 余额 和 USDC 余额
-    function test_BalanceOf_ALP_USDC() public {
+    function test_BalanceOf_ALP_USDC() public view {
         uint256 alpBalance = treasury.balanceOf(address(govToken));
         uint256 usdcBalance = treasury.balanceOf(address(usdc));
         assertEq(alpBalance, 2_000_000e18);

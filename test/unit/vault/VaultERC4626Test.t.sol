@@ -49,7 +49,7 @@ contract VaultERC4626Test is BaseTest {
 
     // 测试previewDeposit预测的份额与实际存款铸造的份额一致
     function test_PreviewDeposit_MatchesActual() public {
-        uint256 shares = _deposit(bob, 0, 5_000e6);
+        _deposit(bob, 0, 5_000e6);
         uint256 previewShares = vault.previewDeposit(5000e6);
 
         vm.prank(alice);
@@ -72,7 +72,7 @@ contract VaultERC4626Test is BaseTest {
 
     // 测试标准withdraw已禁用：双币金库按总资产计价却只支付USDC，投资后idle USDC不足必然回滚，须使用withdrawDual
     function test_Revert_StandardWithdraw_Disabled() public {
-        uint256 shares = _deposit(alice, 0, 10_000e6);
+        _deposit(alice, 0, 10_000e6);
 
         uint256 assetsToWithdraw = 2_500e6;
 

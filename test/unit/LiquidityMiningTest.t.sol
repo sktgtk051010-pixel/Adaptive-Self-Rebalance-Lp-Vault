@@ -26,7 +26,7 @@ contract LiquidityMiningTest is BaseTest {
     // ============ currentRewardPerSecond ============
 
     // 测试未开始时返回 0
-    function test_CurrentRewardPerSecond_NotStarted() public {
+    function test_CurrentRewardPerSecond_NotStarted() public view {
         assertEq(mining.currentRewardPerSecond(), 0);
     }
 

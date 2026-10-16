@@ -144,7 +144,7 @@ contract TeamVestingTest is BaseTest {
     // ============ released ============
 
     // 测试初始已领取为 0
-    function test_Released_Initial() public {
+    function test_Released_Initial() public view {
         assertEq(teamVesting.released(), 0);
     }
 
