@@ -140,33 +140,33 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **AdaptiveLPVault**（金库） | `0x22ecc87bb664ec2bfcb0531915c6f2d1c4bf76ab` | 待验证 |
-| **TWAPOracle**（预言机） | `0x36c5fc2bf3967bf5d8cb29a7841157b5e7a4719b` | 待验证 |
-| **AdaptiveRebalanceStrategy**（策略） | `0x93b2d37d005a7492ba986d40dce24d7ef50aa058` | 待验证 |
-| **RebalanceIncentives**（激励） | `0xc3791fc14c5e2fb1d77b44d16f8276537dd1b6e8` | 待验证 |
+| **AdaptiveLPVault**（金库） | `0x7e4e41ec418d758886fc05637ce46c97e5535245` | 待验证 |
+| **TWAPOracle**（预言机） | `0xe5e92f36753b2a73f4d28aed4527626c81244e16` | 待验证 |
+| **AdaptiveRebalanceStrategy**（策略） | `0x4d5323bff71d5aaecafdca344c1843fed17b741a` | 待验证 |
+| **RebalanceIncentives**（激励） | `0x029bb2794955744d0057cd0f3735215e37fd2407` | 待验证 |
 
 ### 治理合约
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **GovernanceToken**（治理代币 ALP） | `0x0659ca9b72b5fb89acd7cf72aacdd730ae7e95e6` | 待验证 |
-| **AdaptiveGovernance**（治理模块） | `0xadc8614bde4897a101c84f1a0e7c18fee5aaf129` | 待验证 |
+| **GovernanceToken**（治理代币 ALP） | `0xc3791fc14c5e2fb1d77b44d16f8276537dd1b6e8` | 待验证 |
+| **AdaptiveGovernance**（治理模块） | `0xb2270eb8f1fb89721efb8c87c086d2450e0b3c87` | 待验证 |
 
 ### 流动性适配器
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **UniswapV2Adapter**（V2 适配器） | `0xb73baf8ac8d899da4e328d7cf88443a1d9116430` | 待验证 |
-| **UniswapV3Adapter**（V3 0.05% 低费率） | `0xdb89e81ea2f929fca9209617416ba7b618ffc9cb` | 待验证 |
-| **UniswapV3Adapter**（V3 0.30% 高费率） | `0x20b184b870bf9a6ac212d04ab8a3109a523fe7e2` | 待验证 |
+| **UniswapV2Adapter**（V2 适配器） | `0x24e1bc61551cda72fcd253c434e29c97ec7d53db` | 待验证 |
+| **UniswapV3Adapter**（V3 0.05% 低费率） | `0xce2bda4143f4b6466acaa4d1b0684ab03396c5d7` | 待验证 |
+| **UniswapV3Adapter**（V3 0.30% 高费率） | `0xd0285d31097dc8d8bb616e8e251b415527953cde` | 待验证 |
 
 ### 代币分发合约
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **LiquidityMining**（流动性挖矿） | `0xce2bda4143f4b6466acaa4d1b0684ab03396c5d7` | 待验证 |
-| **TeamVesting**（团队锁仓） | `0xd0285d31097dc8d8bb616e8e251b415527953cde` | 待验证 |
-| **Treasury**（国库） | `0x41e8c430cb14696ada9c91098235ec200ec4e138` | 待验证 |
+| **LiquidityMining**（流动性挖矿） | `0x469f9df10bbc97f9208500156c14a8b7b2edfc4f` | 待验证 |
+| **TeamVesting**（团队锁仓） | `0x8d335f585fd82c4c05169632531d32a82fa3de16` | 待验证 |
+| **Treasury**（国库） | `0x29e33b7a1cd11c660c2ff03beb7089177da8452f` | 待验证 |
 
 ### 外部依赖（Sepolia）
 
