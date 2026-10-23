@@ -18,6 +18,11 @@
 - [核心特性](#核心特性)
 - [系统架构](#系统架构)
 - [Sepolia 测试网部署](#sepolia-测试网部署)
+  - [核心合约](#核心合约)
+  - [治理合约](#治理合约)
+  - [流动性适配器](#流动性适配器)
+  - [代币分发合约](#代币分发合约)
+  - [外部依赖（Sepolia）](#外部依赖sepolia)
 - [快速开始](#快速开始)
 - [项目结构](#项目结构)
 - [核心合约说明](#核心合约说明)
@@ -134,52 +139,41 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 
 ## Sepolia 测试网部署
 
-所有 12 个合约均已部署至 Sepolia 测试网，并全部完成 Etherscan 源码验证。点击下方表格中“已验证”链接可查看各合约的 Etherscan 验证详情。
+所有 **12 个合约**均已部署至 Sepolia 测试网，并全部完成 Etherscan 源码验证。点击下方各合约地址可直接跳转 Etherscan 查看验证详情。
 
 ### 核心合约
 
-| 合约 | 地址 | Etherscan |
-|------|------|-----------|
-| **AdaptiveLPVault**（金库） | `0xd86C18c579b661ba795292264789FC4f1FC65F0d` | [已验证](https://sepolia.etherscan.io/address/0xd86C18c579b661ba795292264789FC4f1FC65F0d) |
-| **TWAPOracle**（预言机） | `0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23` | [已验证](https://sepolia.etherscan.io/address/0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23) |
-| **AdaptiveRebalanceStrategy**（策略） | `0xfB7A050cE4a3a47317f049694d3e452B119CEBb5` | [已验证](https://sepolia.etherscan.io/address/0xfB7A050cE4a3a47317f049694d3e452B119CEBb5) |
-| **RebalanceIncentives**（激励） | `0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8` | [已验证](https://sepolia.etherscan.io/address/0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8) |
+- **AdaptiveLPVault**（金库）: [0xd86C18c579b661ba795292264789FC4f1FC65F0d](https://sepolia.etherscan.io/address/0xd86C18c579b661ba795292264789FC4f1FC65F0d)
+- **TWAPOracle**（预言机）: [0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23](https://sepolia.etherscan.io/address/0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23)
+- **AdaptiveRebalanceStrategy**（策略）: [0xfB7A050cE4a3a47317f049694d3e452B119CEBb5](https://sepolia.etherscan.io/address/0xfB7A050cE4a3a47317f049694d3e452B119CEBb5)
+- **RebalanceIncentives**（激励）: [0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8](https://sepolia.etherscan.io/address/0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8)
 
 ### 治理合约
 
-| 合约 | 地址 | Etherscan |
-|------|------|-----------|
-| **GovernanceToken**（治理代币 ALP） | `0x42b82413B6FdF44662A84bE81494cD1B508D05a7` | [已验证](https://sepolia.etherscan.io/address/0x42b82413B6FdF44662A84bE81494cD1B508D05a7) |
-| **AdaptiveGovernance**（治理模块） | `0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD` | [已验证](https://sepolia.etherscan.io/address/0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD) |
+- **GovernanceToken**（治理代币 ALP）: [0x42b82413B6FdF44662A84bE81494cD1B508D05a7](https://sepolia.etherscan.io/address/0x42b82413B6FdF44662A84bE81494cD1B508D05a7)
+- **AdaptiveGovernance**（治理模块）: [0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD](https://sepolia.etherscan.io/address/0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD)
 
 ### 流动性适配器
 
-| 合约 | 地址 | Etherscan |
-|------|------|-----------|
-| **UniswapV2Adapter**（V2 适配器） | `0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D` | [已验证](https://sepolia.etherscan.io/address/0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D) |
-| **UniswapV3Adapter**（V3 0.05% 低费率） | `0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72` | [已验证](https://sepolia.etherscan.io/address/0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72) |
-| **UniswapV3Adapter**（V3 0.30% 高费率） | `0x42371d76FACe900d923862766Efe3Dfe7B2a6a81` | [已验证](https://sepolia.etherscan.io/address/0x42371d76FACe900d923862766Efe3Dfe7B2a6a81) |
+- **UniswapV2Adapter**（V2 适配器）: [0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D](https://sepolia.etherscan.io/address/0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D)
+- **UniswapV3Adapter**（V3 0.05% 低费率池）: [0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72](https://sepolia.etherscan.io/address/0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72)
+- **UniswapV3Adapter**（V3 0.30% 高费率池）: [0x42371d76FACe900d923862766Efe3Dfe7B2a6a81](https://sepolia.etherscan.io/address/0x42371d76FACe900d923862766Efe3Dfe7B2a6a81)
 
 ### 代币分发合约
 
-| 合约 | 地址 | Etherscan |
-|------|------|-----------|
-| **LiquidityMining**（流动性挖矿） | `0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9` | [已验证](https://sepolia.etherscan.io/address/0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9) |
-| **TeamVesting**（团队锁仓） | `0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A` | [已验证](https://sepolia.etherscan.io/address/0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A) |
-| **Treasury**（国库） | `0x6450A5456957750BD144272a6C078A049C3f8834` | [已验证](https://sepolia.etherscan.io/address/0x6450A5456957750BD144272a6C078A049C3f8834) |
+- **LiquidityMining**（流动性挖矿）: [0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9](https://sepolia.etherscan.io/address/0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9)
+- **TeamVesting**（团队锁仓）: [0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A](https://sepolia.etherscan.io/address/0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A)
+- **Treasury**（国库）: [0x6450A5456957750BD144272a6C078A049C3f8834](https://sepolia.etherscan.io/address/0x6450A5456957750BD144272a6C078A049C3f8834)
 
 ### 外部依赖（Sepolia）
 
-| 协议 | 地址 |
-|------|------|
-| WETH | `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14` |
-| USDC | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` |
-| Uniswap V3 Factory | `0x0227628f3F023bb0B980b67D528571c95c6DaC1c` |
-| Uniswap V2 Router | `0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3` |
-| V3 0.05% 池（WETH/USDC） | `0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1` |
-| V3 0.30% 池（WETH/USDC） | `0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50` |
+- **WETH**: [0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14](https://sepolia.etherscan.io/token/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
+- **USDC**: [0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238](https://sepolia.etherscan.io/token/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
+- **Uniswap V3 Factory**: [0x0227628f3F023bb0B980b67D528571c95c6DaC1c](https://sepolia.etherscan.io/address/0x0227628f3F023bb0B980b67D528571c95c6DaC1c)
+- **Uniswap V2 Router**: [0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3](https://sepolia.etherscan.io/address/0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3)
+- **V3 0.05% 池（WETH/USDC）**: [0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1](https://sepolia.etherscan.io/address/0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1)
+- **V3 0.30% 池（WETH/USDC）**: [0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50](https://sepolia.etherscan.io/address/0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50)
 
----
 
 ## 快速开始
 
