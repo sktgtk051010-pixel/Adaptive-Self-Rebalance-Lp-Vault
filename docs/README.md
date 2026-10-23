@@ -148,53 +148,55 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 <a id="core-contracts"></a>
 ### 核心合约
 
-- **AdaptiveLPVault**（金库）: `0xd86C18c579b661ba795292264789FC4f1FC65F0d` [查看](https://sepolia.etherscan.io/address/0xd86C18c579b661ba795292264789FC4f1FC65F0d)
-- **TWAPOracle**（预言机）: `0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23` [查看](https://sepolia.etherscan.io/address/0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23)
-- **AdaptiveRebalanceStrategy**（策略）: `0xfB7A050cE4a3a47317f049694d3e452B119CEBb5` [查看](https://sepolia.etherscan.io/address/0xfB7A050cE4a3a47317f049694d3e452B119CEBb5)
-- **RebalanceIncentives**（激励）: `0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8` [查看](https://sepolia.etherscan.io/address/0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8)
-
+| 合约 | 地址 | Etherscan |
+|------|------|-----------|
+| **AdaptiveLPVault**（金库） | `0xd86C18c579b661ba795292264789FC4f1FC65F0d` | [查看](https://sepolia.etherscan.io/address/0xd86C18c579b661ba795292264789FC4f1FC65F0d) |
+| **TWAPOracle**（预言机） | `0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23` | [查看](https://sepolia.etherscan.io/address/0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23) |
+| **AdaptiveRebalanceStrategy**（策略） | `0xfB7A050cE4a3a47317f049694d3e452B119CEBb5` | [查看](https://sepolia.etherscan.io/address/0xfB7A050cE4a3a47317f049694d3e452B119CEBb5) |
+| **RebalanceIncentives**（激励） | `0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8` | [查看](https://sepolia.etherscan.io/address/0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8) |
 <a id="governance-contracts"></a>
 ### 治理合约
 
-- **GovernanceToken**（治理代币 ALP）: `0x42b82413B6FdF44662A84bE81494cD1B508D05a7` [查看](https://sepolia.etherscan.io/address/0x42b82413B6FdF44662A84bE81494cD1B508D05a7)
-- **AdaptiveGovernance**（治理模块）: `0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD` [查看](https://sepolia.etherscan.io/address/0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD)
-
+| 合约 | 地址 | Etherscan |
+|------|------|-----------|
+| **GovernanceToken**（治理代币 ALP） | `0x42b82413B6FdF44662A84bE81494cD1B508D05a7` | [查看](https://sepolia.etherscan.io/address/0x42b82413B6FdF44662A84bE81494cD1B508D05a7) |
+| **AdaptiveGovernance**（治理模块） | `0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD` | [查看](https://sepolia.etherscan.io/address/0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD) |
 <a id="adapters"></a>
 ### 流动性适配器
 
-- **UniswapV2Adapter**（V2 适配器）: `0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D` [查看](https://sepolia.etherscan.io/address/0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D)
-- **UniswapV3Adapter**（V3 0.05% 低费率池）: `0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72` [查看](https://sepolia.etherscan.io/address/0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72)
-- **UniswapV3Adapter**（V3 0.30% 高费率池）: `0x42371d76FACe900d923862766Efe3Dfe7B2a6a81` [查看](https://sepolia.etherscan.io/address/0x42371d76FACe900d923862766Efe3Dfe7B2a6a81)
-
+| 合约 | 地址 | Etherscan |
+|------|------|-----------|
+| **UniswapV2Adapter**（V2 适配器） | `0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D` | [查看](https://sepolia.etherscan.io/address/0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D) |
+| **UniswapV3Adapter**（V3 0.05% 低费率池） | `0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72` | [查看](https://sepolia.etherscan.io/address/0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72) |
+| **UniswapV3Adapter**（V3 0.30% 高费率池） | `0x42371d76FACe900d923862766Efe3Dfe7B2a6a81` | [查看](https://sepolia.etherscan.io/address/0x42371d76FACe900d923862766Efe3Dfe7B2a6a81) |
 <a id="distribution-contracts"></a>
 ### 代币分发合约
 
-- **LiquidityMining**（流动性挖矿）: `0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9` [查看](https://sepolia.etherscan.io/address/0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9)
-- **TeamVesting**（团队锁仓）: `0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A` [查看](https://sepolia.etherscan.io/address/0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A)
-- **Treasury**（国库）: `0x6450A5456957750BD144272a6C078A049C3f8834` [查看](https://sepolia.etherscan.io/address/0x6450A5456957750BD144272a6C078A049C3f8834)
-
+| 合约 | 地址 | Etherscan |
+|------|------|-----------|
+| **LiquidityMining**（流动性挖矿） | `0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9` | [查看](https://sepolia.etherscan.io/address/0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9) |
+| **TeamVesting**（团队锁仓） | `0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A` | [查看](https://sepolia.etherscan.io/address/0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A) |
+| **Treasury**（国库） | `0x6450A5456957750BD144272a6C078A049C3f8834` | [查看](https://sepolia.etherscan.io/address/0x6450A5456957750BD144272a6C078A049C3f8834) |
 <a id="external-dependencies"></a>
 ### 外部依赖（Sepolia）
 
-- **WETH**: `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14` [查看](https://sepolia.etherscan.io/token/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14)
-- **USDC**: `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` [查看](https://sepolia.etherscan.io/token/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
-- **Uniswap V3 Factory**: `0x0227628f3F023bb0B980b67D528571c95c6DaC1c` [查看](https://sepolia.etherscan.io/address/0x0227628f3F023bb0B980b67D528571c95c6DaC1c)
-- **Uniswap V2 Router**: `0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3` [查看](https://sepolia.etherscan.io/address/0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3)
-- **V3 0.05% 池（WETH/USDC）**: `0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1` [查看](https://sepolia.etherscan.io/address/0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1)
-- **V3 0.30% 池（WETH/USDC）**: `0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50` [查看](https://sepolia.etherscan.io/address/0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50)
-
-
+| 合约 | 地址 | Etherscan |
+|------|------|-----------|
+| **WETH** | `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14` | [查看](https://sepolia.etherscan.io/token/0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14) |
+| **USDC** | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` | [查看](https://sepolia.etherscan.io/token/0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238) |
+| **Uniswap V3 Factory** | `0x0227628f3F023bb0B980b67D528571c95c6DaC1c` | [查看](https://sepolia.etherscan.io/address/0x0227628f3F023bb0B980b67D528571c95c6DaC1c) |
+| **Uniswap V2 Router** | `0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3` | [查看](https://sepolia.etherscan.io/address/0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3) |
+| **V3 0.05% 池（WETH/USDC）** | `0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1` | [查看](https://sepolia.etherscan.io/address/0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1) |
+| **V3 0.30% 池（WETH/USDC）** | `0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50` | [查看](https://sepolia.etherscan.io/address/0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50) |
 <a id="quickstart"></a>
 ## 快速开始
 
 ### 环境要求
-
 - [Foundry](https://getfoundry.sh/)（forge, cast, anvil）
 - Git
 - Node.js >= 18（前端开发，可选）
 
 ### 安装与编译
-
 ```bash
 # 克隆仓库
 git clone <repo-url>
@@ -208,7 +210,6 @@ forge build
 ```
 
 ### 运行测试
-
 ```bash
 # 运行全部测试（单元 + 不变量 + 分叉）
 forge test -vvv
@@ -224,7 +225,6 @@ forge coverage --ir-minimum
 ```
 
 ### 部署到 Sepolia
-> **注意（2026-10-06 起）**：Sepolia 已激活 **Glamsterdam 硬分叉（EIP-8037）**，合约创建按新规则计价，成本约为旧规则数倍。旧版 Foundry（< 1.8.6）本地模拟不含新规则，直接 `forge script --broadcast` 会因创建 gas 不足而 OOG 回滚。
 
 请使用 Foundry **1.8.6+**，并加 `--skip-simulation` 让广播时采用节点按链上规则估算：
 
@@ -271,7 +271,6 @@ forge script script/Deploy.s.sol:DeployScript \
 > **注意**：本次部署的 12 个合约已全部完成 Etherscan 源码验证（见上方地址表）。若后续重新部署，可在命令后加 `--verify` 参数自动验证（网络不佳时可能失败，届时需手动验证）。
 
 ### 部署后权限模型
-
 部署脚本执行完毕后，各合约的所有权归属如下：
 
 | 合约 | owner 归属 | 说明 |
@@ -383,7 +382,6 @@ Adaptive-Self-Rebalance-Lp-Vault/
 
 <a id="volatility-calculation"></a>
 ### 波动率计算口径
-
 系统的"波动率"定义为**现货价格相对 TWAP 参考价的偏离度**，由策略合约 `estimateVolatility()` 计算：
 
 ```
@@ -399,7 +397,6 @@ Adaptive-Self-Rebalance-Lp-Vault/
 
 <a id="volatility-allocation"></a>
 ### 波动率自适应资金分配
-
 系统根据 TWAP 预言机计算的市场波动率，动态调整资金在不同流动性场所的分配：
 
 | 波动率 | V2 权重 | V3 低费率(0.05%) | V3 高费率(0.30%) |
@@ -413,7 +410,6 @@ Adaptive-Self-Rebalance-Lp-Vault/
 - 高波动率时，增加 V2 配比，利用 V2 的无限区间特性降低无常损失
 
 ### V3 三层做市区间
-
 V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 | 区间 | 宽度 | 低波动占比 | 中波动占比 | 高波动占比 |
@@ -428,7 +424,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 - 三层区间组合在不同市场环境下都能保持一定的手续费收益
 
 ### 再平衡触发机制
-
 再平衡由外部执行者调用，**任何人可在冷却期结束后触发**，无需满足特定市场条件：
 
 1. **冷却期（唯一时间约束）**：冷却期结束前不可再次触发，按当前波动率动态调整——
@@ -449,7 +444,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 ---
 
 ### 1. 存款机制
-
 **怎么运转**：用户存入 **WETH + USDC 双币** 获得 **ALP-VAULT 份额**；低于灰尘阈值的金额不参与做市。
 
 | 参数 | 数值 |
@@ -461,7 +455,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 > **注意**：单币存款的资金将闲置、不参与做市；前端授权为无限授权（MaxUint256），用户需自行管理授权。存款后自动参与流动性挖矿，金库会调用 `liquidityMining.updateBalance()` 更新你的挖矿份额。
 
 ### 2. 赎回机制
-
 **怎么运转**：金库以 **USDC** 计价；前端赎回返回 **WETH + USDC 双币**；标准 ERC4626 取款接口（`withdraw`/`redeem`）**已禁用**，取款请使用自定义 `withdrawDual`。
 
 | 参数 | 数值 |
@@ -476,7 +469,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 > **注意**：赎回后金库会自动调用 `liquidityMining.updateBalance()` 更新你的挖矿份额，待领奖励不受影响。
 
 ### 3. 再平衡机制
-
 **怎么运转**：任何人在冷却期结束后都能触发再平衡，系统按当前波动率把全部资金重新配仓；波动率越高，冷却期越长。
 
 | 参数 | 数值 |
@@ -488,7 +480,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 > **边界**：系统没有"定时自动再平衡"或"波动率突变自动触发"逻辑——**什么时候触发由人来判断**，冷却期是唯一的链上约束。
 
 ### 4. 手续费机制
-
 **怎么运转**：V3 手续费在仓位中累积并计入净值，再平衡时由金库统一领取；V2 手续费随 LP 价值隐式累积。
 
 | 项 | V2 | V3 |
@@ -504,7 +495,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 <a id="incentives"></a>
 ### 5. 激励机制
-
 **怎么运转**：再平衡产生正向收益时，执行者获得 **USDC + ALP 双奖励**。USDC 为收益的 5%，从激励池余额中扣除；ALP 为固定数量（默认每次 10 个），从 RebalanceIncentives 合约的 ALP 储备中扣除。任一奖励池余额不足时，该奖励按当前奖励池余额支付，另一部分照常发放。
 
 | 参数 | 数值 |
@@ -520,7 +510,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 > 说明：激励合约内部另有 5 分钟记账冷却参数（治理可调 60~86400 秒），但因 `onRebalanceExecuted` 仅金库可调用，实际冷却以金库动态冷却为准，该参数不单独生效。
 
 ### 6. 波动率机制
-
 **怎么运转**：系统用"现货价相对 TWAP 参考价的偏离比例"作为波动率，按三档决定资金配比与冷却期档位。
 
 | 参数 | 数值 |
@@ -535,7 +524,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 > **说明**：此处的"波动率"指**价格偏离度**，衡量现货价脱离均线参考价的程度，与金融统计中的收益率标准差口径不同。
 
 ### 7. 治理机制
-
 **怎么运转**：持有 **ALP 治理代币** 的人可发起提案、投票修改系统参数；提案通过后需等待 **48 小时时间锁** 才生效。
 
 | 参数 | 数值 |
@@ -563,7 +551,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 > **代币铸造与分发**：治理代币总量 1000万 ALP，部署时一次性 mint 并分配到流动性挖矿、再平衡奖励、团队锁仓、国库四个合约。详见下方 [代币分发机制](#token-distribution) 章节。
 ### 8. 滑点保护
-
 **全局参数：**
 
 | 参数 | 默认值 | 可调范围 |
@@ -584,7 +571,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 **已启用**：成交偏离超过容忍度时自动 `revert`；**未启用**：当前版本已知限制，后续迭代恢复传参。
 
 ### 9. 预言机失效行为
-
 **怎么运转**：TWAP 依赖池内观测数据；数据不足时，估值自动降级，存取款与再平衡各有不同表现。
 
 | 操作 | 数据不足时 |
@@ -633,7 +619,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 - 支出记录永久上链，可通过 getSpending() 查询历史；每条记录含提案描述（reason 字段），明确标注资金用途
 - 用途可包括：社区奖励、生态合作、安全审计、运维费用等
 ### 参数速查表
-
 | 类别 | 参数 | 默认值 | 治理可调 | 说明 |
 |------|------|--------|---------|------|
 | **用户操作** | 再平衡冷却（正常） | 10 分钟 | 否 | 波动率 ≤50% 时 |
@@ -732,7 +717,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 ## 测试覆盖率
 
 ### 测试体系架构
-
 项目采用三层测试架构（单元 / 不变量 / 分叉），覆盖从单个函数到完整系统交互的各个层级：
 
 | 测试层级 | 目录 | 测试文件数 | 覆盖目标 |
@@ -742,7 +726,6 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 | **分叉测试** | `test/fork/` | 1 | 基于主网真实状态的端到端验证 |
 
 ### 各合约测试覆盖
-
 | 合约 | 对应测试文件 | 覆盖重点 |
 |------|-------------|---------|
 | `AdaptiveLPVault` | `test/unit/vault/`（7个文件） | 存款/取款/再平衡/管理员操作/ERC4626 接口/视图函数 |
@@ -758,14 +741,12 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 | `Treasury` | `test/unit/TreasuryTest.t.sol` | 提案支出、权限控制、多币种转账 |
 
 ### 覆盖率统计方式
-
 项目使用 Foundry 内置的覆盖率工具，支持行覆盖率（Line Coverage）和分支覆盖率（Branch Coverage）两种统计维度：
 
 - **行覆盖率**：统计源代码中每一行是否被测试执行过
 - **分支覆盖率**：统计每个条件判断（if/require/&&/||）的 true 和 false 分支是否都被覆盖
 
 ### 生成覆盖率报告
-
 > ⚠️ **注意**：本项目启用了 `viaIR` 优化，运行覆盖率命令时必须加 `--ir-minimum` 参数，否则会报 "Stack too deep" 编译错误。
 
 ```bash
@@ -780,7 +761,6 @@ forge coverage --ir-minimum --report debug
 ```
 
 ### 测试设计原则
-
 1. **正向路径覆盖**：每个公开函数至少有一个正常执行路径的测试
 2. **反向路径覆盖**：核心 require/revert 错误路径均有对应测试；分支覆盖率 47.31%，受 viaIR 优化下 forge coverage 分支统计精度限制，实际测试覆盖范围高于报告数值
 3. **边界条件测试**：零值、最大值、临界值等边界场景均有覆盖
@@ -788,7 +768,6 @@ forge coverage --ir-minimum --report debug
 5. **不变量验证**：系统核心不变量（如总资产守恒、新存款不稀释现有份额比例）通过模糊测试验证
 
 ### 运行测试
-
 ```bash
 # 运行全部测试
 forge test -vvv
@@ -804,7 +783,6 @@ forge test --match-contract ForkTest -vvv
 ```
 
 ### 核心合约覆盖率统计
-
 > 统计范围：包含 `src/` 下 11 个核心业务合约，排除外部导入的第三方依赖库与部署脚本；项目内手工移植的 UniswapMath 属于本仓库源码，计入覆盖率统计。
 >
 > 统计命令：`forge coverage --ir-minimum --report summary`
