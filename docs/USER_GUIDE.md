@@ -27,7 +27,7 @@
 | MetaMask 钱包 | 浏览器插件，如果你还没有，去 [metamask.io](https://metamask.io) 下载安装 |
 | Sepolia 测试网 ETH | 用来付 gas（交易手续费），可以去 [Sepolia Faucet](https://sepolia-faucet.pk910.de/) 领 |
 | WETH 和 USDC | 你要存入金库的两种币，测试网环境下可以在交易所或水龙头获取 |
-| 前端页面 | 部署好的前端地址（见项目 README 中的部署信息） |
+| 前端页面 | 本地托管 `frontend/` 目录（如 `python -m http.server 8080` 后访问 localhost:8080）；线上部署地址由项目方另行发布 |
 
 > 💡 这是测试网项目，所有代币都是测试币，没有真实价值，放心操作。
 

@@ -26,7 +26,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *   3. （可选）确保部署钱包有一些 Sepolia USDC，用于给激励合约充值
  *
  *   部署命令：
- *   forge script script/Deploy.s.sol:DeployScript --rpc-url sepolia --broadcast --verify
+ *   forge script script/Deploy.s.sol:DeployScript --rpc-url "$SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY" --broadcast --slow --skip-simulation
  *
  *   代币分配（总量 1000 万 ALP）：
  *   - 500 万 -> LiquidityMining（流动性挖矿，比特币式减半释放）

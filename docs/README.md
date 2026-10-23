@@ -44,7 +44,7 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 ## 核心特性
 
 - **ERC4626 标准金库**：存款铸币、份额销毁，份额（ALP-VAULT）净值自动累积做市手续费收益；**取款通过自定义双币接口 `withdrawDual`**（标准取款接口已禁用，原因见 [SECURITY 风险 6](./SECURITY.md)）
-- **为什么选 ERC4626**：兼容主流钱包的基础交互（显示份额余额、发起存款交易）；**取款须使用前端封装的双币赎回入口**（标准取款接口已禁用）。
+- **为什么选 ERC4626**：兼容主流钱包的基础交互（显示份额余额、发起存款交易）；取款须走前端封装的 `withdrawDual` 双币赎回入口
   ⚠️ 第三方按 ERC4626 标准直接调用合约时，标准取款接口（`withdraw`/`redeem`）**已禁用**——双币金库按总资产计价却只支付 USDC，资金投资后必然回滚；第三方接入须使用自定义接口 `withdrawDual`。详见 [SECURITY.md 风险6](./SECURITY.md)
 - **多场所流动性路由**：Uniswap V2 + Uniswap V3 0.05% + Uniswap V3 0.30% 三池联动
 - **TWAP 预言机驱动**：使用 Uniswap V3 时间加权均价，可缓解瞬时价格操纵和闪电贷攻击
@@ -206,7 +206,7 @@ forge build
 ### 运行测试
 
 ```bash
-# 运行全部测试（单元 + 集成 + 不变量）
+# 运行全部测试（单元 + 不变量 + 分叉）
 forge test -vvv
 
 # 仅运行单元测试
@@ -234,11 +234,7 @@ forge script script/Deploy.s.sol:DeployScript \
 
 
 
-1. 复制环境变量模板并填入配置：
-
-```bash
-cp .env.example .env
-```
+1. 在仓库根目录创建 `.env` 文件：
 
 2. 编辑 `.env` 文件，填入：
 
@@ -254,9 +250,8 @@ ETHERSCAN_API_KEY=你的Etherscan API Key
 
 ```bash
 forge script script/Deploy.s.sol:DeployScript \
-  --rpc-url sepolia \
-  --broadcast \
-  -vvvv
+  --rpc-url "$SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY" \
+  --broadcast --slow --skip-simulation
 ```
 
 部署脚本会自动完成：
@@ -285,11 +280,11 @@ forge script script/Deploy.s.sol:DeployScript \
 | LiquidityMining（流动性挖矿） | AdaptiveGovernance | startMining 等管理函数由治理控制 |
 | TeamVesting（团队锁仓） | AdaptiveGovernance | 锁仓参数由治理控制 |
 | Treasury（国库） | AdaptiveGovernance | 支出必须通过治理提案 |
-| GovernanceToken（治理代币） | 治理合约为 minter | 部署者通过治理合约按需铸造 |
+| GovernanceToken（治理代币） | 治理合约为 minter | 铸造权限已移交治理合约；过渡期部署者以治理 owner 身份经 `executeAsOwner` 代执行 |
 
 **管理函数的两条调用路径：**
 
-1. **治理提案路径**（去中心化）：持有 ALP 治理代币 → 发起提案 → 投票通过 → 48 小时时间锁 → 自动执行。当前治理代币零分发，此路径待激活。
+1. **治理提案路径**（去中心化）：持有 ALP 治理代币 → 发起提案 → 投票通过 → 48 小时时间锁 → 自动执行。当前 1000 万 ALP 已按部署计划分配到挖矿/激励/锁仓/国库四个合约，尚未向社区与用户流通，此路径待 ALP 实际分发后激活。
 2. **`executeAsOwner` 代理路径**（过渡阶段）：治理合约的 owner（部署者）可调用 `AdaptiveGovernance.executeAsOwner(address target, bytes data)`，代理执行任意目标合约的任意管理函数。此路径用于部署后初始化与紧急操作，生产环境应随治理代币分发逐步停用。
 
 > **注意**：部署者 EOA 仍为治理合约的 owner，保留 `executeAsOwner` 调用权；这是测试网/开发阶段的过渡形态，主网部署前应将治理合约 owner 移交多签或 DAO。
@@ -341,8 +336,6 @@ Adaptive-Self-Rebalance-Lp-Vault/
 │   │   ├── IncentivesTest.t.sol
 │   │   ├── GovernanceTest.t.sol
 │   │   └── UniswapMathTest.t.sol
-│   ├── integration/
-│   │   └── IntegrationTest.t.sol      # 集成测试
 │   ├── invariant/
 │   │   └── VaultInvariantTest.t.sol   # 不变量测试
 │   └── fork/
@@ -361,19 +354,21 @@ Adaptive-Self-Rebalance-Lp-Vault/
 
 ## 核心合约说明
 
+（行数 = 源文件总行数，含注释，2026-10-24 实测）
+
 | 合约 | 行数 | 说明 |
 |------|------|------|
-| `AdaptiveLPVault` | ~500 | ERC4626 标准金库，统一管理用户资金，协调再平衡流程，处理存款/取款/份额计算 |
-| `TWAPOracle` | ~150 | Uniswap V3 TWAP 价格读取器，支持时间加权均价计算，缓解瞬时价格操纵 |
-| `AdaptiveRebalanceStrategy` | ~200 | 波动率自适应策略引擎，根据市场波动率计算 V2/V3 资金配比和三层做市区间 |
-| `UniswapV2Adapter` | ~200 | Uniswap V2 流动性适配器，封装添加/移除流动性、领取手续费等操作 |
-| `UniswapV3Adapter` | ~350 | Uniswap V3 多区间流动性适配器，支持集中流动性做市、多层区间管理 |
-| `RebalanceIncentives` | ~200 | 再平衡执行者激励发放，正向收益时奖励 **USDC + ALP 双奖励**，防女巫攻击 |
-| `AdaptiveGovernance` | ~300 | 链上治理系统，治理代币投票、提案时间锁、参数管理 |
-| `GovernanceToken` | ~50 | ERC20Votes 治理代币，支持投票权委托和快照，总量上限 1000 万 |
-| `LiquidityMining` | ~150 | 流动性挖矿合约，500万 ALP 按比特币式减半释放，存款用户按份额比例获得奖励 |
-| `TeamVesting` | ~100 | 团队锁仓合约，200万 ALP，1年悬崖期 + 3年线性释放 |
-| `Treasury` | ~100 | 国库合约，200万 ALP，所有支出必须通过治理提案，支持多币种 |
+| `AdaptiveLPVault` | 1011 | ERC4626 标准金库，统一管理用户资金，协调再平衡流程，处理存款/取款/份额计算 |
+| `TWAPOracle` | 150 | Uniswap V3 TWAP 价格读取器，支持时间加权均价计算，缓解瞬时价格操纵 |
+| `AdaptiveRebalanceStrategy` | 212 | 波动率自适应策略引擎，根据市场波动率计算 V2/V3 资金配比和三层做市区间 |
+| `UniswapV2Adapter` | 281 | Uniswap V2 流动性适配器，封装添加/移除流动性、领取手续费等操作 |
+| `UniswapV3Adapter` | 577 | Uniswap V3 多区间流动性适配器，支持集中流动性做市、多层区间管理 |
+| `RebalanceIncentives` | 213 | 再平衡执行者激励发放，正向收益时奖励 **USDC + ALP 双奖励**，防女巫攻击 |
+| `AdaptiveGovernance` | 443 | 链上治理系统，治理代币投票、提案时间锁、参数管理（内含 GovernanceToken） |
+| `GovernanceToken` | 36 | ERC20Votes 治理代币，支持投票权委托和快照，总量上限 1000 万（契约体，含于 `AdaptiveGovernance.sol`） |
+| `LiquidityMining` | 166 | 流动性挖矿合约，500万 ALP 按比特币式减半释放，存款用户按份额比例获得奖励 |
+| `TeamVesting` | 89 | 团队锁仓合约，200万 ALP，1年悬崖期 + 3年线性释放 |
+| `Treasury` | 117 | 国库合约，200万 ALP，所有支出必须通过治理提案，支持多币种 |
 
 ---
 
@@ -568,7 +563,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 | 分类 | 操作路径 | 滑点保护 | 说明 |
 |------|---------|---------|------|
-| **用户操作** | 双币存款 `depositDual` | ⚠️ 前端未设下限 | 用户可传 `minShares`，当前前端传 0 |
+| **用户操作** | 双币存款 `deposit(wethAmount, usdcAmount, minShares)` | ⚠️ 前端未设下限 | 用户可传 `minShares`，当前前端传 0 |
 | | 双币赎回 `withdrawDual` | ✅ 已启用（1%） | 前端默认 1%，用户可传 `minWETH/minUSDC` |
 | **V2 适配器** | 添加/移除流动性 | ✅ 已启用（1%） | adapter 内部自己算滑点下限，外部传参被忽略 |
 | **V3 适配器** | rebalance 重新加流动性 | ⚠️ 未启用 | 代码中 `slippageMin` 传参已注释 |
@@ -650,7 +645,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 ## 完整流程示例
 
-> 注：示例基于 Sepolia 测试网当前价格（WETH ≈ 20,000 USDC）
+> 注：示例使用固定演示价格（WETH ≈ 20,000 USDC，基于 Sepolia 测试网当前价格），仅用于说明计算过程，实际以链上 TWAP 报价为准。
 
 #### 第一步：用户存款
 
@@ -658,7 +653,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 - 0.05 WETH × 20,000 = 1,000 USDC 价值
 - 总价值 = 1,000 + 1,000 = **2,000 USDC**
-- 金库按 1:1 计价，铸造 **2,000 份** ALP-VAULT 份额（另铸造 **1,000,000 份**虚拟份额锁定于 `0xdead`，防止首存/捐赠攻击；本例首存 2,000 USDC，虚拟份额占比 = 1,000,000 ÷ (1,000,000 + 2,000,000) ≈ **0.05%**，本示例忽略其稀释影响）
+- 金库按 1:1 计价，铸造 **2,000 份** ALP-VAULT 份额（另铸造 **1,000,000 份**虚拟份额锁定于 `0xdead`，防止首存/捐赠攻击；本例首存 2,000 USDC，总份额 = 1,002,000，首存者被虚拟份额稀释约 **0.2%**，本示例忽略其稀释影响）
 
 #### 第二步：金库分配资金
 
@@ -723,12 +718,11 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 ### 测试体系架构
 
-项目采用四层测试架构，覆盖从单个函数到完整系统交互的各个层级：
+项目采用三层测试架构（单元 / 不变量 / 分叉），覆盖从单个函数到完整系统交互的各个层级：
 
 | 测试层级 | 目录 | 测试文件数 | 覆盖目标 |
 |---------|------|-----------|---------|
 | **单元测试** | `test/unit/` | 17 | 单个合约的函数逻辑、边界条件、错误路径 |
-| **集成测试** | `test/integration/` | 1 | 多合约协同工作的完整业务流程 |
 | **不变量测试** | `test/invariant/` | 1 | 系统关键不变量在随机操作序列下始终成立 |
 | **分叉测试** | `test/fork/` | 1 | 基于主网真实状态的端到端验证 |
 
@@ -773,7 +767,7 @@ forge coverage --ir-minimum --report debug
 ### 测试设计原则
 
 1. **正向路径覆盖**：每个公开函数至少有一个正常执行路径的测试
-2. **反向路径覆盖**：核心 require/revert 错误路径均有对应测试；分支覆盖率 47.31%，受 viaIR 优化下 forge coverage 分支统计精度限制，实际测试覆盖范围高于报告数值
+2. **反向路径覆盖**：核心 require/revert 错误路径均有对应测试；分支覆盖率 51.30%（src/ 口径，见下方覆盖率表），受 viaIR 优化下 forge coverage 分支统计精度限制，实际测试覆盖范围高于报告数值
 3. **边界条件测试**：零值、最大值、临界值等边界场景均有覆盖
 4. **事件校验**：关键状态变更通过事件日志校验
 5. **不变量验证**：系统核心不变量（如总资产守恒、新存款不稀释现有份额比例）通过模糊测试验证
