@@ -220,7 +220,10 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
 
         if (pType == ProposalType.SPEND_FROM_TREASURY) {
             require(newValue <= type(uint160).max, "Governance: bad token addr");
+            require(newValue != 0, "Governance: zero token addr");
             require(newValue2 <= type(uint160).max, "Governance: bad to addr");
+            require(newValue2 != 0, "Governance: zero to addr");
+            require(newValue3 > 0, "Governance: zero amount");
         }
 
         uint256 id = ++proposalCount;
@@ -409,7 +412,10 @@ contract AdaptiveGovernance is IGovernance, ReentrancyGuard, Ownable {
         } else if (pType == ProposalType.SPEND_FROM_TREASURY) {
             require(treasury != address(0), "Governance: treasury not set");
             require(v1 <= type(uint160).max, "Governance: bad token addr");
+            require(v1 != 0, "Governance: zero token addr");
             require(v2 <= type(uint160).max, "Governance: bad to addr");
+            require(v2 != 0, "Governance: zero to addr");
+            require(v3 > 0, "Governance: zero amount");
             ITreasury(treasury).spend(address(uint160(v1)), address(uint160(v2)), v3, description);
         } else if (pType == ProposalType.SET_ALP_REWARD) {
             require(incentives != address(0), "Governance: incentives not set");

@@ -900,4 +900,49 @@ contract GovernanceTest is BaseTest {
             "test"
         );
     }
+
+    // 测试SPEND_FROM_TREASURY提案时，代币地址为0应在发起时revert
+    function test_Revert_Propose_SpendZeroTokenAddr() public {
+        govToken.mint(alice, 2000e18);
+
+        vm.prank(alice);
+        vm.expectRevert(bytes("Governance: zero token addr"));
+        governance.propose(
+            AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY,
+            0,
+            uint256(uint160(bob)),
+            100e18,
+            "test"
+        );
+    }
+
+    // 测试SPEND_FROM_TREASURY提案时，接收方地址为0应在发起时revert
+    function test_Revert_Propose_SpendZeroToAddr() public {
+        govToken.mint(alice, 2000e18);
+
+        vm.prank(alice);
+        vm.expectRevert(bytes("Governance: zero to addr"));
+        governance.propose(
+            AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY,
+            uint256(uint160(address(govToken))),
+            0,
+            100e18,
+            "test"
+        );
+    }
+
+    // 测试SPEND_FROM_TREASURY提案时，金额为0应在发起时revert
+    function test_Revert_Propose_SpendZeroAmount() public {
+        govToken.mint(alice, 2000e18);
+
+        vm.prank(alice);
+        vm.expectRevert(bytes("Governance: zero amount"));
+        governance.propose(
+            AdaptiveGovernance.ProposalType.SPEND_FROM_TREASURY,
+            uint256(uint160(address(govToken))),
+            uint256(uint160(bob)),
+            0,
+            "test"
+        );
+    }
 }

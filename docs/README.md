@@ -140,33 +140,33 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **AdaptiveLPVault**（金库） | `0x7e4e41ec418d758886fc05637ce46c97e5535245` | 待验证 |
-| **TWAPOracle**（预言机） | `0xe5e92f36753b2a73f4d28aed4527626c81244e16` | 待验证 |
-| **AdaptiveRebalanceStrategy**（策略） | `0x4d5323bff71d5aaecafdca344c1843fed17b741a` | 待验证 |
-| **RebalanceIncentives**（激励） | `0x029bb2794955744d0057cd0f3735215e37fd2407` | 待验证 |
+| **AdaptiveLPVault**（金库） | `0xd86C18c579b661ba795292264789FC4f1FC65F0d` | 已验证 |
+| **TWAPOracle**（预言机） | `0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23` | 已验证 |
+| **AdaptiveRebalanceStrategy**（策略） | `0xfB7A050cE4a3a47317f049694d3e452B119CEBb5` | 已验证 |
+| **RebalanceIncentives**（激励） | `0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8` | 已验证 |
 
 ### 治理合约
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **GovernanceToken**（治理代币 ALP） | `0xc3791fc14c5e2fb1d77b44d16f8276537dd1b6e8` | 待验证 |
-| **AdaptiveGovernance**（治理模块） | `0xb2270eb8f1fb89721efb8c87c086d2450e0b3c87` | 待验证 |
+| **GovernanceToken**（治理代币 ALP） | `0x42b82413B6FdF44662A84bE81494cD1B508D05a7` | 已验证 |
+| **AdaptiveGovernance**（治理模块） | `0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD` | 已验证 |
 
 ### 流动性适配器
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **UniswapV2Adapter**（V2 适配器） | `0x24e1bc61551cda72fcd253c434e29c97ec7d53db` | 待验证 |
-| **UniswapV3Adapter**（V3 0.05% 低费率） | `0xce2bda4143f4b6466acaa4d1b0684ab03396c5d7` | 待验证 |
-| **UniswapV3Adapter**（V3 0.30% 高费率） | `0xd0285d31097dc8d8bb616e8e251b415527953cde` | 待验证 |
+| **UniswapV2Adapter**（V2 适配器） | `0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D` | 已验证 |
+| **UniswapV3Adapter**（V3 0.05% 低费率） | `0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72` | 已验证 |
+| **UniswapV3Adapter**（V3 0.30% 高费率） | `0x42371d76FACe900d923862766Efe3Dfe7B2a6a81` | 已验证 |
 
 ### 代币分发合约
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **LiquidityMining**（流动性挖矿） | `0x469f9df10bbc97f9208500156c14a8b7b2edfc4f` | 待验证 |
-| **TeamVesting**（团队锁仓） | `0x8d335f585fd82c4c05169632531d32a82fa3de16` | 待验证 |
-| **Treasury**（国库） | `0x29e33b7a1cd11c660c2ff03beb7089177da8452f` | 待验证 |
+| **LiquidityMining**（流动性挖矿） | `0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9` | 已验证 |
+| **TeamVesting**（团队锁仓） | `0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A` | 已验证 |
+| **Treasury**（国库） | `0x6450A5456957750BD144272a6C078A049C3f8834` | 已验证 |
 
 ### 外部依赖（Sepolia）
 
@@ -220,6 +220,19 @@ forge coverage --ir-minimum
 ```
 
 ### 部署到 Sepolia
+> **注意（2026-10-06 起）**：Sepolia 已激活 **Glamsterdam 硬分叉（EIP-8037）**，合约创建按新规则计价，成本约为旧规则数倍。旧版 Foundry（< 1.8.6）本地模拟不含新规则，直接 `forge script --broadcast` 会因创建 gas 不足而 OOG 回滚。
+
+请使用 Foundry **1.8.6+**，并加 `--skip-simulation` 让广播时采用节点按链上规则估算：
+
+```bash
+forge script script/Deploy.s.sol:DeployScript \
+  --rpc-url "$SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY" \
+  --broadcast --slow --skip-simulation
+```
+
+（本项目当前部署即采用该方式，12 个合约全部部署成功，地址见上表。）
+
+
 
 1. 复制环境变量模板并填入配置：
 
