@@ -5,7 +5,7 @@
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636.svg)](https://soliditylang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Network: Sepolia](https://img.shields.io/badge/Network-Sepolia-4A4A4A.svg)](https://sepolia.etherscan.io/)
-[![Contracts: Verified](https://img.shields.io/badge/Contracts-12%20Deployed-blue.svg)](#sepolia-测试网部署)
+[![Contracts: Verified](https://img.shields.io/badge/Contracts-12%20Verified-green.svg)](#sepolia-测试网部署)
 [![User Guide](https://img.shields.io/badge/📖-用户使用指南-orange.svg)](./USER_GUIDE.md)
 
 > 📖 **新用户？先看 [用户使用指南](./USER_GUIDE.md)** — 教你怎么存款、赎回、触发再平衡赚奖励
@@ -134,39 +134,39 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 
 ## Sepolia 测试网部署
 
-所有合约均已部署至 Sepolia 测试网。核心合约（金库/预言机/策略/激励/治理/适配器）已完成 Etherscan 源码验证；新增代币分发模块合约（LiquidityMining / TeamVesting / Treasury）验证中，Etherscan 链接待补充。
+所有 12 个合约均已部署至 Sepolia 测试网，并全部完成 Etherscan 源码验证。点击下方表格中“已验证”链接可查看各合约的 Etherscan 验证详情。
 
 ### 核心合约
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **AdaptiveLPVault**（金库） | `0xd86C18c579b661ba795292264789FC4f1FC65F0d` | 已验证 |
-| **TWAPOracle**（预言机） | `0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23` | 已验证 |
-| **AdaptiveRebalanceStrategy**（策略） | `0xfB7A050cE4a3a47317f049694d3e452B119CEBb5` | 已验证 |
-| **RebalanceIncentives**（激励） | `0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8` | 已验证 |
+| **AdaptiveLPVault**（金库） | `0xd86C18c579b661ba795292264789FC4f1FC65F0d` | [已验证](https://sepolia.etherscan.io/address/0xd86C18c579b661ba795292264789FC4f1FC65F0d) |
+| **TWAPOracle**（预言机） | `0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23` | [已验证](https://sepolia.etherscan.io/address/0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23) |
+| **AdaptiveRebalanceStrategy**（策略） | `0xfB7A050cE4a3a47317f049694d3e452B119CEBb5` | [已验证](https://sepolia.etherscan.io/address/0xfB7A050cE4a3a47317f049694d3e452B119CEBb5) |
+| **RebalanceIncentives**（激励） | `0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8` | [已验证](https://sepolia.etherscan.io/address/0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8) |
 
 ### 治理合约
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **GovernanceToken**（治理代币 ALP） | `0x42b82413B6FdF44662A84bE81494cD1B508D05a7` | 已验证 |
-| **AdaptiveGovernance**（治理模块） | `0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD` | 已验证 |
+| **GovernanceToken**（治理代币 ALP） | `0x42b82413B6FdF44662A84bE81494cD1B508D05a7` | [已验证](https://sepolia.etherscan.io/address/0x42b82413B6FdF44662A84bE81494cD1B508D05a7) |
+| **AdaptiveGovernance**（治理模块） | `0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD` | [已验证](https://sepolia.etherscan.io/address/0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD) |
 
 ### 流动性适配器
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **UniswapV2Adapter**（V2 适配器） | `0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D` | 已验证 |
-| **UniswapV3Adapter**（V3 0.05% 低费率） | `0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72` | 已验证 |
-| **UniswapV3Adapter**（V3 0.30% 高费率） | `0x42371d76FACe900d923862766Efe3Dfe7B2a6a81` | 已验证 |
+| **UniswapV2Adapter**（V2 适配器） | `0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D` | [已验证](https://sepolia.etherscan.io/address/0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D) |
+| **UniswapV3Adapter**（V3 0.05% 低费率） | `0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72` | [已验证](https://sepolia.etherscan.io/address/0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72) |
+| **UniswapV3Adapter**（V3 0.30% 高费率） | `0x42371d76FACe900d923862766Efe3Dfe7B2a6a81` | [已验证](https://sepolia.etherscan.io/address/0x42371d76FACe900d923862766Efe3Dfe7B2a6a81) |
 
 ### 代币分发合约
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
-| **LiquidityMining**（流动性挖矿） | `0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9` | 已验证 |
-| **TeamVesting**（团队锁仓） | `0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A` | 已验证 |
-| **Treasury**（国库） | `0x6450A5456957750BD144272a6C078A049C3f8834` | 已验证 |
+| **LiquidityMining**（流动性挖矿） | `0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9` | [已验证](https://sepolia.etherscan.io/address/0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9) |
+| **TeamVesting**（团队锁仓） | `0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A` | [已验证](https://sepolia.etherscan.io/address/0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A) |
+| **Treasury**（国库） | `0x6450A5456957750BD144272a6C078A049C3f8834` | [已验证](https://sepolia.etherscan.io/address/0x6450A5456957750BD144272a6C078A049C3f8834) |
 
 ### 外部依赖（Sepolia）
 
@@ -269,7 +269,7 @@ forge script script/Deploy.s.sol:DeployScript \
 - 部署流动性挖矿、团队锁仓、国库合约
 - mint 1000万 ALP 并分配到各合约
 
-> **注意**：部署脚本不会自动验证合约源码。如需验证，可在命令后加 `--verify` 参数（可能因网络问题失败，失败时需手动在 Etherscan 验证）。
+> **注意**：本次部署的 12 个合约已全部完成 Etherscan 源码验证（见上方地址表）。若后续重新部署，可在命令后加 `--verify` 参数自动验证（网络不佳时可能失败，届时需手动验证）。
 
 ### 部署后权限模型
 
@@ -773,7 +773,7 @@ forge coverage --ir-minimum --report debug
 ### 测试设计原则
 
 1. **正向路径覆盖**：每个公开函数至少有一个正常执行路径的测试
-2. **反向路径覆盖**：核心 require/revert 错误路径均有对应测试；分支覆盖率 54.55%，受 viaIR 优化下 forge coverage 分支统计精度限制，实际测试覆盖范围高于报告数值
+2. **反向路径覆盖**：核心 require/revert 错误路径均有对应测试；分支覆盖率 47.31%，受 viaIR 优化下 forge coverage 分支统计精度限制，实际测试覆盖范围高于报告数值
 3. **边界条件测试**：零值、最大值、临界值等边界场景均有覆盖
 4. **事件校验**：关键状态变更通过事件日志校验
 5. **不变量验证**：系统核心不变量（如总资产守恒、新存款不稀释现有份额比例）通过模糊测试验证
@@ -803,23 +803,23 @@ forge test --match-contract ForkTest -vvv
 | 合约 | 行覆盖率 | 语句覆盖率 | 分支覆盖率 | 函数覆盖率 |
 |------|---------|-----------|-----------|-----------|
 | `AdaptiveLPVault（金库）` | 94.01% (314/334) | 94.24% (425/451) | 73.56% (64/87) | 92.86% (39/42) |
-| `UniswapV3Adapter（V3适配器）` | 98.21% (165/168) | 97.28% (179/184) | 63.04% (29/46) | 100.00% (23/23) |
-| `UniswapV2Adapter（V2适配器）` | 96.74% (89/92) | 95.45% (105/110) | 59.26% (16/27) | 90.91% (10/11) |
-| `AdaptiveGovernance（治理）` | 95.14% (137/144) | 95.93% (118/123) | 31.43% (22/70) | 92.59% (25/27) |
-| `UniswapMath（数学库）` | 80.92% (123/152) | 85.43% (217/254) | 73.21% (41/56) | 94.12% (16/17) |
-| `RebalanceIncentives（激励）` | 100.00% (75/75) | 100.00% (69/69) | 35.29% (12/34) | 100.00% (13/13) |
-| `AdaptiveRebalanceStrategy（策略）` | 88.00% (44/50) | 92.31% (48/52) | 80.00% (8/10) | 80.00% (8/10) |
-| `TWAPOracle（预言机）` | 95.83% (46/48) | 92.16% (47/51) | 52.63% (10/19) | 100.00% (8/8) |
-| `LiquidityMining（挖矿）` | 95.31% (61/64) | 96.05% (73/76) | 33.33% (5/15) | 100.00% (11/11) |
+| `UniswapV3Adapter（V3适配器）` | 98.21% (165/168) | 97.28% (179/184) | 50.00% (23/46) | 100.00% (23/23) |
+| `UniswapV2Adapter（V2适配器）` | 97.83% (90/92) | 95.45% (105/110) | 51.85% (14/27) | 90.91% (10/11) |
+| `AdaptiveGovernance（治理）` | 96.77% (150/155) | 97.01% (130/134) | 28.26% (26/92) | 96.30% (26/27) |
+| `UniswapMath（数学库）` | 80.92% (123/152) | 85.43% (217/254) | 76.47% (52/68) | 94.12% (16/17) |
+| `RebalanceIncentives（激励）` | 100.00% (75/75) | 100.00% (69/69) | 29.41% (10/34) | 100.00% (13/13) |
+| `AdaptiveRebalanceStrategy（策略）` | 88.00% (44/50) | 92.31% (48/52) | 83.33% (10/12) | 80.00% (8/10) |
+| `TWAPOracle（预言机）` | 95.83% (46/48) | 92.16% (47/51) | 42.11% (8/19) | 100.00% (8/8) |
+| `LiquidityMining（挖矿）` | 95.31% (61/64) | 96.05% (73/76) | 41.18% (7/17) | 100.00% (11/11) |
 | `TeamVesting（团队锁仓）` | 100.00% (28/28) | 100.00% (32/32) | 20.00% (3/15) | 100.00% (5/5) |
-| `Treasury（国库）` | 100.00% (14/14) | 100.00% (11/11) | 0.00% (0/6) | 100.00% (4/4) |
-| **加权平均** | **93.76% (1096/1169)** | **93.70% (1324/1413)** | **54.55% (210/385)** | **94.74% (162/171)** |
+| `Treasury（国库）` | 100.00% (15/15) | 100.00% (11/11) | 0.00% (0/6) | 100.00% (5/5) |
+| **加权平均** | **94.07% (1111/1181)** | **93.82% (1336/1424)** | **51.30% (217/423)** | **95.35% (164/172)** |
 
 **覆盖率说明：**
 
-- **行覆盖率 93.76%**：核心业务逻辑覆盖充分，未覆盖行主要为极端异常路径和仅 owner 可调用的管理函数
-- **函数覆盖率 94.74%**：绝大多数公开函数均有对应测试，未覆盖函数主要为视图辅助函数
-- **分支覆盖率 54.55%**：受 Foundry `--ir-minimum` 模式分支统计机制限制，部分 `require` 条件的 false 分支难以通过单元测试触发；实际业务逻辑分支覆盖远高于此数值
+- **行覆盖率 94.07%**：核心业务逻辑覆盖充分，未覆盖行主要为极端异常路径和仅 owner 可调用的管理函数
+- **函数覆盖率 95.35%**：绝大多数公开函数均有对应测试，未覆盖函数主要为视图辅助函数
+- **分支覆盖率 51.30%**：受 Foundry `--ir-minimum` 模式分支统计机制限制，部分 `require` 条件的 false 分支难以通过单元测试触发；实际业务逻辑分支覆盖远高于此数值
 - **新增分发模块行覆盖率 100%**：`TeamVesting`、`Treasury` 全部代码路径覆盖；`LiquidityMining` 行覆盖 95.31%，未覆盖行主要为挖矿启动前的边界路径
 - **RebalanceIncentives 行覆盖率 100.00%**：激励合约代码路径覆盖充分，包括奖励计算、冷却期、最低利润阈值、ALP 双奖励等核心逻辑
 
