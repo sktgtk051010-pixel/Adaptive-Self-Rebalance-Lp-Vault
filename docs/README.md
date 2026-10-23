@@ -37,6 +37,7 @@
 ---
 
 <a id="project-overview"></a>
+
 ## 项目概述
 
 Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理协议。用户存入 WETH + USDC 双代币，获得金库份额代币 **ALP-VAULT**（存款凭证，可赎回双币），金库自动将资金智能分配至 Uniswap V2 和多费率 Uniswap V3 流动性池。
@@ -48,6 +49,7 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 ---
 
 <a id="core-features"></a>
+
 ## 核心特性
 
 - **ERC4626 标准金库**：存款铸币、份额销毁，份额（ALP-VAULT）净值自动累积做市手续费收益；**取款通过自定义双币接口 `withdrawDual`**（标准取款接口已禁用，原因见 [SECURITY 风险 6](./SECURITY.md)）
@@ -67,6 +69,7 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 ---
 
 <a id="architecture"></a>
+
 ## 系统架构
 
 ```
@@ -141,11 +144,13 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 ---
 
 <a id="deployment"></a>
+
 ## Sepolia 测试网部署
 
 所有 **12 个合约**均已部署至 Sepolia 测试网，并全部完成 Etherscan 源码验证。点击下方各合约地址可直接跳转 Etherscan 查看验证详情。
 
 <a id="core-contracts"></a>
+
 ### 核心合约
 
 | 合约 | 地址 | Etherscan |
@@ -154,14 +159,18 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 | **TWAPOracle**（预言机） | `0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23` | [查看](https://sepolia.etherscan.io/address/0xcfAFD9c0D710463b3b7Eb36d2592B12DF68Dee23) |
 | **AdaptiveRebalanceStrategy**（策略） | `0xfB7A050cE4a3a47317f049694d3e452B119CEBb5` | [查看](https://sepolia.etherscan.io/address/0xfB7A050cE4a3a47317f049694d3e452B119CEBb5) |
 | **RebalanceIncentives**（激励） | `0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8` | [查看](https://sepolia.etherscan.io/address/0x7b92c378f13B5B53b53f689c6aAE55650F69a5B8) |
+
 <a id="governance-contracts"></a>
+
 ### 治理合约
 
 | 合约 | 地址 | Etherscan |
 |------|------|-----------|
 | **GovernanceToken**（治理代币 ALP） | `0x42b82413B6FdF44662A84bE81494cD1B508D05a7` | [查看](https://sepolia.etherscan.io/address/0x42b82413B6FdF44662A84bE81494cD1B508D05a7) |
 | **AdaptiveGovernance**（治理模块） | `0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD` | [查看](https://sepolia.etherscan.io/address/0xfe57600e2eCA52D553B1bbaFF43e1076749AAEdD) |
+
 <a id="adapters"></a>
+
 ### 流动性适配器
 
 | 合约 | 地址 | Etherscan |
@@ -169,7 +178,9 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 | **UniswapV2Adapter**（V2 适配器） | `0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D` | [查看](https://sepolia.etherscan.io/address/0x27B28c4a29FCFbD0D5088007f1917CE108ed8A5D) |
 | **UniswapV3Adapter**（V3 0.05% 低费率池） | `0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72` | [查看](https://sepolia.etherscan.io/address/0xb673f8Af97b831Bc154a5B40C4e05F77733c6D72) |
 | **UniswapV3Adapter**（V3 0.30% 高费率池） | `0x42371d76FACe900d923862766Efe3Dfe7B2a6a81` | [查看](https://sepolia.etherscan.io/address/0x42371d76FACe900d923862766Efe3Dfe7B2a6a81) |
+
 <a id="distribution-contracts"></a>
+
 ### 代币分发合约
 
 | 合约 | 地址 | Etherscan |
@@ -177,7 +188,9 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 | **LiquidityMining**（流动性挖矿） | `0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9` | [查看](https://sepolia.etherscan.io/address/0xBC8bc462DD80a5669aef296CaC0a82D77FFB13e9) |
 | **TeamVesting**（团队锁仓） | `0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A` | [查看](https://sepolia.etherscan.io/address/0x57ff13b8951Aa714Bc3D332D2053ebB43d65672A) |
 | **Treasury**（国库） | `0x6450A5456957750BD144272a6C078A049C3f8834` | [查看](https://sepolia.etherscan.io/address/0x6450A5456957750BD144272a6C078A049C3f8834) |
+
 <a id="external-dependencies"></a>
+
 ### 外部依赖（Sepolia）
 
 | 合约 | 地址 | Etherscan |
@@ -188,7 +201,9 @@ Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理�
 | **Uniswap V2 Router** | `0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3` | [查看](https://sepolia.etherscan.io/address/0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3) |
 | **V3 0.05% 池（WETH/USDC）** | `0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1` | [查看](https://sepolia.etherscan.io/address/0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1) |
 | **V3 0.30% 池（WETH/USDC）** | `0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50` | [查看](https://sepolia.etherscan.io/address/0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50) |
+
 <a id="quickstart"></a>
+
 ## 快速开始
 
 ### 环境要求
@@ -295,6 +310,7 @@ forge script script/Deploy.s.sol:DeployScript \
 ---
 
 <a id="project-structure"></a>
+
 ## 项目结构
 
 ```
@@ -357,6 +373,7 @@ Adaptive-Self-Rebalance-Lp-Vault/
 ---
 
 <a id="contract-details"></a>
+
 ## 核心合约说明
 
 （行数 = 源文件总行数，含注释，2026-10-24 实测）
@@ -378,9 +395,11 @@ Adaptive-Self-Rebalance-Lp-Vault/
 ---
 
 <a id="strategy-details"></a>
+
 ## 策略逻辑详解
 
 <a id="volatility-calculation"></a>
+
 ### 波动率计算口径
 系统的"波动率"定义为**现货价格相对 TWAP 参考价的偏离度**，由策略合约 `estimateVolatility()` 计算：
 
@@ -396,6 +415,7 @@ Adaptive-Self-Rebalance-Lp-Vault/
 > 注：本项目的"波动率"指**价格偏离度**（现货对 TWAP 参考价的偏差比例），并非金融统计中的收益率标准差口径；该指标用于波动率分层资金配比与再平衡冷却期选择。
 
 <a id="volatility-allocation"></a>
+
 ### 波动率自适应资金分配
 系统根据 TWAP 预言机计算的市场波动率，动态调整资金在不同流动性场所的分配：
 
@@ -436,6 +456,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 ---
 
 <a id="core-parameters"></a>
+
 ## 核心机制与参数总览
 
 > 用一页看清系统的关键机制：**每个机制怎么运转、参数是多少、边界在哪里**。
@@ -494,6 +515,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 > **领取流程**：再平衡触发时，金库先调用 V3 适配器的 `collectFees()` 领取手续费，再进行新的资金分配；V2 手续费无需主动领取，直接体现在 LP 代币价值中。
 
 <a id="incentives"></a>
+
 ### 5. 激励机制
 **怎么运转**：再平衡产生正向收益时，执行者获得 **USDC + ALP 双奖励**。USDC 为收益的 5%，从激励池余额中扣除；ALP 为固定数量（默认每次 10 个），从 RebalanceIncentives 合约的 ALP 储备中扣除。任一奖励池余额不足时，该奖励按当前奖励池余额支付，另一部分照常发放。
 
@@ -587,6 +609,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 
 <a id="token-distribution"></a>
+
 ## 代币分发机制
 
 治理代币 ALP 总量上限 **1000万枚**，部署时一次性 mint 并分配到四个合约：
@@ -641,6 +664,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 
 
 <a id="full-example"></a>
+
 ## 完整流程示例
 
 > 注：示例使用固定演示价格（WETH ≈ 20,000 USDC，基于 Sepolia 测试网当前价格），仅用于说明计算过程，实际以链上 TWAP 报价为准。
@@ -694,6 +718,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 ---
 
 <a id="security"></a>
+
 ## 安全分析
 
 本项目已识别 6 类主要安全风险，并实施了相应的缓解措施：
@@ -714,6 +739,7 @@ V3 资金进一步分配到三个价格区间，平衡收益与风险：
 ---
 
 <a id="test-coverage"></a>
+
 ## 测试覆盖率
 
 ### 测试体系架构
@@ -811,6 +837,7 @@ forge test --match-contract ForkTest -vvv
 ---
 
 <a id="license"></a>
+
 ## License
 
 MIT License - 详见 [LICENSE](../LICENSE) 文件。
