@@ -3,7 +3,7 @@
 
 [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-3674A5.svg)](https://getfoundry.sh/)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636.svg)](https://soliditylang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
 [![Network: Sepolia](https://img.shields.io/badge/Network-Sepolia-4A4A4A.svg)](https://sepolia.etherscan.io/)
 [![Contracts: Verified](https://img.shields.io/badge/Contracts-12%20Verified-green.svg)](#deployment)
 [![User Guide](https://img.shields.io/badge/📖-用户使用指南-orange.svg)](./USER_GUIDE.md)
@@ -254,9 +254,7 @@ forge script script/Deploy.s.sol:DeployScript \
 
 
 
-1. 在仓库根目录创建 `.env` 文件：
-
-2. 编辑 `.env` 文件，填入：
+1. 在仓库根目录创建 `.env` 文件，填入：
 
 ```
 PRIVATE_KEY=你的部署私钥
@@ -264,9 +262,9 @@ SEPOLIA_RPC_URL=你的Sepolia RPC URL
 ETHERSCAN_API_KEY=你的Etherscan API Key
 ```
 
-3. 确保部署钱包有足够的 Sepolia ETH
+2. 确保部署钱包有足够的 Sepolia ETH
 
-4. 执行部署：
+3. 执行部署：
 
 ```bash
 forge script script/Deploy.s.sol:DeployScript \
