@@ -5,7 +5,6 @@ broadcast/
 *.log
 
 # Dependencies
-lib/
 node_modules/
 
 # Environment
