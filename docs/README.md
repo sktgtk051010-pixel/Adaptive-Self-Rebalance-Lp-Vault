@@ -1,6 +1,7 @@
 
 > 去中心化自适应再平衡 Uniswap LP 金库 ，自动管理 V2/V3 多池流动性
 
+[![CI](https://github.com/sktgtk051010-pixel/Adaptive-Self-Rebalance-Lp-Vault/actions/workflows/test.yml/badge.svg)](https://github.com/sktgtk051010-pixel/Adaptive-Self-Rebalance-Lp-Vault/actions)
 [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-3674A5.svg)](https://getfoundry.sh/)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636.svg)](https://soliditylang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
