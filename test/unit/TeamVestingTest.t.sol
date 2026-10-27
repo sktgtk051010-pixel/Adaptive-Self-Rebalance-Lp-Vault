@@ -5,7 +5,6 @@ import {BaseTest} from "../base/BaseTest.t.sol";
 import {FullMath} from "../../src/libraries/UniswapMath.sol";
 
 contract TeamVestingTest is BaseTest {
-
     function setUp() public override {
         // 必须在 super.setUp() 之前设置 teamWallet，
         // 因为 BaseTest._deployDistribution() 用它创建 TeamVesting 合约
@@ -33,7 +32,7 @@ contract TeamVestingTest is BaseTest {
         assertEq(teamVesting.vestedAmount(), 0);
 
         teamVesting.startVesting();
-        skip(180 days); 
+        skip(180 days);
 
         assertEq(teamVesting.vestedAmount(), 0);
     }
@@ -41,7 +40,7 @@ contract TeamVestingTest is BaseTest {
     // 测试悬崖期刚结束时返回 0
     function test_VestedAmount_AtCliffEnd() public {
         teamVesting.startVesting();
-        skip(365 days); 
+        skip(365 days);
         assertEq(teamVesting.vestedAmount(), 0);
     }
 
@@ -147,5 +146,4 @@ contract TeamVestingTest is BaseTest {
     function test_Released_Initial() public view {
         assertEq(teamVesting.released(), 0);
     }
-
 }

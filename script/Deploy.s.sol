@@ -46,10 +46,10 @@ contract DeployScript is Script {
 
     // ============ 代币分配常量 ============
     uint256 constant TOTAL_SUPPLY = 10_000_000e18;
-    uint256 constant MINING_ALLOCATION = 5_000_000e18;    // 50% 流动性挖矿
+    uint256 constant MINING_ALLOCATION = 5_000_000e18; // 50% 流动性挖矿
     uint256 constant INCENTIVE_ALLOCATION = 1_000_000e18; // 10% 再平衡奖励
-    uint256 constant TEAM_ALLOCATION = 2_000_000e18;      // 20% 团队锁仓
-    uint256 constant TREASURY_ALLOCATION = 2_000_000e18;  // 20% 国库
+    uint256 constant TEAM_ALLOCATION = 2_000_000e18; // 20% 团队锁仓
+    uint256 constant TREASURY_ALLOCATION = 2_000_000e18; // 20% 国库
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -89,23 +89,21 @@ contract DeployScript is Script {
 
         // ============ 5. 金库 ============
         AdaptiveLPVault vault = new AdaptiveLPVault(
-            USDC_SEPOLIA, WETH_SEPOLIA, address(oracle), address(strategy),
-            "Adaptive LP Vault", "ALP-VAULT"
+            USDC_SEPOLIA, WETH_SEPOLIA, address(oracle), address(strategy), "Adaptive LP Vault", "ALP-VAULT"
         );
         console2.log("[5/13] AdaptiveLPVault:", address(vault));
 
         // ============ 6. 确定 token 顺序 ============
         // V3 池的 token0 是地址较小的那个，token1 是地址较大的那个
-        (address token0, address token1) = WETH_SEPOLIA < USDC_SEPOLIA
-            ? (WETH_SEPOLIA, USDC_SEPOLIA) : (USDC_SEPOLIA, WETH_SEPOLIA);
+        (address token0, address token1) =
+            WETH_SEPOLIA < USDC_SEPOLIA ? (WETH_SEPOLIA, USDC_SEPOLIA) : (USDC_SEPOLIA, WETH_SEPOLIA);
         console2.log("[6/13] token0:", token0);
         console2.log("[6/13] token1:", token1);
 
         // ============ 7. V2 适配器 ============
         address v2AdapterAddr = address(0);
         if (UNISWAP_V2_ROUTER != address(0)) {
-            v2AdapterAddr = address(new UniswapV2Adapter(
-                UNISWAP_V2_ROUTER, address(vault), USDC_SEPOLIA, WETH_SEPOLIA));
+            v2AdapterAddr = address(new UniswapV2Adapter(UNISWAP_V2_ROUTER, address(vault), USDC_SEPOLIA, WETH_SEPOLIA));
             console2.log("[7/13] UniswapV2Adapter:", v2AdapterAddr);
         } else {
             console2.log("[7/13] V2 Adapter: skipped (no V2 router on Sepolia)");
@@ -116,16 +114,22 @@ contract DeployScript is Script {
         address v3HighFeeAdapter = address(0);
 
         if (v3Pool500 != address(0)) {
-            v3LowFeeAdapter = address(new UniswapV3Adapter(
-                v3Pool500, address(vault), token0, token1, ILPAdapter.AdapterType.UNISWAP_V3_LOW_FEE));
+            v3LowFeeAdapter = address(
+                new UniswapV3Adapter(
+                    v3Pool500, address(vault), token0, token1, ILPAdapter.AdapterType.UNISWAP_V3_LOW_FEE
+                )
+            );
             console2.log("[8/13] V3LowFeeAdapter:", v3LowFeeAdapter);
         } else {
             console2.log("[8/13] V3LowFeeAdapter: skipped (no 0.05% pool)");
         }
 
         if (v3Pool3000 != address(0)) {
-            v3HighFeeAdapter = address(new UniswapV3Adapter(
-                v3Pool3000, address(vault), token0, token1, ILPAdapter.AdapterType.UNISWAP_V3_HIGH_FEE));
+            v3HighFeeAdapter = address(
+                new UniswapV3Adapter(
+                    v3Pool3000, address(vault), token0, token1, ILPAdapter.AdapterType.UNISWAP_V3_HIGH_FEE
+                )
+            );
             console2.log("[8/13] V3HighFeeAdapter:", v3HighFeeAdapter);
         } else {
             console2.log("[8/13] V3HighFeeAdapter: skipped (no 0.30% pool)");
@@ -136,8 +140,7 @@ contract DeployScript is Script {
         console2.log("[9/13] Adapters set to vault");
 
         // ============ 10. 激励合约 + 关联设置 ============
-        RebalanceIncentives incentives = new RebalanceIncentives(
-            address(vault), USDC_SEPOLIA, address(govToken));
+        RebalanceIncentives incentives = new RebalanceIncentives(address(vault), USDC_SEPOLIA, address(govToken));
         console2.log("[10/13] RebalanceIncentives:", address(incentives));
 
         // 金库关联设置

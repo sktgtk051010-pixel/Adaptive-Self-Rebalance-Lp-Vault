@@ -20,7 +20,7 @@ contract UniswapV3AdapterTest is BaseTest {
     }
 
     function _getValidTicks() internal view returns (int24 lower, int24 upper) {
-        (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
+        (, int24 currentTick,,,,,) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
         lower = aligned - 600;
         upper = aligned + 600;
@@ -37,7 +37,7 @@ contract UniswapV3AdapterTest is BaseTest {
 
         bytes memory data = abi.encode(lower, upper);
         vm.prank(address(vault));
-        (uint256 a0, uint256 a1, ) = v3HighAdapter.addLiquidity(amount0, amount1, 0, 0, data);
+        (uint256 a0, uint256 a1,) = v3HighAdapter.addLiquidity(amount0, amount1, 0, 0, data);
 
         assertGt(a0, 0);
         assertGt(a1, 0);
@@ -56,14 +56,14 @@ contract UniswapV3AdapterTest is BaseTest {
 
         bytes memory data = abi.encode(lower, upper);
         vm.prank(address(vault));
-        (, , bytes32 id) = v3HighAdapter.addLiquidity(amount0, amount1, 0, 0, data);
+        (,, bytes32 id) = v3HighAdapter.addLiquidity(amount0, amount1, 0, 0, data);
 
         assertEq(id, expectedId);
     }
 
     // 测试在两个不同价格范围分别添加流动性，activePositions返回2个
     function test_AddLiquidity_MultipleRanges() public {
-        (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
+        (, int24 currentTick,,,,,) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
         int24 tick1L = aligned - 1200;
         int24 tick1U = aligned - 600;
@@ -74,8 +74,8 @@ contract UniswapV3AdapterTest is BaseTest {
         usdc.transfer(address(vault), 20_000e6);
 
         vm.startPrank(address(vault));
-        (uint256 a0A, uint256 a1A, ) = v3HighAdapter.addLiquidity(2 ether, 4000e6, 0, 0, abi.encode(tick1L, tick1U));
-        (uint256 a0B, uint256 a1B, ) = v3HighAdapter.addLiquidity(2 ether, 4000e6, 0, 0, abi.encode(tick2L, tick2U));
+        (uint256 a0A, uint256 a1A,) = v3HighAdapter.addLiquidity(2 ether, 4000e6, 0, 0, abi.encode(tick1L, tick1U));
+        (uint256 a0B, uint256 a1B,) = v3HighAdapter.addLiquidity(2 ether, 4000e6, 0, 0, abi.encode(tick2L, tick2U));
         vm.stopPrank();
 
         bytes32[] memory positions = v3HighAdapter.getActivePositions();
@@ -94,9 +94,9 @@ contract UniswapV3AdapterTest is BaseTest {
 
         bytes memory data = abi.encode(lower, upper);
         vm.startPrank(address(vault));
-        (uint256 a0A, uint256 a1A, ) = v3HighAdapter.addLiquidity(2 ether, 4000e6, 0, 0, data);
+        (uint256 a0A, uint256 a1A,) = v3HighAdapter.addLiquidity(2 ether, 4000e6, 0, 0, data);
         uint256 lpAfterFirst = v3HighAdapter.getLpBalance();
-        (uint256 a0B, uint256 a1B, ) = v3HighAdapter.addLiquidity(2 ether, 4000e6, 0, 0, data);
+        (uint256 a0B, uint256 a1B,) = v3HighAdapter.addLiquidity(2 ether, 4000e6, 0, 0, data);
         uint256 lpAfterSecond = v3HighAdapter.getLpBalance();
         vm.stopPrank();
 
@@ -121,7 +121,7 @@ contract UniswapV3AdapterTest is BaseTest {
 
     // 测试tick未对齐到tickSpacing时revert
     function test_Revert_AddLiquidity_UnalignedTicks() public {
-        (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
+        (, int24 currentTick,,,,,) = v3PoolHighFee.slot0();
         int24 lower = currentTick - 599;
         int24 upper = currentTick + 601;
 
@@ -225,7 +225,7 @@ contract UniswapV3AdapterTest is BaseTest {
 
     // 测试getTotalAssets返回所有position的资产之和
     function test_GetTotalAssets_SumOfPositions() public {
-        (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
+        (, int24 currentTick,,,,,) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
         int24 t1L = aligned - 1200;
         int24 t1U = aligned - 600;
@@ -270,8 +270,7 @@ contract UniswapV3AdapterTest is BaseTest {
         vm.prank(address(vault));
         v3HighAdapter.addLiquidity(5 ether, 10_000e6, 0, 0, data);
 
-        (int24 tL, int24 tU, uint128 liquidity, , , , , bool active) =
-            v3HighAdapter.getPositionInfo(id);
+        (int24 tL, int24 tU, uint128 liquidity,,,,, bool active) = v3HighAdapter.getPositionInfo(id);
 
         assertEq(tL, lower);
         assertEq(tU, upper);
@@ -302,7 +301,7 @@ contract UniswapV3AdapterTest is BaseTest {
 
     // 测试withdrawAll撤出所有position的全部流动性，所有position停用
     function test_WithdrawAll_AllPositionsBurned() public {
-        (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
+        (, int24 currentTick,,,,,) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
         int24 t1L = aligned - 1200;
         int24 t1U = aligned - 600;
@@ -336,14 +335,8 @@ contract UniswapV3AdapterTest is BaseTest {
 
     // 测试高费率和低费率适配器返回正确的adapterType枚举值
     function test_AdapterType() public view {
-        assertEq(
-            uint256(v3HighAdapter.adapterType()),
-            uint256(ILPAdapter.AdapterType.UNISWAP_V3_HIGH_FEE)
-        );
-        assertEq(
-            uint256(v3LowAdapter.adapterType()),
-            uint256(ILPAdapter.AdapterType.UNISWAP_V3_LOW_FEE)
-        );
+        assertEq(uint256(v3HighAdapter.adapterType()), uint256(ILPAdapter.AdapterType.UNISWAP_V3_HIGH_FEE));
+        assertEq(uint256(v3LowAdapter.adapterType()), uint256(ILPAdapter.AdapterType.UNISWAP_V3_LOW_FEE));
     }
 
     // 测试添加流动性金额过小导致liquidity为0时，仍返回有效的positionId
@@ -371,7 +364,7 @@ contract UniswapV3AdapterTest is BaseTest {
         weth.transfer(address(vault), 1 ether);
         usdc.transfer(address(vault), 2000e6);
         vm.prank(address(vault));
-        (, , bytes32 id) = v3HighAdapter.addLiquidity(1 ether, 2000e6, 0, 0, data);
+        (,, bytes32 id) = v3HighAdapter.addLiquidity(1 ether, 2000e6, 0, 0, data);
 
         vm.prank(address(vault));
         (uint256 fee0, uint256 fee1) = v3HighAdapter.collectFees(id);
@@ -383,16 +376,7 @@ contract UniswapV3AdapterTest is BaseTest {
     function test_GetPositionInfo_NotExists() public view {
         bytes32 fakeId = keccak256("nonexistent_position_id");
 
-        (
-             ,
-             ,
-             ,
-             ,
-             ,
-             ,
-             ,
-            bool active
-        ) = v3HighAdapter.getPositionInfo(fakeId);
+        (,,,,,,, bool active) = v3HighAdapter.getPositionInfo(fakeId);
 
         assertFalse(active, "active should be false");
     }
@@ -406,7 +390,7 @@ contract UniswapV3AdapterTest is BaseTest {
         weth.transfer(address(vault), 1 ether);
 
         vm.prank(address(vault));
-        (uint256 amount0, uint256 amount1, ) = v3HighAdapter.addLiquidity(1 ether, 0, 0, 0, data);
+        (uint256 amount0, uint256 amount1,) = v3HighAdapter.addLiquidity(1 ether, 0, 0, 0, data);
 
         assertGt(amount0, 0);
         assertEq(amount1, 0);
@@ -414,7 +398,7 @@ contract UniswapV3AdapterTest is BaseTest {
 
     // 测试仅存入USDC（WETH为0）时添加流动性成功，只投入USDC
     function test_AddLiquidity_OnlyUSDC() public {
-        (, int24 currentTick, , , , , ) = v3PoolHighFee.slot0();
+        (, int24 currentTick,,,,,) = v3PoolHighFee.slot0();
         int24 aligned = _alignTick(currentTick, 60);
         int24 tickLower = aligned - 1200;
         int24 tickUpper = aligned - 600;
@@ -424,7 +408,7 @@ contract UniswapV3AdapterTest is BaseTest {
         usdc.transfer(address(vault), 2000e6);
 
         vm.prank(address(vault));
-        (uint256 amount0, uint256 amount1, ) = v3HighAdapter.addLiquidity(0, 2000e6, 0, 0, data);
+        (uint256 amount0, uint256 amount1,) = v3HighAdapter.addLiquidity(0, 2000e6, 0, 0, data);
 
         assertEq(amount0, 0);
         assertGt(amount1, 0);
@@ -460,7 +444,7 @@ contract UniswapV3AdapterTest is BaseTest {
         usdc.transfer(address(vault), 20000e6);
 
         vm.prank(address(vault));
-        (, , bytes32 id) = v3HighAdapter.addLiquidity(10 ether, 20000e6, 0, 0, data);
+        (,, bytes32 id) = v3HighAdapter.addLiquidity(10 ether, 20000e6, 0, 0, data);
 
         vm.prank(address(vault));
         vm.expectRevert(bytes("V3Adapter: invalid liquidity"));
@@ -475,9 +459,9 @@ contract UniswapV3AdapterTest is BaseTest {
         weth.transfer(address(vault), 10 ether);
         usdc.transfer(address(vault), 20000e6);
         vm.prank(address(vault));
-        (, , bytes32 id) = v3HighAdapter.addLiquidity(10 ether, 20000e6, 0, 0, data);
+        (,, bytes32 id) = v3HighAdapter.addLiquidity(10 ether, 20000e6, 0, 0, data);
 
-        (, , uint128 liquidity,,,,,) = v3HighAdapter.getPositionInfo(id);
+        (,, uint128 liquidity,,,,,) = v3HighAdapter.getPositionInfo(id);
 
         vm.prank(address(vault));
         vm.expectRevert(bytes("V3Adapter: slippage"));

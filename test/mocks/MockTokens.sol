@@ -20,7 +20,7 @@ contract MockWETH is ERC20 {
 
     function withdraw(uint256 wad) external {
         _burn(msg.sender, wad);
-        (bool success, ) = payable(msg.sender).call{value: wad}("");
+        (bool success,) = payable(msg.sender).call{value: wad}("");
         require(success, "ETH transfer failed");
         emit Withdrawal(msg.sender, wad);
     }
@@ -46,9 +46,7 @@ contract MockUSDC is ERC20 {
 contract MockERC20 is ERC20 {
     uint8 private _decimals;
 
-    constructor(string memory name_, string memory symbol_, uint8 decimals_)
-        ERC20(name_, symbol_)
-    {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) {
         _decimals = decimals_;
     }
 

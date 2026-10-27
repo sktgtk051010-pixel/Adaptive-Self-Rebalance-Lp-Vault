@@ -183,8 +183,8 @@ contract VaultDepositTest is BaseTest {
         assertGt(shares, 0);
         assertEq(vault.balanceOf(alice), shares);
 
-        (uint256 idleW, , , ) = _getWethDistribution();
-        (uint256 idleU, , , ) = _getUsdcDistribution();
+        (uint256 idleW,,,) = _getWethDistribution();
+        (uint256 idleU,,,) = _getUsdcDistribution();
         assertEq(idleW, smallWeth);
         assertEq(idleU, smallUsdc);
     }
@@ -194,13 +194,13 @@ contract VaultDepositTest is BaseTest {
         _deposit(alice, 10 ether, 20_000e6);
         _rebalance();
 
-        ( , uint256 v2WBefore, uint256 v3LowWBefore, uint256 v3HighWBefore) = _getWethDistribution();
-        ( , uint256 v2UBefore, uint256 v3LowUBefore, uint256 v3HighUBefore) = _getUsdcDistribution();
+        (, uint256 v2WBefore, uint256 v3LowWBefore, uint256 v3HighWBefore) = _getWethDistribution();
+        (, uint256 v2UBefore, uint256 v3LowUBefore, uint256 v3HighUBefore) = _getUsdcDistribution();
 
         _deposit(bob, 5 ether, 10_000e6);
 
-        ( , uint256 v2WAfter, uint256 v3LowWAfter, uint256 v3HighWAfter) = _getWethDistribution();
-        ( , uint256 v2UAfter, uint256 v3LowUAfter, uint256 v3HighUAfter) = _getUsdcDistribution();
+        (, uint256 v2WAfter, uint256 v3LowWAfter, uint256 v3HighWAfter) = _getWethDistribution();
+        (, uint256 v2UAfter, uint256 v3LowUAfter, uint256 v3HighUAfter) = _getUsdcDistribution();
 
         assertGt(v2WAfter + v3LowWAfter + v3HighWAfter, v2WBefore + v3LowWBefore + v3HighWBefore);
         assertGt(v2UAfter + v3LowUAfter + v3HighUAfter, v2UBefore + v3LowUBefore + v3HighUBefore);

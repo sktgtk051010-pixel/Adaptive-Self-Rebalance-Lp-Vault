@@ -134,38 +134,27 @@ contract VaultAdminTest is BaseTest {
         vm.stopPrank();
     }
 
-
     // 测试构造函数USDC地址为0时revert
     function test_Revert_Constructor_ZeroUSDC() public {
         vm.expectRevert(bytes("Vault: zero USDC"));
-        new AdaptiveLPVault(
-            address(0), address(weth), address(oracle), address(strategy), "Test", "TEST"
-        );
+        new AdaptiveLPVault(address(0), address(weth), address(oracle), address(strategy), "Test", "TEST");
     }
 
     // 测试构造函数WETH地址为0时revert
     function test_Revert_Constructor_ZeroWETH() public {
         vm.expectRevert(bytes("Vault: zero WETH"));
-        new AdaptiveLPVault(
-            address(usdc), address(0), address(oracle), address(strategy), "Test", "TEST"
-        );
+        new AdaptiveLPVault(address(usdc), address(0), address(oracle), address(strategy), "Test", "TEST");
     }
 
     // 测试构造函数oracle地址为0时revert
     function test_Revert_Constructor_ZeroOracle() public {
         vm.expectRevert(bytes("Vault: zero oracle"));
-        new AdaptiveLPVault(
-            address(usdc), address(weth), address(0), address(strategy), "Test", "TEST"
-        );
+        new AdaptiveLPVault(address(usdc), address(weth), address(0), address(strategy), "Test", "TEST");
     }
 
     // 测试构造函数strategy地址为0时revert
     function test_Revert_Constructor_ZeroStrategy() public {
         vm.expectRevert(bytes("Vault: zero strategy"));
-        new AdaptiveLPVault(
-            address(usdc), address(weth), address(oracle), address(0), "Test", "TEST"
-        );
+        new AdaptiveLPVault(address(usdc), address(weth), address(oracle), address(0), "Test", "TEST");
     }
-
-
 }

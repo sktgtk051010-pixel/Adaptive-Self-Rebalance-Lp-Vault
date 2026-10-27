@@ -15,7 +15,7 @@ contract IncentivesTest is BaseTest {
         uint256 afterValue = 1200e6;
 
         vm.prank(address(vault));
-        (uint256 reward, ) = incentives.onRebalanceExecuted(alice, before, afterValue);
+        (uint256 reward,) = incentives.onRebalanceExecuted(alice, before, afterValue);
 
         assertEq(reward, 10e6);
         assertEq(incentives.pendingReward(alice), 10e6);
@@ -29,7 +29,7 @@ contract IncentivesTest is BaseTest {
         uint256 afterValue = 10_000_000e6;
 
         vm.prank(address(vault));
-        (uint256 reward, ) = incentives.onRebalanceExecuted(alice, before, afterValue);
+        (uint256 reward,) = incentives.onRebalanceExecuted(alice, before, afterValue);
 
         // USDC 奖励被截断为合约余额
         assertLe(reward, balance);
@@ -62,7 +62,7 @@ contract IncentivesTest is BaseTest {
     // 测试冷却期 revert：第一次再平衡后300秒内再次调用应 revert
     function test_Revert_OnRebalanceExecuted_Cooldown() public {
         vm.prank(address(vault));
-        (uint256 reward, ) = incentives.onRebalanceExecuted(alice, 1000e6, 1100e6);
+        (uint256 reward,) = incentives.onRebalanceExecuted(alice, 1000e6, 1100e6);
         assertEq(reward, 5e6);
 
         vm.prank(address(vault));
@@ -73,12 +73,12 @@ contract IncentivesTest is BaseTest {
     // 测试冷却期过后可正常执行：跳过301秒后第二次再平衡成功
     function test_OnRebalanceExecuted_AfterCooldown() public {
         vm.prank(address(vault));
-        (uint256 rewardA, ) = incentives.onRebalanceExecuted(alice, 1000e6, 1100e6);
+        (uint256 rewardA,) = incentives.onRebalanceExecuted(alice, 1000e6, 1100e6);
         assertEq(rewardA, 5e6);
 
         skip(301);
         vm.prank(address(vault));
-        (uint256 rewardB, ) = incentives.onRebalanceExecuted(bob, 1000e6, 1100e6);
+        (uint256 rewardB,) = incentives.onRebalanceExecuted(bob, 1000e6, 1100e6);
         assertGt(rewardB, 0);
     }
 
@@ -226,8 +226,8 @@ contract IncentivesTest is BaseTest {
     function test_OnRebalanceExecuted_ZeroRewardWhenNoBalance() public {
         incentives.setIncentiveBps(0);
         vm.prank(address(vault));
-        (uint256 reward, ) = incentives.onRebalanceExecuted(alice, 1000e6, 1100e6);
-        
+        (uint256 reward,) = incentives.onRebalanceExecuted(alice, 1000e6, 1100e6);
+
         assertEq(reward, 0);
         assertEq(incentives.pendingReward(alice), 0);
         assertEq(incentives.totalUsdcRewardsPaid(), 0);
@@ -266,7 +266,6 @@ contract IncentivesTest is BaseTest {
 
     // ============ ALP 双奖励测试 ============
 
-
     // 测试 ALP 奖励被余额截断：ALP 余额不足时按实际余额发放，USDC 奖励不受影响
     function test_OnRebalanceExecuted_ALPRewardCappedByBalance() public {
         uint256 alpBalance = govToken.balanceOf(address(incentives));
@@ -288,7 +287,7 @@ contract IncentivesTest is BaseTest {
         govToken.transfer(alice, alpBalance);
 
         vm.prank(address(vault));
-        (uint256 usdcReward, ) = incentives.onRebalanceExecuted(alice, 1000e6, 1200e6);
+        (uint256 usdcReward,) = incentives.onRebalanceExecuted(alice, 1000e6, 1200e6);
 
         assertGt(usdcReward, 0);
         assertEq(incentives.pendingReward(alice), 10e6);

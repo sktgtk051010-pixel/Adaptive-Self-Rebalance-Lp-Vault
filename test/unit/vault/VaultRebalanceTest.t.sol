@@ -202,10 +202,7 @@ contract VaultRebalanceTest is BaseTest {
         uint256 feesAfterNoFees = vault.cumulativeFeesUSDC();
 
         assertApproxEqRel(
-            assetsAfterNoFees,
-            assetsBeforeNoFees,
-            0.01e18,
-            "without fees, total assets should not change"
+            assetsAfterNoFees, assetsBeforeNoFees, 0.01e18, "without fees, total assets should not change"
         );
 
         assertEq(feesAfterNoFees, feesBeforeNoFees);

@@ -33,10 +33,7 @@ contract MockUniswapV2Pair is ERC20 {
         if (_totalSupply == 0) {
             liquidity = _sqrt(amount0 * amount1);
         } else {
-            liquidity = Math.min(
-                (amount0 * _totalSupply) / reserve0,
-                (amount1 * _totalSupply) / reserve1
-            );
+            liquidity = Math.min((amount0 * _totalSupply) / reserve0, (amount1 * _totalSupply) / reserve1);
         }
         require(liquidity > 0, "V2: INSUFFICIENT");
         _mint(to, liquidity);
@@ -72,8 +69,13 @@ contract MockUniswapV2Pair is ERC20 {
         if (y > 3) {
             z = y;
             uint256 x = y / 2 + 1;
-            while (x < z) { z = x; x = (y / x + x) / 2; }
-        } else if (y != 0) { z = 1; }
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
     }
 }
 
@@ -127,7 +129,7 @@ contract MockUniswapV2Router {
             pair = MockUniswapV2Factory(factory).createPair(tokenA, tokenB);
         }
 
-        (uint112 reserveA, uint112 reserveB, ) = MockUniswapV2Pair(pair).getReserves();
+        (uint112 reserveA, uint112 reserveB,) = MockUniswapV2Pair(pair).getReserves();
 
         if (reserveA == 0 && reserveB == 0) {
             amountA = amountADesired;
@@ -178,7 +180,7 @@ contract MockUniswapV2Router {
         address pair = MockUniswapV2Factory(factory).getPair(path[0], path[1]);
         require(pair != address(0), "V2: PAIR_NOT_FOUND");
 
-        (uint112 reserve0, uint112 reserve1, ) = MockUniswapV2Pair(pair).getReserves();
+        (uint112 reserve0, uint112 reserve1,) = MockUniswapV2Pair(pair).getReserves();
 
         uint256 reserveIn;
         uint256 reserveOut;
@@ -200,15 +202,9 @@ contract MockUniswapV2Router {
         IERC20(path[1]).safeTransfer(to, amountOut);
 
         if (inputIsToken0) {
-            MockUniswapV2Pair(pair).setReserves(
-                uint112(reserve0 + amountIn),
-                uint112(reserve1 - amountOut)
-            );
+            MockUniswapV2Pair(pair).setReserves(uint112(reserve0 + amountIn), uint112(reserve1 - amountOut));
         } else {
-            MockUniswapV2Pair(pair).setReserves(
-                uint112(reserve0 - amountOut),
-                uint112(reserve1 + amountIn)
-            );
+            MockUniswapV2Pair(pair).setReserves(uint112(reserve0 - amountOut), uint112(reserve1 + amountIn));
         }
 
         amounts = new uint256[](2);
@@ -225,7 +221,7 @@ contract MockUniswapV2Router {
         address pair = MockUniswapV2Factory(factory).getPair(path[0], path[1]);
         require(pair != address(0), "V2: PAIR_NOT_FOUND");
 
-        (uint112 reserve0, uint112 reserve1, ) = MockUniswapV2Pair(pair).getReserves();
+        (uint112 reserve0, uint112 reserve1,) = MockUniswapV2Pair(pair).getReserves();
         uint256 reserveIn;
         uint256 reserveOut;
         if (path[0] == MockUniswapV2Pair(pair).token0()) {

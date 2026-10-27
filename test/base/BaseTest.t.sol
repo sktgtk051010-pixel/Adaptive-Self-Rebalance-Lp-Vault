@@ -94,12 +94,7 @@ contract BaseTest is Test {
         oracle = new TWAPOracle(address(v3PoolHighFee), address(weth), address(usdc), address(governance));
 
         vault = new AdaptiveLPVault(
-            address(usdc),
-            address(weth),
-            address(oracle),
-            address(strategy),
-            "Adaptive LP Vault",
-            "ALP"
+            address(usdc), address(weth), address(oracle), address(strategy), "Adaptive LP Vault", "ALP"
         );
     }
 
@@ -132,20 +127,20 @@ contract BaseTest is Test {
         governance.setVault(address(vault));
     }
 
-
     function _deployDistribution() internal {
         mining = new LiquidityMining(address(govToken), address(vault));
         teamVesting = new TeamVesting(address(govToken), teamWallet);
         treasury = new Treasury();
 
         // 给新合约注入资金
-        govToken.mint(address(mining), 5_000_000e18);      // 500万 ALP 挖矿奖励
-        govToken.mint(address(teamVesting), 2_000_000e18);  // 200万 ALP 团队锁仓
-        govToken.mint(address(treasury), 2_000_000e18);     // 200万 ALP 国库
-        govToken.mint(address(incentives), 1_000_000e18);   // 100万 ALP 再平衡奖励
+        govToken.mint(address(mining), 5_000_000e18); // 500万 ALP 挖矿奖励
+        govToken.mint(address(teamVesting), 2_000_000e18); // 200万 ALP 团队锁仓
+        govToken.mint(address(treasury), 2_000_000e18); // 200万 ALP 国库
+        govToken.mint(address(incentives), 1_000_000e18); // 100万 ALP 再平衡奖励
 
         // 注意：不在这里启动挖矿和锁仓，让测试自己控制开始时间
     }
+
     function _setupUsersAndSkip() internal {
         _mintTokens(alice, INITIAL_WETH, INITIAL_USDC);
         _mintTokens(bob, INITIAL_WETH, INITIAL_USDC);

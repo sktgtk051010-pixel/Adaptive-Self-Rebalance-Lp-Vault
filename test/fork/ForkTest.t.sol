@@ -18,12 +18,10 @@ import {TeamVesting} from "../../src/distribution/TeamVesting.sol";
 import {Treasury} from "../../src/distribution/Treasury.sol";
 
 interface IUniswapV2RouterSimple {
-    function swapExactETHForTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
+    function swapExactETHForTokens(uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts);
 }
 
 interface IUniswapV3SwapRouterSimple {
@@ -76,7 +74,11 @@ contract ForkTest is Test {
     IERC20 public usdc = IERC20(MAINNET_USDC);
 
     function setUp() public {
-        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"));
+        try vm.envString("MAINNET_RPC_URL") returns (string memory rpcUrl) {
+            vm.createSelectFork(rpcUrl);
+        } catch {
+            vm.skip(true);
+        }
 
         govToken = new GovernanceToken();
         governance = new AdaptiveGovernance(address(govToken));
@@ -86,8 +88,7 @@ contract ForkTest is Test {
         oracle = new TWAPOracle(MAINNET_V3_POOL_3000, MAINNET_WETH, MAINNET_USDC, address(governance));
 
         vault = new AdaptiveLPVault(
-            MAINNET_USDC, MAINNET_WETH, address(oracle), address(strategy),
-            "Adaptive LP Vault", "ALP-VAULT"
+            MAINNET_USDC, MAINNET_WETH, address(oracle), address(strategy), "Adaptive LP Vault", "ALP-VAULT"
         );
 
         v2Adapter = new UniswapV2Adapter(MAINNET_V2_ROUTER, address(vault), MAINNET_USDC, MAINNET_WETH);
@@ -142,7 +143,7 @@ contract ForkTest is Test {
 
         vm.startPrank(user);
 
-        (bool success, ) = MAINNET_WETH.call{value: wethAmount}("");
+        (bool success,) = MAINNET_WETH.call{value: wethAmount}("");
         require(success, "WETH deposit failed");
 
         address[] memory path = new address[](2);
@@ -150,10 +151,7 @@ contract ForkTest is Test {
         path[1] = MAINNET_USDC;
         uint256 ethForUSDC = 1000 ether - wethAmount;
         IUniswapV2RouterSimple(MAINNET_V2_ROUTER).swapExactETHForTokens{value: ethForUSDC}(
-            0,
-            path,
-            user,
-            block.timestamp + 300
+            0, path, user, block.timestamp + 300
         );
 
         require(IERC20(MAINNET_USDC).balanceOf(user) >= usdcAmount, "not enough USDC");
@@ -170,7 +168,7 @@ contract ForkTest is Test {
     }
 
     function _getV3Tick() internal view returns (int24 tickLower, int24 tickUpper) {
-        (, int24 currentTick, , , , , ) = IUniswapV3Pool(MAINNET_V3_POOL_3000).slot0();
+        (, int24 currentTick,,,,,) = IUniswapV3Pool(MAINNET_V3_POOL_3000).slot0();
         int24 tickSpacing = IUniswapV3Pool(MAINNET_V3_POOL_3000).tickSpacing();
         int24 aligned = currentTick - (currentTick % tickSpacing);
         tickLower = aligned - tickSpacing * 10;
@@ -202,7 +200,7 @@ contract ForkTest is Test {
 
     // 测试主网V3 0.3%池的当前价格可以正常读取
     function test_Fork_Mainnet_V3Pool_PriceReadable() public view {
-        (uint160 sqrtPriceX96, int24 tick, , , , , ) = IUniswapV3Pool(MAINNET_V3_POOL_3000).slot0();
+        (uint160 sqrtPriceX96, int24 tick,,,,,) = IUniswapV3Pool(MAINNET_V3_POOL_3000).slot0();
         assertGt(sqrtPriceX96, 0, "sqrtPriceX96 should be > 0");
         assertGt(tick, 0, "tick should be positive (token0=USDC, token1=WETH)");
         console2.log("V3 0.3% pool current tick:", tick);
@@ -225,7 +223,9 @@ contract ForkTest is Test {
         assertGt(shares, 0, "shares should be > 0");
         assertEq(vault.balanceOf(ALICE), shares, "alice should have shares");
         assertEq(mining.balanceOf(ALICE), shares, "mining balance should sync on deposit");
-        assertEq(mining.totalShares() + 1e6, vault.totalSupply(), "mining totalShares + dead shares should sync on deposit");
+        assertEq(
+            mining.totalShares() + 1e6, vault.totalSupply(), "mining totalShares + dead shares should sync on deposit"
+        );
 
         uint256 assetsAfterDeposit = vault.totalAssets();
         assertGt(assetsAfterDeposit, 0, "totalAssets should be > 0");
@@ -249,8 +249,14 @@ contract ForkTest is Test {
         incentives.onRebalanceExecuted(ALICE, valueBefore, valueAfter);
 
         uint256 expectedUsdc = (valueAfter - valueBefore) * incentives.incentiveBps() / 10000;
-        assertEq(incentives.pendingReward(ALICE) - usdcPendingBefore, expectedUsdc, "USDC reward should be 5% of profit");
-        assertEq(incentives.pendingAlpReward(ALICE) - alpPendingBefore, incentives.DEFAULT_ALP_REWARD(), "ALP reward should be fixed 10");
+        assertEq(
+            incentives.pendingReward(ALICE) - usdcPendingBefore, expectedUsdc, "USDC reward should be 5% of profit"
+        );
+        assertEq(
+            incentives.pendingAlpReward(ALICE) - alpPendingBefore,
+            incentives.DEFAULT_ALP_REWARD(),
+            "ALP reward should be fixed 10"
+        );
 
         // ===== 4. 领取激励双奖励 =====
         uint256 usdcBeforeClaim = usdc.balanceOf(ALICE);
@@ -258,7 +264,9 @@ contract ForkTest is Test {
         vm.prank(ALICE);
         incentives.claimReward();
         assertEq(usdc.balanceOf(ALICE) - usdcBeforeClaim, expectedUsdc, "should receive USDC reward");
-        assertEq(govToken.balanceOf(ALICE) - alpBeforeClaim, incentives.DEFAULT_ALP_REWARD(), "should receive ALP reward");
+        assertEq(
+            govToken.balanceOf(ALICE) - alpBeforeClaim, incentives.DEFAULT_ALP_REWARD(), "should receive ALP reward"
+        );
         assertEq(incentives.pendingReward(ALICE), 0, "USDC pending should be 0 after claim");
         assertEq(incentives.pendingAlpReward(ALICE), 0, "ALP pending should be 0 after claim");
 
@@ -318,9 +326,7 @@ contract ForkTest is Test {
         usdc.transfer(address(vault), 10_000e6);
 
         vm.prank(address(vault));
-        (uint256 amount0, uint256 amount1, bytes32 lpId) = v2Adapter.addLiquidity(
-            10_000e6, 5 ether, 0, 0, ""
-        );
+        (uint256 amount0, uint256 amount1, bytes32 lpId) = v2Adapter.addLiquidity(10_000e6, 5 ether, 0, 0, "");
 
         assertGt(amount0, 0, "v2 amount0 should be > 0");
         assertGt(amount1, 0, "v2 amount1 should be > 0");
@@ -334,14 +340,20 @@ contract ForkTest is Test {
         uint256 vaultWethBeforeRemove = weth.balanceOf(address(vault));
 
         vm.prank(address(vault));
-        (uint256 removed0, uint256 removed1) = v2Adapter.removeLiquidity(
-            lpId, uint128(lpToRemove), 0, 0
-        );
+        (uint256 removed0, uint256 removed1) = v2Adapter.removeLiquidity(lpId, uint128(lpToRemove), 0, 0);
 
         assertGt(removed0, 0);
         assertGt(removed1, 0);
-        assertEq(usdc.balanceOf(address(vault)), vaultUsdcBeforeRemove + removed0, "vault USDC should increase after removeLiquidity");
-        assertEq(weth.balanceOf(address(vault)), vaultWethBeforeRemove + removed1, "vault WETH should increase after removeLiquidity");
+        assertEq(
+            usdc.balanceOf(address(vault)),
+            vaultUsdcBeforeRemove + removed0,
+            "vault USDC should increase after removeLiquidity"
+        );
+        assertEq(
+            weth.balanceOf(address(vault)),
+            vaultWethBeforeRemove + removed1,
+            "vault WETH should increase after removeLiquidity"
+        );
 
         uint256 lpBalanceAfterRemove = v2Adapter.getLpBalance();
         assertEq(lpBalanceAfterRemove, lpBalanceAfterAdd - lpToRemove, "LP balance should decrease by removed amount");
@@ -360,9 +372,8 @@ contract ForkTest is Test {
         usdc.transfer(address(vault), 10_000e6);
 
         vm.prank(address(vault));
-        (uint256 amount0, uint256 amount1, bytes32 lpId) = v3HighAdapter.addLiquidity(
-            10_000e6, 5 ether, 0, 0, abi.encode(tickLower, tickUpper)
-        );
+        (uint256 amount0, uint256 amount1, bytes32 lpId) =
+            v3HighAdapter.addLiquidity(10_000e6, 5 ether, 0, 0, abi.encode(tickLower, tickUpper));
 
         assertGt(amount0 + amount1, 0, "v3 total amount should be > 0");
         assertGt(v3HighAdapter.getLpBalance(), 0, "v3 LP balance should be > 0");
@@ -370,22 +381,23 @@ contract ForkTest is Test {
         bytes32[] memory positions = v3HighAdapter.getActivePositions();
         assertEq(positions.length, 1, "should have 1 active position after addLiquidity");
 
-        (, , uint128 liquidityAfterAdd, , , , , bool activeAfterAdd) = v3HighAdapter.getPositionInfo(lpId);
+        (,, uint128 liquidityAfterAdd,,,,, bool activeAfterAdd) = v3HighAdapter.getPositionInfo(lpId);
         assertTrue(activeAfterAdd, "position should be active after addLiquidity");
         assertGt(uint256(liquidityAfterAdd), 0, "liquidity should be > 0 after addLiquidity");
 
         weth.approve(MAINNET_V3_SWAP_ROUTER, 1 ether);
 
-        IUniswapV3SwapRouterSimple.ExactInputSingleParams memory swapParams = IUniswapV3SwapRouterSimple.ExactInputSingleParams({
-            tokenIn: MAINNET_WETH,
-            tokenOut: MAINNET_USDC,
-            fee: 3000,
-            recipient: address(this),
-            deadline: block.timestamp + 600,
-            amountIn: 1 ether,
-            amountOutMinimum: 0,
-            sqrtPriceLimitX96: 0
-        });
+        IUniswapV3SwapRouterSimple.ExactInputSingleParams memory swapParams =
+            IUniswapV3SwapRouterSimple.ExactInputSingleParams({
+                tokenIn: MAINNET_WETH,
+                tokenOut: MAINNET_USDC,
+                fee: 3000,
+                recipient: address(this),
+                deadline: block.timestamp + 600,
+                amountIn: 1 ether,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            });
 
         uint256 usdcOut = IUniswapV3SwapRouterSimple(MAINNET_V3_SWAP_ROUTER).exactInputSingle(swapParams);
         assertGt(usdcOut, 0, "swap should receive USDC");
@@ -397,8 +409,11 @@ contract ForkTest is Test {
         (uint256 fees0, uint256 fees1) = v3HighAdapter.collectFees(lpId);
 
         assertGt(fees0 + fees1, 0, "should collect fees after swap");
-        assertGt(usdc.balanceOf(address(vault)) + weth.balanceOf(address(vault)),
-            vaultUsdcBefore + vaultWethBefore, "vault balance should increase after collectFees");
+        assertGt(
+            usdc.balanceOf(address(vault)) + weth.balanceOf(address(vault)),
+            vaultUsdcBefore + vaultWethBefore,
+            "vault balance should increase after collectFees"
+        );
 
         bytes32[] memory positionsAfterCollect = v3HighAdapter.getActivePositions();
         assertEq(positionsAfterCollect.length, 1, "should still have 1 active position after collectFees");
@@ -410,19 +425,27 @@ contract ForkTest is Test {
         uint256 vaultWethBeforeRemove = weth.balanceOf(address(vault));
 
         vm.prank(address(vault));
-        (uint256 removed0, uint256 removed1) = v3HighAdapter.removeLiquidity(
-            lpId, liquidityToRemove, 0, 0
-        );
+        (uint256 removed0, uint256 removed1) = v3HighAdapter.removeLiquidity(lpId, liquidityToRemove, 0, 0);
 
         assertGt(removed0 + removed1, 0, "should receive tokens after removeLiquidity");
-        assertGt(usdc.balanceOf(address(vault)), vaultUsdcBeforeRemove, "vault USDC should increase after removeLiquidity");
-        assertGt(weth.balanceOf(address(vault)), vaultWethBeforeRemove, "vault WETH should increase after removeLiquidity");
+        assertGt(
+            usdc.balanceOf(address(vault)), vaultUsdcBeforeRemove, "vault USDC should increase after removeLiquidity"
+        );
+        assertGt(
+            weth.balanceOf(address(vault)), vaultWethBeforeRemove, "vault WETH should increase after removeLiquidity"
+        );
 
-        (, , uint128 liquidityAfterRemove, , , , , bool activeAfterRemove) = v3HighAdapter.getPositionInfo(lpId);
-        assertEq(uint256(liquidityAfterRemove), uint256(liquidityAfterAdd) - uint256(liquidityToRemove), "liquidity should decrease by removed amount");
+        (,, uint128 liquidityAfterRemove,,,,, bool activeAfterRemove) = v3HighAdapter.getPositionInfo(lpId);
+        assertEq(
+            uint256(liquidityAfterRemove),
+            uint256(liquidityAfterAdd) - uint256(liquidityToRemove),
+            "liquidity should decrease by removed amount"
+        );
         assertTrue(activeAfterRemove, "position should still be active after partial remove");
 
-        assertEq(v3HighAdapter.getLpBalance(), uint256(liquidityAfterRemove), "getLpBalance should match remaining liquidity");
+        assertEq(
+            v3HighAdapter.getLpBalance(), uint256(liquidityAfterRemove), "getLpBalance should match remaining liquidity"
+        );
 
         vm.prank(address(vault));
         v3HighAdapter.withdrawAll();
@@ -432,7 +455,7 @@ contract ForkTest is Test {
 
         assertEq(v3HighAdapter.getLpBalance(), 0, "LP balance should be 0 after withdrawAll");
 
-        (, , , , , , , bool activeAfterWithdraw) = v3HighAdapter.getPositionInfo(lpId);
+        (,,,,,,, bool activeAfterWithdraw) = v3HighAdapter.getPositionInfo(lpId);
         assertFalse(activeAfterWithdraw, "position should not be active after withdrawAll");
     }
 
@@ -451,20 +474,14 @@ contract ForkTest is Test {
         vm.roll(block.number + 1);
 
         vm.prank(ALICE);
-        uint256 id = governance.propose(
-            AdaptiveGovernance.ProposalType.SET_TWAP_WINDOW,
-            600, 0, 0, "test proposal"
-        );
+        uint256 id = governance.propose(AdaptiveGovernance.ProposalType.SET_TWAP_WINDOW, 600, 0, 0, "test proposal");
 
         vm.roll(block.number + governance.votingDelay() + 1);
         vm.prank(BOB);
         governance.castVote(id, true);
 
         vm.roll(block.number + governance.votingPeriod() + 1);
-        assertEq(
-            uint256(governance.getProposalState(id)),
-            uint256(AdaptiveGovernance.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governance.getProposalState(id)), uint256(AdaptiveGovernance.ProposalState.Succeeded));
 
         governance.executeProposal(id);
 
@@ -497,14 +514,18 @@ contract ForkTest is Test {
         }
 
         vm.prank(address(vault));
-        (uint256 actualReward, ) = incentives.onRebalanceExecuted(address(this), totalValueBefore, totalValueAfter);
+        (uint256 actualReward,) = incentives.onRebalanceExecuted(address(this), totalValueBefore, totalValueAfter);
 
         assertEq(actualReward, expectedReward, "reward should be 5% of profit");
 
         uint256 rewardAfter = incentives.pendingReward(address(this));
         assertEq(rewardAfter - rewardBefore, expectedReward, "pending reward should increase by expected reward");
 
-        assertEq(incentives.totalUsdcRewardsPaid(), totalRewardsPaidBefore + expectedReward, "totalUsdcRewardsPaid should increase");
+        assertEq(
+            incentives.totalUsdcRewardsPaid(),
+            totalRewardsPaidBefore + expectedReward,
+            "totalUsdcRewardsPaid should increase"
+        );
         assertGt(incentives.totalAlpRewardsPaid(), 0, "totalAlpRewardsPaid should also increase");
 
         assertGt(incentives.lastRebalanceTime(), lastRebalanceTimeBefore, "lastRebalanceTime should be updated");
@@ -558,12 +579,11 @@ contract ForkTest is Test {
 
     // 测试主网环境下团队锁仓：悬崖期内不能领取
     function test_Fork_TeamVesting_CliffPeriod() public {
-        skip(180 days); 
+        skip(180 days);
         assertEq(teamVesting.vestedAmount(), 0, "no tokens vested during cliff");
 
         vm.prank(teamWallet);
         vm.expectRevert(bytes("TeamVesting: nothing to claim"));
         teamVesting.claim();
     }
-
 }

@@ -5,7 +5,6 @@ import {BaseTest} from "../base/BaseTest.t.sol";
 import {FullMath} from "../../src/libraries/UniswapMath.sol";
 
 contract LiquidityMiningTest is BaseTest {
-
     function setUp() public override {
         super.setUp();
     }
@@ -111,7 +110,7 @@ contract LiquidityMiningTest is BaseTest {
 
         uint256 totalReward = timeDelta * rewardPerSecond;
         uint256 expectedNewRps = oldGlobalRps + FullMath.mulDiv(totalReward, 1e18, mining.totalShares());
-        
+
         uint256 aliceShare = mining.balanceOf(alice);
         uint256 expectedPending = FullMath.mulDiv(aliceShare, expectedNewRps - oldUserDebt, 1e18);
 
@@ -142,7 +141,7 @@ contract LiquidityMiningTest is BaseTest {
 
         vm.prank(alice);
         mining.claimReward();
-        
+
         uint256 balanceAfter = govToken.balanceOf(alice);
         assertEq(balanceAfter - balanceBefore, pending);
         assertEq(mining.pendingReward(alice), 0);
@@ -188,7 +187,7 @@ contract LiquidityMiningTest is BaseTest {
 
         skip(1 days);
         uint256 rpsBefore = mining.rewardPerShare();
-        
+
         vm.prank(bob);
         mining.distribute();
         uint256 rpsAfter = mining.rewardPerShare();

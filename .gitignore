@@ -24,3 +24,7 @@ Thumbs.db
 lcov.info
 coverage.lcov
 
+
+# Backup files
+.env.bak*
+*.bak

@@ -63,23 +63,20 @@ contract MockUniswapV3Pool {
 
     uint256 public mockFeesPerPosition;
 
-    constructor(
-        address _token0,
-        address _token1,
-        uint24 _fee,
-        int24 _tickSpacing
-    ) {
+    constructor(address _token0, address _token1, uint24 _fee, int24 _tickSpacing) {
         token0 = _token0;
         token1 = _token1;
         fee = _fee;
         tickSpacing = _tickSpacing;
 
-        observations.push(Observation({
-            blockTimestamp: uint32(block.timestamp),
-            tickCumulative: 0,
-            secondsPerLiquidityCumulativeX128: 0,
-            initialized: true
-        }));
+        observations.push(
+            Observation({
+                blockTimestamp: uint32(block.timestamp),
+                tickCumulative: 0,
+                secondsPerLiquidityCumulativeX128: 0,
+                initialized: true
+            })
+        );
         observationCardinality = 1;
         observationCardinalityNext = 1;
 
@@ -118,8 +115,13 @@ contract MockUniswapV3Pool {
         if (y > 3) {
             z = y;
             uint256 x = y / 2 + 1;
-            while (x < z) { z = x; x = (y / x + x) / 2; }
-        } else if (y != 0) { z = 1; }
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
     }
 
     function _updateObservation() internal {
@@ -128,30 +130,31 @@ contract MockUniswapV3Pool {
             if (last.blockTimestamp == uint32(block.timestamp)) return;
             uint32 delta = uint32(block.timestamp) - last.blockTimestamp;
             int56 newTickCumulative = last.tickCumulative + int56(tick) * int56(uint56(delta));
-            observations.push(Observation({
-                blockTimestamp: uint32(block.timestamp),
-                tickCumulative: newTickCumulative,
-                secondsPerLiquidityCumulativeX128: 0,
-                initialized: true
-            }));
+            observations.push(
+                Observation({
+                    blockTimestamp: uint32(block.timestamp),
+                    tickCumulative: newTickCumulative,
+                    secondsPerLiquidityCumulativeX128: 0,
+                    initialized: true
+                })
+            );
         } else {
-            observations.push(Observation({
-                blockTimestamp: uint32(block.timestamp),
-                tickCumulative: 0,
-                secondsPerLiquidityCumulativeX128: 0,
-                initialized: true
-            }));
+            observations.push(
+                Observation({
+                    blockTimestamp: uint32(block.timestamp),
+                    tickCumulative: 0,
+                    secondsPerLiquidityCumulativeX128: 0,
+                    initialized: true
+                })
+            );
         }
         observationIndex = uint16(observations.length - 1);
         observationCardinality = uint16(observations.length);
         observationCardinalityNext = uint16(observations.length);
     }
 
-    function slot0() external view returns (
-        uint160, int24, uint16, uint16, uint16, uint8, bool
-    ) {
-        return (sqrtPriceX96, tick, observationIndex, observationCardinality,
-                observationCardinalityNext, 0, false);
+    function slot0() external view returns (uint160, int24, uint16, uint16, uint16, uint8, bool) {
+        return (sqrtPriceX96, tick, observationIndex, observationCardinality, observationCardinalityNext, 0, false);
     }
 
     function increaseObservationCardinalityNext(uint16 _cardinality) external {
@@ -166,9 +169,7 @@ contract MockUniswapV3Pool {
         returns (int56[] memory tickCumulatives, uint160[] memory)
     {
         tickCumulatives = new int56[](secondsAgos.length);
-        int56 currentCum = observations.length > 0
-            ? observations[observations.length - 1].tickCumulative
-            : int56(0);
+        int56 currentCum = observations.length > 0 ? observations[observations.length - 1].tickCumulative : int56(0);
 
         for (uint256 i = 0; i < secondsAgos.length; i++) {
             if (uint256(secondsAgos[i]) >= block.timestamp) {
@@ -222,29 +223,20 @@ contract MockUniswapV3Pool {
         return beforeOrAt.tickCumulative + (cumDelta * int56(uint56(targetDelta))) / int56(uint56(timeDelta));
     }
 
-    function _positionKey(address owner, int24 tickLower, int24 tickUpper)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function _positionKey(address owner, int24 tickLower, int24 tickUpper) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(owner, tickLower, tickUpper));
     }
 
-    function mint(
-        address recipient,
-        int24 tickLower,
-        int24 tickUpper,
-        uint128 amount,
-        bytes calldata data
-    ) external returns (uint256 amount0, uint256 amount1) {
+    function mint(address recipient, int24 tickLower, int24 tickUpper, uint128 amount, bytes calldata data)
+        external
+        returns (uint256 amount0, uint256 amount1)
+    {
         require(amount > 0, "V3: ZERO");
 
         uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(tickLower);
         uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
 
-        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(
-            sqrtPriceX96, sqrtRatioAX96, sqrtRatioBX96, amount
-        );
+        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(sqrtPriceX96, sqrtRatioAX96, sqrtRatioBX96, amount);
 
         IUniswapV3MintCallback(msg.sender).uniswapV3MintCallback(amount0, amount1, data);
 
@@ -263,11 +255,10 @@ contract MockUniswapV3Pool {
         liquidity += amount;
     }
 
-    function burn(
-        int24 tickLower,
-        int24 tickUpper,
-        uint128 amount
-    ) external returns (uint256 amount0, uint256 amount1) {
+    function burn(int24 tickLower, int24 tickUpper, uint128 amount)
+        external
+        returns (uint256 amount0, uint256 amount1)
+    {
         bytes32 key = _positionKey(msg.sender, tickLower, tickUpper);
         require(positions[key].liquidity >= amount, "V3: INSUFFICIENT");
 
@@ -292,7 +283,8 @@ contract MockUniswapV3Pool {
         ticks[tickUpper].liquidityGross -= amount;
         ticks[tickUpper].liquidityNet += int128(amount);
 
-        if (amount > liquidity) { liquidity = 0; } else { liquidity -= amount; }
+        if (amount > liquidity) liquidity = 0;
+        else liquidity -= amount;
     }
 
     function collect(

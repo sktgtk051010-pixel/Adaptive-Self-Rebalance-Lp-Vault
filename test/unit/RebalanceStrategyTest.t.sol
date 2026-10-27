@@ -13,8 +13,7 @@ contract RebalanceStrategyTest is BaseTest {
 
     // 测试低波动率（volatility=1000）下的权重分配：V2=10%, V3低=30%, V3高=60%
     function test_CalculateAllocation_LowVolatility() public view {
-        (IRebalanceStrategy.AllocationWeights memory alloc,
-         IRebalanceStrategy.V3RangeWeights memory ranges) =
+        (IRebalanceStrategy.AllocationWeights memory alloc, IRebalanceStrategy.V3RangeWeights memory ranges) =
             AdaptiveRebalanceStrategy(address(strategy)).calculateAllocation(0, 0, 1000);
 
         assertEq(alloc.v2Weight, 1000, "v2=10%");
@@ -29,8 +28,7 @@ contract RebalanceStrategyTest is BaseTest {
 
     // 测试中波动率（volatility=3000）下的权重分配：V2=25%, V3低=30%, V3高=45%
     function test_CalculateAllocation_MediumVolatility() public view {
-        (IRebalanceStrategy.AllocationWeights memory alloc,
-         IRebalanceStrategy.V3RangeWeights memory ranges) =
+        (IRebalanceStrategy.AllocationWeights memory alloc, IRebalanceStrategy.V3RangeWeights memory ranges) =
             AdaptiveRebalanceStrategy(address(strategy)).calculateAllocation(0, 0, 3000);
 
         assertEq(alloc.v2Weight, 2500, "v2=25%");
@@ -45,8 +43,7 @@ contract RebalanceStrategyTest is BaseTest {
 
     // 测试高波动率（volatility=6000）下的权重分配：V2=50%, V3低=25%, V3高=25%
     function test_CalculateAllocation_HighVolatility() public view {
-        (IRebalanceStrategy.AllocationWeights memory alloc,
-         IRebalanceStrategy.V3RangeWeights memory ranges) =
+        (IRebalanceStrategy.AllocationWeights memory alloc, IRebalanceStrategy.V3RangeWeights memory ranges) =
             AdaptiveRebalanceStrategy(address(strategy)).calculateAllocation(0, 0, 6000);
 
         assertEq(alloc.v2Weight, 5000, "v2=50%");
@@ -62,8 +59,7 @@ contract RebalanceStrategyTest is BaseTest {
     // 测试getRangeTicks的tight范围：以当前tick为中心，上下约198 tick
     function test_GetRangeTicks_Tight() public view {
         int24 currentTick = -200000;
-        (int24 tLower, int24 tUpper, , , , ) =
-            AdaptiveRebalanceStrategy(address(strategy)).getRangeTicks(currentTick);
+        (int24 tLower, int24 tUpper,,,,) = AdaptiveRebalanceStrategy(address(strategy)).getRangeTicks(currentTick);
         assertApproxEqAbs(int256(tLower), int256(currentTick - 198), 60, "tight lower");
         assertApproxEqAbs(int256(tUpper), int256(currentTick + 198), 60, "tight upper");
         assertLt(tLower, tUpper);
@@ -72,8 +68,7 @@ contract RebalanceStrategyTest is BaseTest {
     // 测试getRangeTicks的medium范围：以当前tick为中心，上下约953 tick
     function test_GetRangeTicks_Medium() public view {
         int24 currentTick = -200000;
-        (, , int24 mLower, int24 mUpper, , ) =
-            AdaptiveRebalanceStrategy(address(strategy)).getRangeTicks(currentTick);
+        (,, int24 mLower, int24 mUpper,,) = AdaptiveRebalanceStrategy(address(strategy)).getRangeTicks(currentTick);
         assertApproxEqAbs(int256(mLower), int256(currentTick - 953), 60, "medium lower");
         assertApproxEqAbs(int256(mUpper), int256(currentTick + 953), 60, "medium upper");
     }
@@ -81,8 +76,7 @@ contract RebalanceStrategyTest is BaseTest {
     // 测试getRangeTicks的wide范围：以当前tick为中心，上下约2624 tick
     function test_GetRangeTicks_Wide() public view {
         int24 currentTick = -200000;
-        (, , , , int24 wLower, int24 wUpper) =
-            AdaptiveRebalanceStrategy(address(strategy)).getRangeTicks(currentTick);
+        (,,,, int24 wLower, int24 wUpper) = AdaptiveRebalanceStrategy(address(strategy)).getRangeTicks(currentTick);
         assertApproxEqAbs(int256(wLower), int256(currentTick - 2624), 60, "wide lower");
         assertApproxEqAbs(int256(wUpper), int256(currentTick + 2624), 60, "wide upper");
     }
@@ -90,15 +84,13 @@ contract RebalanceStrategyTest is BaseTest {
     // 测试getRangeTicks在接近MIN_TICK/MAX_TICK时会钳制边界，不越界
     function test_GetRangeTicks_ClampsAtMinMax() public view {
         int24 nearMin = TickMath.MIN_TICK + 100;
-        (int24 tLower, , int24 mLower, , int24 wLower, ) =
-            strategy.getRangeTicks(nearMin);
+        (int24 tLower,, int24 mLower,, int24 wLower,) = strategy.getRangeTicks(nearMin);
         assertGe(tLower, TickMath.MIN_TICK, "tightLower should clamp at MIN_TICK");
         assertGe(mLower, TickMath.MIN_TICK, "mediumLower should clamp at MIN_TICK");
         assertGe(wLower, TickMath.MIN_TICK, "wideLower should clamp at MIN_TICK");
 
         int24 nearMax = TickMath.MAX_TICK - 100;
-        (, int24 tUpper, , int24 mUpper, , int24 wUpper) =
-            strategy.getRangeTicks(nearMax);
+        (, int24 tUpper,, int24 mUpper,, int24 wUpper) = strategy.getRangeTicks(nearMax);
         assertGe(tUpper, TickMath.MAX_TICK, "tightUpper should clamp at MAX_TICK");
         assertGe(mUpper, TickMath.MAX_TICK, "mediumUpper should clamp at MAX_TICK");
         assertGe(wUpper, TickMath.MAX_TICK, "wideUpper should clamp at MAX_TICK");

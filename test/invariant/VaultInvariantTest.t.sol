@@ -154,9 +154,7 @@ contract VaultInvariantTest is Test {
         uint256 totalSupply = handler.vault().totalSupply();
         if (totalSupply == 0) return; // 空金库：尚无任何份额（含死份额）
 
-        uint256 sumOfBalances =
-            handler.vault().balanceOf(handler.alice())
-            + handler.vault().balanceOf(handler.bob())
+        uint256 sumOfBalances = handler.vault().balanceOf(handler.alice()) + handler.vault().balanceOf(handler.bob())
             + handler.vault().balanceOf(handler.charlie());
 
         assertEq(sumOfBalances + 1e6, totalSupply, "sum of user balances + dead shares should equal totalSupply");
@@ -172,9 +170,7 @@ contract VaultInvariantTest is Test {
         uint256 sumOfUserAssets = aliceAssets + bobAssets + charlieAssets;
 
         assertLe(
-            sumOfUserAssets,
-            totalAssets + 1,
-            "sum of user assets should not exceed totalAssets (insolvency detected)"
+            sumOfUserAssets, totalAssets + 1, "sum of user assets should not exceed totalAssets (insolvency detected)"
         );
     }
 
@@ -187,10 +183,7 @@ contract VaultInvariantTest is Test {
         uint256 sharesFromAssets = handler.vault().convertToShares(totalAssets);
 
         assertApproxEqRel(
-            sharesFromAssets,
-            totalSupply,
-            0.01e18,
-            "convertToShares(totalAssets) should approx equal totalSupply"
+            sharesFromAssets, totalSupply, 0.01e18, "convertToShares(totalAssets) should approx equal totalSupply"
         );
     }
 

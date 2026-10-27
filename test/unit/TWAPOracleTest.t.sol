@@ -18,8 +18,8 @@ contract TWAPOracleTest is BaseTest {
 
     // 测试TWAP价格与当前现货价格近似相等（1%误差内）
     function test_GetTWAPPrice_MatchesApproxSpot() public view {
-        (uint160 twapPrice, ) = oracle.getTWAPPrice();
-        (uint160 spotPrice, ) = oracle.getCurrentPrice();
+        (uint160 twapPrice,) = oracle.getTWAPPrice();
+        (uint160 spotPrice,) = oracle.getCurrentPrice();
         assertApproxEqRel(uint256(twapPrice), uint256(spotPrice), 0.01e18, "TWAP approx spot");
     }
 
@@ -112,11 +112,11 @@ contract TWAPOracleTest is BaseTest {
 
     // 测试ensureObservationCardinality增加V3池的观测基数到10
     function test_EnsureObservationCardinality() public {
-        (, , , , uint16 cardinalityBefore, , ) = v3PoolHighFee.slot0();
+        (,,,, uint16 cardinalityBefore,,) = v3PoolHighFee.slot0();
 
         oracle.ensureObservationCardinality(10);
 
-        (, , , , uint16 cardinalityAfter, , ) = v3PoolHighFee.slot0();
+        (,,,, uint16 cardinalityAfter,,) = v3PoolHighFee.slot0();
         assertEq(cardinalityAfter, 10);
         assertGt(cardinalityAfter, cardinalityBefore);
     }

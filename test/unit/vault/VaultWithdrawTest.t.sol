@@ -146,7 +146,7 @@ contract VaultWithdrawTest is BaseTest {
         uint256 shares = _deposit(alice, 10 ether, 20_000e6);
         _rebalance();
 
-        ( , uint256 totalU) = _getTotalUnderlying();
+        (, uint256 totalU) = _getTotalUnderlying();
         uint256 totalSupply = vault.totalSupply();
         uint256 expectedUsdc = (totalU * shares / totalSupply) * 90 / 100;
 
@@ -160,7 +160,7 @@ contract VaultWithdrawTest is BaseTest {
         uint256 shares = _deposit(alice, 10 ether, 20_000e6);
         _rebalance();
 
-        (uint256 totalW, ) = _getTotalUnderlying();
+        (uint256 totalW,) = _getTotalUnderlying();
         uint256 totalSupply = vault.totalSupply();
         uint256 expectedWeth = (totalW * shares / totalSupply) * 90 / 100;
 

@@ -5,7 +5,6 @@ import {BaseTest} from "../../base/BaseTest.t.sol";
 import {LiquidityMining} from "../../../src/distribution/LiquidityMining.sol";
 
 contract VaultMiningTest is BaseTest {
-
     function setUp() public override {
         super.setUp();
         mining.startMining();

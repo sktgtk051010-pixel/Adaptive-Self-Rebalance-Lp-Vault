@@ -6,7 +6,6 @@ import {Treasury} from "../../src/distribution/Treasury.sol";
 import {GovernanceToken} from "../../src/governance/AdaptiveGovernance.sol";
 
 contract TreasuryTest is BaseTest {
-
     function setUp() public override {
         super.setUp();
         // BaseTest 只给国库注入了 ALP，这里补注 USDC 供双币支出测试
