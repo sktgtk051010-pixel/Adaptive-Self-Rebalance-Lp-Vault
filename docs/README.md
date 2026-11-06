@@ -367,6 +367,7 @@ Adaptive-Self-Rebalance-Lp-Vault/
 │   ├── README.md                       # 项目说明文档
 │   └── SECURITY.md                     # 安全分析文档
 │   └── USER_GUIDE.md                   # 用户手册文档
+│   └── SECURITY-REVIEW.md              # 自我审计报告
 ├── foundry.toml                        # Foundry 配置
 ```
 
