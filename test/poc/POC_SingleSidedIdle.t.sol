@@ -41,30 +41,43 @@ contract POC_SingleSidedIdle is Test {
     uint256 constant AMOUNT = 1_000e6;
 
     function setUp() public {
-        vm.createSelectFork("sepolia");
+        try vm.envString("SEPOLIA_RPC_URL") returns (string memory rpcUrl) {
+            vm.createSelectFork(rpcUrl);
+        } catch {
+            vm.skip(true);
+            return;
+        }
 
         GovernanceToken govToken = new GovernanceToken();
         AdaptiveGovernance governance = new AdaptiveGovernance(address(govToken));
         strat = new AdaptiveRebalanceStrategy(address(governance));
         oracle = new TWAPOracle(V3_POOL_3000, WETH, USDC, address(governance));
 
-        vault = new AdaptiveLPVault(
-            USDC, WETH, address(oracle), address(strat), "Adaptive LP Vault", "ALP-VAULT"
-        );
+        vault = new AdaptiveLPVault(USDC, WETH, address(oracle), address(strat), "Adaptive LP Vault", "ALP-VAULT");
 
         UniswapV2Adapter v2 = new UniswapV2Adapter(V2_ROUTER, address(vault), USDC, WETH);
 
         IUniswapV3Pool pool500 = IUniswapV3Pool(V3_POOL_500);
-        v3Low = address(new UniswapV3Adapter(
-            V3_POOL_500, address(vault), pool500.token0(), pool500.token1(),
-            ILPAdapter.AdapterType.UNISWAP_V3_LOW_FEE
-        ));
+        v3Low = address(
+            new UniswapV3Adapter(
+                V3_POOL_500,
+                address(vault),
+                pool500.token0(),
+                pool500.token1(),
+                ILPAdapter.AdapterType.UNISWAP_V3_LOW_FEE
+            )
+        );
 
         IUniswapV3Pool pool3000 = IUniswapV3Pool(V3_POOL_3000);
-        v3High = address(new UniswapV3Adapter(
-            V3_POOL_3000, address(vault), pool3000.token0(), pool3000.token1(),
-            ILPAdapter.AdapterType.UNISWAP_V3_HIGH_FEE
-        ));
+        v3High = address(
+            new UniswapV3Adapter(
+                V3_POOL_3000,
+                address(vault),
+                pool3000.token0(),
+                pool3000.token1(),
+                ILPAdapter.AdapterType.UNISWAP_V3_HIGH_FEE
+            )
+        );
 
         vault.setAdapters(address(v2), v3Low, v3High);
 
@@ -106,17 +119,16 @@ contract POC_SingleSidedIdle is Test {
         _report("v3Low  medium", v3Low, mL, mU, AMOUNT * V3_LOW_WEIGHT / TOTAL_WEIGHT * MEDIUM_PCT / TOTAL_RANGE_LOCAL);
         _report("v3Low  wide  ", v3Low, wL, wU, AMOUNT * V3_LOW_WEIGHT / TOTAL_WEIGHT * WIDE_PCT / TOTAL_RANGE_LOCAL);
         _report("v3High tight ", v3High, tL, tU, AMOUNT * V3_HIGH_WEIGHT / TOTAL_WEIGHT * TIGHT_PCT / TOTAL_RANGE_LOCAL);
-        _report("v3High medium", v3High, mL, mU, AMOUNT * V3_HIGH_WEIGHT / TOTAL_WEIGHT * MEDIUM_PCT / TOTAL_RANGE_LOCAL);
+        _report(
+            "v3High medium", v3High, mL, mU, AMOUNT * V3_HIGH_WEIGHT / TOTAL_WEIGHT * MEDIUM_PCT / TOTAL_RANGE_LOCAL
+        );
         _report("v3High wide  ", v3High, wL, wU, AMOUNT * V3_HIGH_WEIGHT / TOTAL_WEIGHT * WIDE_PCT / TOTAL_RANGE_LOCAL);
     }
 
-    function _report(
-        string memory tag,
-        address adapter,
-        int24 tickLower,
-        int24 tickUpper,
-        uint256 usdcAlloc
-    ) internal view {
+    function _report(string memory tag, address adapter, int24 tickLower, int24 tickUpper, uint256 usdcAlloc)
+        internal
+        view
+    {
         IUniswapV3Pool pool = IUniswapV3Pool(UniswapV3Adapter(adapter).pool());
         (uint160 sqrtP,,,,,,) = pool.slot0();
         uint160 a = TickMath.getSqrtRatioAtTick(tickLower);

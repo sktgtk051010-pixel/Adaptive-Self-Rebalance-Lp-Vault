@@ -157,7 +157,7 @@ totalAssets()  [USDC 计价]
 | F-05 | Low | `_update` 用空 `catch` 吞掉挖矿记账异常 | `AdaptiveLPVault.sol#L440-447` | Accepted |
 | F-06 | Info（设计） | ERC4626 标准接口与双币入口错配，`withdraw`/`redeem` 禁用 | `AdaptiveLPVault.sol#L395-405` | Accepted |
 | F-07 | Medium | V3 再平衡路径滑点下限为 0，存在三明治残留风险 | `UniswapV3Adapter.sol`（`addLiquidity` / `withdrawAll`） | Open |
-| F-08 | Low | 单币存款无法参与做市，资金闲置 | `AdaptiveLPVault.sol#L678-710` | Accepted |
+| F-08 | Low | 分配层按权重切币，单边存款资金全量闲置 | `AdaptiveLPVault.sol#L688-710` | Accepted |
 
 ### F-01 `burn` 缺少授权检查
 
@@ -379,12 +379,21 @@ forge test
 forge test --match-contract VaultInvariantTest
 ```
 
-### 6.2 PoC（待补）
+### 6.2 PoC
 
-| PoC | 目标发现 | 路径 | 状态 |
+| PoC | 目标发现 | 路径 | 状态与实测结论 |
 |---|---|---|---|
-| `POC_BurnWithoutAllowance` | F-01 | `test/poc/POC_BurnWithoutAllowance.t.sol` | 待编写 |
-| `POC_SetMinterZero` | F-02 | `test/poc/POC_SetMinterZero.t.sol` | 待编写 |
+| `POC_BurnWithoutAllowance` | F-01 | `test/poc/POC_BurnWithoutAllowance.t.sol` | 已跑通：victim 未授予任何 allowance，minter 直接 `burn` 后余额归零 |
+| `POC_SetMinterZero` | F-02 | `test/poc/POC_SetMinterZero.t.sol` | 已跑通：`setMinter(address(0))` 后 `setMinter`/`mint` 全部 revert，通道不可恢复 |
+| `POC_SingleSidedIdle` | F-08 | `test/poc/POC_SingleSidedIdle.t.sol` | 已跑通：单边存 1000 USDC，idle 占比 10000 bps；六个区间现状流动性均为 0 |
+
+运行方式：
+
+```bash
+forge test --match-path "test/poc/*" -vv
+```
+
+`POC_SingleSidedIdle` 依赖 Sepolia fork，单次约 40 秒；另两个为本地部署，毫秒级。
 
 PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；修复后该断言应失败（届时改为 `vm.expectRevert`）。
 
@@ -392,7 +401,7 @@ PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；�
 
 | 行为 | 证据 |
 |---|---|
-| 首存通胀攻击无法获利 | `SECURITY.md` §5 的实测数据（受害者获正份额、攻击者回本 < 25%），对应测试待补引用 |
+| 首存通胀攻击无法获利 | `SECURITY.md` §5 的实测数据（受害者获正份额、攻击者回本 < 25%）；仓库内无对应自动化测试，证据为当时的手工运行记录 |
 | 治理参数校验（地址/金额零值与越界） | `src/governance/AdaptiveGovernance.sol`：propose L222-226、`_applyParam` L414-418；测试 `test_Revert_Propose_SpendBadTokenAddr`（`GovernanceTest.t.sol` L771）、`test_Revert_Propose_SpendZeroAmount`（L821）、`test_ApplyParam_ZeroAddressNoSync`（L667） |
 | 死份额不触达 `LiquidityMining` | `_update` L439/L444 的 `DEAD_ADDRESS` 排除条件 |
 
@@ -442,7 +451,7 @@ Sepolia 上已验证的源码即链上代码。若直接修改 `src/` 并重部�
 
 | 优先级 | 行动 |
 |---|---|
-| P0 | 编写 2 个 PoC（F-01、F-02），补入第 6 章 |
+| P0 | 编写 2 个 PoC（F-01、F-02）——已完成，见 6.2 |
 | P0 | 轮换 RPC / 浏览器 API Key |
 | P1 | 建立 `fix/govtoken-burn-auth` 分支：`burn` 加 allowance、`setMinter` 加零地址校验 + 单测 |
 | P2 | V3 再平衡滑点下限接入 `maxSlippageBps`（F-07） |
