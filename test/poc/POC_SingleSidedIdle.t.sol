@@ -125,6 +125,28 @@ contract POC_SingleSidedIdle is Test {
         _report("v3High wide  ", v3High, wL, wU, AMOUNT * V3_HIGH_WEIGHT / TOTAL_WEIGHT * WIDE_PCT / TOTAL_RANGE_LOCAL);
     }
 
+    /// @notice 补证：双边按 1:2 价值比存入，与仓位需求不符，至少一侧仍显著闲置
+    function test_BilateralMismatchStillIdle() public {
+        uint256 wethAmt = 1e18;
+        deal(WETH, user, wethAmt);
+
+        vm.startPrank(user);
+        IERC20(WETH).approve(address(vault), wethAmt);
+        uint256 shares = vault.deposit(wethAmt, AMOUNT, 0);
+        vm.stopPrank();
+
+        (uint256 idleWETH, uint256 idleUSDC,,,,,,) = vault.getDistribution();
+
+        console2.log("bilateral shares   :", shares);
+        console2.log("idle WETH          :", idleWETH);
+        console2.log("idle USDC          :", idleUSDC);
+
+        assertTrue(
+            idleWETH * 100 > wethAmt * 5 || idleUSDC * 100 > AMOUNT * 5,
+            "bilateral mismatch leaves >=5% idle on one side"
+        );
+    }
+
     function _report(string memory tag, address adapter, int24 tickLower, int24 tickUpper, uint256 usdcAlloc)
         internal
         view

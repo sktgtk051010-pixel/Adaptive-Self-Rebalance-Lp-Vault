@@ -20,7 +20,7 @@ contract POC_BurnWithoutAllowance is Test {
         assertEq(token.balanceOf(victim), 1_000e18);
         assertEq(token.allowance(victim, address(this)), 0);
 
-        token.burn(victim, 1_000e18);//无授权销毁
+        token.burn(victim, 1_000e18); //无授权销毁
 
         console2.log("victim balance after burn:", token.balanceOf(victim));
         console2.log("totalSupply after burn   :", token.totalSupply());

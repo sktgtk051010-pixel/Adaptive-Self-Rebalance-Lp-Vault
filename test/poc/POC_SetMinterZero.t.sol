@@ -17,7 +17,7 @@ contract POC_SetMinterZero is Test {
         token.mint(address(0xCAFE), 1e18);
         assertEq(token.minter(), address(this));
 
-        token.setMinter(address(0));//minter设为0
+        token.setMinter(address(0)); //minter设为0
         assertEq(token.minter(), address(0));
 
         vm.expectRevert("GovToken: not minter");
