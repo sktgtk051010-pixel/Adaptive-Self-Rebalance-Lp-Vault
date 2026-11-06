@@ -353,6 +353,7 @@ Slither 的 impact 标签与真实严重性不一致，本项目已出现三类�
 | 预言机操纵 | 30 分钟 TWAP + 波动率冷却期 + 数据源 `immutable`；失败时降级（F-04） | `SECURITY.md` §3 |
 | 无常损失 | 三档区间 + V2 宽区间摊薄 + 波动率自适应 | `SECURITY.md` §4 |
 | 份额价格操纵 | 首存锁 1e6 死份额至 `0xdead`（L95/L97/L258），实测攻击者无法回本 | `SECURITY.md` §5 |
+| 份额换算舍入 | 存入按 Floor 取整、mint 按 Ceil 取整；`withdrawDual` 以 `sharePct` 向下取整并按实际余额差结算，零头留在金库，协议不吃亏 | 代码 L979/L996 |
 | ERC4626 兼容性 | 标准取款禁用、双币入口替代（F-06） | `SECURITY.md` §6 |
 | 滑点覆盖 | 3 条路径未启用（F-07） | `SECURITY.md` §"已知限制 1" |
 | 单币存款 | 无法参与做市（F-08） | `SECURITY.md` §"已知限制 3" |
@@ -395,13 +396,13 @@ forge test --match-path "test/poc/*" -vv
 
 `POC_SingleSidedIdle` 依赖 Sepolia fork，三个测试合计约 2–4 分钟；另两个为本地部署，毫秒级。fork 测试依赖外部 RPC，免费额度限流或网络抖动时可能出现 `operation timed out` 后 revert，重跑即可，非断言失败。
 
-PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；修复后该断言应失败（届时改为 `vm.expectRevert`）。
+PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；修复后该断言应失败（届时改为 `vm.expectRevert`）。防御有效性验证（断言方向相反，通过即防御生效）见 §6.3。
 
 ### 6.3 已验证行为
 
 | 行为 | 证据 |
 |---|---|
-| 首存通胀攻击无法获利 | `SECURITY.md` §5 的实测数据（受害者获正份额、攻击者回本 < 25%）；仓库内无对应自动化测试，证据为当时的手工运行记录 |
+| 首存通胀攻击无法获利 | `test/unit/vault/VaultDepositTest.t.sol` 的 `test_FirstDeposit_DonationAttack_Mitigated`：攻击者先存 1 wei 再捐赠 400,000 USDC，受害者正常存入后攻击者回本 < 25%；历史手工数据见 `SECURITY.md` §5 |
 | 治理参数校验（地址/金额零值与越界） | `src/governance/AdaptiveGovernance.sol`：propose L222-226、`_applyParam` L414-418；测试 `test_Revert_Propose_SpendBadTokenAddr`（`GovernanceTest.t.sol` L771）、`test_Revert_Propose_SpendZeroAmount`（L821）、`test_ApplyParam_ZeroAddressNoSync`（L667） |
 | 死份额不触达 `LiquidityMining` | `_update` L439/L444 的 `DEAD_ADDRESS` 排除条件 |
 
