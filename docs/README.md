@@ -39,7 +39,7 @@
 
 <a id="project-overview"></a>
 
-## 项目概述
+##项目概述
 
 Adaptive LP Vault 是一个基于 ERC4626 标准的去中心化流动性管理协议。用户存入 WETH + USDC 双代币，获得金库份额代币 **ALP-VAULT**（存款凭证，可赎回双币），金库自动将资金智能分配至 Uniswap V2 和多费率 Uniswap V3 流动性池。
 
@@ -281,7 +281,7 @@ forge script script/Deploy.s.sol:DeployScript \
 - 部署再平衡激励合约
 - 完成所有合约间的关联设置
 - 部署流动性挖矿、团队锁仓、国库合约
-- mint 1000万 ALP 并分配到各合约
+- m 1000万 ALP 并分配到各合约
 
 > **注意**：本次部署的 12 个合约已全部完成 Etherscan 源码验证（见上方地址表）。若后续重新部署，可在命令后加 `--verify` 参数自动验证（网络不佳时可能失败，届时需手动验证）。
 
