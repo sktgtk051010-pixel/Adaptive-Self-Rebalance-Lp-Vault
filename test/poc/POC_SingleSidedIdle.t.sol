@@ -159,7 +159,7 @@ contract POC_SingleSidedIdle is Test {
         // 现状：WETH 侧为 0，能投出的流动性
         uint128 lNow = LiquidityAmounts.getLiquidityForAmounts(sqrtP, a, b, 0, usdcAlloc);
 
-        // 按需求：把同等价值折成 WETH 作为上界，与 USDC 一起取 min
+        // 把同等价值折成 WETH 作为上界，与 USDC 一起取 min
         uint256 wethEq = _usdcToWeth(usdcAlloc, sqrtP, pool.token0() == USDC);
         uint128 lNeed = LiquidityAmounts.getLiquidityForAmounts(sqrtP, a, b, wethEq, usdcAlloc);
         (uint256 need0, uint256 need1) = LiquidityAmounts.getAmountsForLiquidity(sqrtP, a, b, lNeed);

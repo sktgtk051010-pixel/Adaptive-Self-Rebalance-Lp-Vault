@@ -393,6 +393,8 @@ forge test --match-contract VaultInvariantTest
 forge test --match-path "test/poc/*" -vv
 ```
 
+`POC_SingleSidedIdle` 依赖 Sepolia fork，三个测试合计约 2–4 分钟；另两个为本地部署，毫秒级。fork 测试依赖外部 RPC，免费额度限流或网络抖动时可能出现 `operation timed out` 后 revert，重跑即可，非断言失败。
+
 PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；修复后该断言应失败（届时改为 `vm.expectRevert`）。
 
 ### 6.3 已验证行为
