@@ -239,10 +239,10 @@ totalAssets()  [USDC 计价]
 ### F-07 V3 再平衡路径滑点下限为 0
 
 - **位置**：`src/adapters/UniswapV3Adapter.sol`（`addLiquidity` 的 `amount0Min`/`amount1Min` 传 0；`withdrawAll` 无最小输出校验）
-- **描述**：再平衡过程中添加/撤出 V3 流动性时未设输出下限，攻击者可在 mempool 抢先交易，使再平衡以不利价格成交。
-- **缓解**：再平衡冷却期（正常 10 分钟 / 高波动 30 分钟）、执行时间不可预测、TWAP 估值。
-- **建议**：以 TWAP 为基准计算 `amountMin`，复用金库的 `maxSlippageBps`。
-- **状态**：Open（已知限制，见 `SECURITY.md` 第 1 节）。
+- **描述**：再平衡过程中添加/撤出 V3 流动性时未设输出下限，攻击者可在 mempool 抢先交易，使再平衡以不利价格成交
+- **缓解**：再平衡冷却期（正常 10 分钟 / 高波动 30 分钟）、执行时间不可预测、TWAP 估值
+- **建议**：以 TWAP 为基准计算 `amountMin`，复用金库的 `maxSlippageBps`
+- **状态**：Open（已知限制，见 `SECURITY.md` 第 1 节）
 
 ### F-08 分配层按权重切币且金库无兑换能力，库存与仓位需求不匹配导致资金闲置
 
