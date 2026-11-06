@@ -15,17 +15,14 @@ contract POC_SetMinterZero is Test {
 
     function test_SetMinterZeroLocksChannelForever() public {
         token.mint(address(0xCAFE), 1e18);
-        assertEq(token.minter(), address(this), "minter is test contract");
+        assertEq(token.minter(), address(this));
 
-        // 无零地址校验，直接写入 0
-        token.setMinter(address(0));
-        assertEq(token.minter(), address(0), "minter overwritten to zero");
+        token.setMinter(address(0));//minter设为0
+        assertEq(token.minter(), address(0));
 
-        // 此后任何地址调用 setMinter 都失败，无法恢复
         vm.expectRevert("GovToken: not minter");
         token.setMinter(address(this));
 
-        // mint / burn 同样失效
         vm.expectRevert("GovToken: not minter");
         token.mint(address(0xCAFE), 1e18);
 

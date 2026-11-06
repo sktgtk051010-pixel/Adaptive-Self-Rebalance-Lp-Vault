@@ -22,7 +22,7 @@ contract POC_SingleSidedIdle is Test {
     address constant V3_POOL_500 = 0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1;
     address constant V3_POOL_3000 = 0x6Ce0896eAE6D4BD668fDe41BB784548fb8F59b50;
 
-    // 与 Vault 常量一致（internal 不可读）
+    // 与 Vault 常量一致
     uint256 constant TOTAL_WEIGHT = 10_000;
     uint256 constant V3_LOW_WEIGHT = 3_000;
     uint256 constant V3_HIGH_WEIGHT = 5_000;

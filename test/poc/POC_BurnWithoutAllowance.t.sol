@@ -11,18 +11,16 @@ contract POC_BurnWithoutAllowance is Test {
     address victim = address(0xBEEF);
 
     function setUp() public {
-        // 构造器将 msg.sender 设为 minter
         token = new GovernanceToken();
     }
 
     function test_MinterCanBurnAnyoneWithoutAllowance() public {
         token.mint(victim, 1_000e18);
 
-        assertEq(token.balanceOf(victim), 1_000e18, "setup balance");
-        assertEq(token.allowance(victim, address(this)), 0, "victim granted no allowance");
+        assertEq(token.balanceOf(victim), 1_000e18);
+        assertEq(token.allowance(victim, address(this)), 0);
 
-        // 无授权也能销毁
-        token.burn(victim, 1_000e18);
+        token.burn(victim, 1_000e18);//无授权销毁
 
         console2.log("victim balance after burn:", token.balanceOf(victim));
         console2.log("totalSupply after burn   :", token.totalSupply());
