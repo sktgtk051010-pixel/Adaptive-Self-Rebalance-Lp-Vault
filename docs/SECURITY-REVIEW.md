@@ -248,7 +248,7 @@ totalAssets()  [USDC 计价]
 
 - **位置**：`src/vault/AdaptiveLPVault.sol#L688-710`（`_investToAdapters` 将 WETH 与 USDC 各自乘同一权重切分）、`#L719-742`（`_investV3MultiRange` 再按区间比例二次切分）、`src/adapters/UniswapV3Adapter.sol#L192-203`（`getLiquidityForAmounts` 取两侧 min）、`#L152`（`liquidity == 0` 直接返回）、`src/` 内无任何 swap 调用（`IUniswapV3.sol` / `IUniswapV2.sol` 仅为接口声明）
 - **描述**：分配层从不计算仓位在当前价与区间边界下实际需要多少两种币，而是把 WETH、USDC 各自乘以同一权重切分。V2 需按储备比配、V3 需按区间位置配，配不上的部分被适配器退回；金库本身又没有兑换能力补齐，缺口无法自愈。单边存款时缺失一侧，V3 算得 `liquidity == 0` 直接返回，V2 因 WETH 侧为 0 被灰尘阈值跳过，资金全额留在金库；双边存款但比例与池子最优比不符时，同样残留部分闲置。
-- **证据**：`test/poc/POC_SingleSidedIdle.t.sol` 在 Sepolia fork 上新建空金库。单边场景仅存 1000 USDC，实测 `getDistribution()` 的 idle 占比 **10000 bps（100%）**，`totalAssets` 由 0 增至 1000e6、`idleUSDC` 同步由 0 增至 1000e6；双边场景存入 1 WETH + 1000 USDC（价值比约 1:2，与仓位需求不符），实测 `idleWETH = 0.925 WETH`（占存入 WETH 的 **92.5%**）、`idleUSDC = 0`，即富余一侧大量闲置、紧缺一侧全部投出。
+- **证据**：`test/poc/POC_SingleSidedIdle.t.sol` 在 Sepolia fork 上新建空金库。单边场景仅存 1000 USDC，实测 `getDistribution()` 的 idle 占比 **10000 bps（100%）**，`totalAssets` 由 0 增至 1000e6、`idleUSDC` 同步由 0 增至 1000e6；双边场景存入 1 WETH + 1000 USDC（价值比约 1:2，与仓位需求不符），实测 `idleWETH = 0.925 WETH`（占存入 WETH 的 **92.5%**，随 fork 时点浮动：本地多次实测 92.5%–95.3%，最近一次 fork @ block 12098853 为 95.25%，运行时 block 见 PoC 日志）、`idleUSDC = 0`，即富余一侧大量闲置、紧缺一侧全部投出。
 - **影响**：单边存款人资金零收益；双币存款亦因配比不匹配产生残余闲置。不造成资金损失，属效率与体验缺陷，级别 Low / Design。
 - **建议（下一版可选）**：① 按当前价与区间边界算出每个仓位需要的 token0/token1 并加总；② 金库库存对比总需求，多的一侧换少的一侧，全局只 swap 一次，`amountOutMin` 复用 `maxSlippageBps`；③ 按①的数字精确分发；④ 分配层同步改为按需求切分（V2 精确 50/50，三档区间各自比例）。只换总账不改分发，残差仍会回流。
 - **状态**：Accepted / Known Limitation。
@@ -386,7 +386,7 @@ forge test --match-contract VaultInvariantTest
 |---|---|---|---|
 | `POC_BurnWithoutAllowance` | F-01 | `test/poc/POC_BurnWithoutAllowance.t.sol` | 已跑通：victim 未授予任何 allowance，minter 直接 `burn` 后余额归零 |
 | `POC_SetMinterZero` | F-02 | `test/poc/POC_SetMinterZero.t.sol` | 已跑通：`setMinter(address(0))` 后 `setMinter`/`mint` 全部 revert，通道不可恢复 |
-| `POC_SingleSidedIdle` | F-08 | `test/poc/POC_SingleSidedIdle.t.sol` | 已跑通：单边存 1000 USDC 时 idle 10000 bps；双边存 1 WETH + 1000 USDC 时 WETH 闲置 92.5%、USDC 为 0；六个区间现状流动性均为 0 |
+| `POC_SingleSidedIdle` | F-08 | `test/poc/POC_SingleSidedIdle.t.sol` | 已跑通：单边存 1000 USDC 时 idle 10000 bps；双边存 1 WETH + 1000 USDC 时 WETH 闲置 92.5%（随 fork 时点浮动，本地实测区间 92.5%–95.3%）、USDC 为 0；六个区间现状流动性均为 0 |
 
 运行方式：
 
@@ -394,7 +394,7 @@ forge test --match-contract VaultInvariantTest
 forge test --match-path "test/poc/*" -vv
 ```
 
-`POC_SingleSidedIdle` 依赖 Sepolia fork，三个测试合计约 2–4 分钟；另两个为本地部署，毫秒级。fork 测试依赖外部 RPC，免费额度限流或网络抖动时可能出现 `operation timed out` 后 revert，重跑即可，非断言失败。
+`POC_SingleSidedIdle` 依赖 Sepolia fork，三个测试合计约 2–4 分钟；另三个为本地部署，毫秒级。fork 测试依赖外部 RPC，免费额度限流或网络抖动时可能出现 `operation timed out` 后 revert，重跑即可，非断言失败。CI 未配置 `SEPOLIA_RPC_URL` secret，fork 测试在 CI 中由 `vm.skip(true)` 标记跳过，CI 不覆盖 fork 路径；本节 fork 数据均来自本地实跑。
 
 PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；修复后该断言应失败（届时改为 `vm.expectRevert`）。防御有效性验证（断言方向相反，通过即防御生效）见 §6.3。
 

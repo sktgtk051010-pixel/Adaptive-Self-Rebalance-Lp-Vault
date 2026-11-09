@@ -48,6 +48,8 @@ contract POC_SingleSidedIdle is Test {
             return;
         }
 
+        console2.log("fork block:", block.number);
+
         GovernanceToken govToken = new GovernanceToken();
         AdaptiveGovernance governance = new AdaptiveGovernance(address(govToken));
         strat = new AdaptiveRebalanceStrategy(address(governance));
