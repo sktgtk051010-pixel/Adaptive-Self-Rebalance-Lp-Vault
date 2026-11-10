@@ -4,8 +4,8 @@ pragma solidity ^0.8.24;
 import {Test, console2} from "forge-std/Test.sol";
 import {GovernanceToken} from "../../src/governance/AdaptiveGovernance.sol";
 
-/// @notice PoC：setMinter 传入零地址后 minter 通道永久锁死（F-02）
-/// @dev 断言方向为"证明缺陷存在"；修复后 setMinter(address(0)) 应 revert
+/// @notice 回归测试：setMinter 拒绝零地址（F-02 已修复）
+/// @dev 修复前为缺陷型 PoC；修复后通过即修复生效
 contract POC_SetMinterZero is Test {
     GovernanceToken token;
 
@@ -13,19 +13,17 @@ contract POC_SetMinterZero is Test {
         token = new GovernanceToken();
     }
 
-    function test_SetMinterZeroLocksChannelForever() public {
+    function test_SetMinterZeroReverts() public {
         token.mint(address(0xCAFE), 1e18);
         assertEq(token.minter(), address(this));
 
-        token.setMinter(address(0)); //minter设为0
-        assertEq(token.minter(), address(0));
+        vm.expectRevert(bytes("GovToken: zero minter"));
+        token.setMinter(address(0)); // 零地址应 revert
+        assertEq(token.minter(), address(this));
 
-        vm.expectRevert("GovToken: not minter");
-        token.setMinter(address(this));
+        token.setMinter(address(0xCAFE));
+        assertEq(token.minter(), address(0xCAFE));
 
-        vm.expectRevert("GovToken: not minter");
-        token.mint(address(0xCAFE), 1e18);
-
-        console2.log("minter after setMinter(0):", token.minter());
+        console2.log("minter after valid setMinter:", token.minter());
     }
 }

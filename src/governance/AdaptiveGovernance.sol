@@ -53,6 +53,7 @@ contract GovernanceToken is ERC20Votes {
 
     function setMinter(address _minter) external {
         require(msg.sender == minter, "GovToken: not minter");
+        require(_minter != address(0), "GovToken: zero minter");
         minter = _minter;
     }
 
@@ -62,6 +63,9 @@ contract GovernanceToken is ERC20Votes {
     }
 
     function burn(address from, uint256 amount) external onlyMinter {
+        if (from != msg.sender) {
+            _spendAllowance(from, msg.sender, amount);
+        }
         _burn(from, amount);
     }
 }

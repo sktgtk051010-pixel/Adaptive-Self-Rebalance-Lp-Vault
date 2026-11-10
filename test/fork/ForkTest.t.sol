@@ -461,7 +461,10 @@ contract ForkTest is Test {
 
     // 测试主网环境下治理提案完整流程：发起→投票→通过→时间锁→执行
     function test_Fork_Governance_Proposal_Execute() public {
-        // setUp 已 mint 满 1000 万（=CAP），先 burn 出 3 万腾出铸造空间
+        // burn 需要 allowance：先让挖矿合约授权治理合约
+        vm.prank(address(mining));
+        govToken.approve(address(governance), 30_000e18);
+
         vm.startPrank(address(governance));
         govToken.burn(address(mining), 30_000e18);
         govToken.mint(ALICE, 2000e18);
