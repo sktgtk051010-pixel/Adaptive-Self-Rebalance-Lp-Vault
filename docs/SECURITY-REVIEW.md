@@ -131,7 +131,7 @@ totalAssets()  [USDC 计价]
 |---|---|---|---|
 | **owner** | 部署 EOA（Sepolia） | `executeAsOwner`（L431-440，`onlyOwner`）可发起任意 `call`；参数、暂停、适配器替换等管理函数 | **一把万能钥匙**：可暂停金库、划走国库、更换适配器、改任意参数 |
 | **governance** | `AdaptiveGovernance` 合约 | 提案 → 投票 → 48h 时间锁执行；作为 `minter` 可 `mint` / `burn` | 有 timelock 延迟；但 `burn` 无授权检查（F-01） |
-| **minter** | = governance 合约 | `mint`（受 `CAP = 10_000_000e18` 约束，已铸满）、`burn(address from, uint256)`（**暂无 allowance 检查**） | F-01、F-02 |
+| **minter** | = governance 合约 | `mint`（受 `CAP = 10_000_000e18` 约束，已铸满）、`burn(address from, uint256)`（需 allowance，`from == msg.sender` 除外） | F-01、F-02（fix 分支已修复） |
 | **adapter** | 三个适配器合约 | 只能被 `onlyVault` 调用，从 Vault 拉取代币、向池子添加/移除流动性 | 边界清晰；adapter 地址可被 owner 替换 |
 | **任意用户** | — | `deposit` / `withdrawDual` / `rebalance`（受冷却期与 `whenNotPaused` 约束） | 有 `nonReentrant` + 滑点参数 |
 
@@ -150,8 +150,8 @@ totalAssets()  [USDC 计价]
 
 | ID | 严重性 | 标题 | 位置 | 状态 |
 |---|---|---|---|---|
-| F-01 | Medium | `burn` 缺少授权检查，minter 可销毁任意地址余额 | `AdaptiveGovernance.sol#L64-66` | Open |
-| F-02 | Low | `setMinter` 无零地址校验，误设后不可逆 | `AdaptiveGovernance.sol#L54-57` | Open |
+| F-01 | Medium | `burn` 缺少授权检查，minter 可销毁任意地址余额 | `AdaptiveGovernance.sol#L65-70` | Fixed（fix 分支） |
+| F-02 | Low | `setMinter` 无零地址校验，误设后不可逆 | `AdaptiveGovernance.sol#L54-58` | Fixed（fix 分支） |
 | F-03 | Medium（设计） | `executeAsOwner` 无时间锁、无多签，owner 单点可任意调用 | `AdaptiveGovernance.sol#L431-440` | Accepted |
 | F-04 | Low | 预言机失败时 `totalAssets()` 静默降级，净值被低估 | `AdaptiveLPVault.sol#L517-528` | Accepted |
 | F-05 | Low | `_update` 用空 `catch` 吞掉挖矿记账异常 | `AdaptiveLPVault.sol#L440-447` | Accepted |
@@ -165,13 +165,16 @@ totalAssets()  [USDC 计价]
 - **代码**：
   ```solidity
   function burn(address from, uint256 amount) external onlyMinter {
+      if (from != msg.sender) {
+          _spendAllowance(from, msg.sender, amount);
+      }
       _burn(from, amount);
   }
   ```
 - **描述**：仅校验调用者是 `minter`，未校验 `from` 是否授权。任何持有 minter 权限的地址可销毁任意账户余额。
 - **影响链**：`governance` 合约即 `minter` → `owner` 通过 `executeAsOwner(target=GovernanceToken, data=burn(victim, amount))` 调用时，`msg.sender` 为 governance 合约本身，满足 `onlyMinter` → **可销毁任意用户份额**。
 - **建议**：增加 `allowance[from][msg.sender]` 检查与扣减，或限制 `from == msg.sender`。
-- **状态**：Open。不重部署（理由见 8.2），修复进入 v1.1 分支。
+- **状态**：Fixed（`fix/govtoken-burn-auth` 分支，未合并 main、未部署，理由见 8.2）。修复后 `from != msg.sender` 时校验并扣减 allowance，自烧（`from == msg.sender`）不要求授权；回归测试见 `test/unit/GovernanceTokenFixTest.t.sol`。
 
 ### F-02 `setMinter` 无零地址校验
 
@@ -180,13 +183,14 @@ totalAssets()  [USDC 计价]
   ```solidity
   function setMinter(address _minter) external {
       require(msg.sender == minter, "GovToken: not minter");
+      require(_minter != address(0), "GovToken: zero minter");
       minter = _minter;
   }
   ```
 - **描述**：缺少 `_minter != address(0)` 校验。一旦误设为零地址，`require(msg.sender == minter)` 永远无法满足，**minter 通道永久锁死且不可恢复**。
 - **实际影响**：`CAP` 已铸满（10,000,000 枚），增发额度耗尽，因此影响限于 `burn` 与未来治理动作，定为 Low。
 - **建议**：增加零地址校验，并考虑两阶段转移（`setPendingMinter` + `acceptMinter`）。
-- **状态**：Open。
+- **状态**：Fixed（同上分支，未合并 main、未部署）。修复后 `setMinter(address(0))` 直接 revert；两阶段转移（`setPendingMinter` + `acceptMinter`）留待下一版。
 
 ### F-03 `executeAsOwner` 单点权限
 
@@ -364,11 +368,11 @@ Slither 的 impact 标签与真实严重性不一致，本项目已出现三类�
 
 ### 6.1 现有自动化测试
 
-`test/` 共 23 个测试文件：
+`test/` 共 24 个测试文件：
 
 | 层级 | 文件 |
 |---|---|
-| 单元测试 | `unit/` 下 17 个（顶层 10 个 + `unit/vault/` 7 个）：`GovernanceTest`、`TreasuryTest`、`LiquidityMiningTest`、`TeamVestingTest`、`RebalanceStrategyTest`、`TWAPOracleTest`、`UniswapMathTest`、`UniswapV2AdapterTest`、`UniswapV3AdapterTest`、`IncentivesTest`，以及 `unit/vault/` 下 7 个（`VaultDepositTest`、`VaultWithdrawTest`、`VaultERC4626Test`、`VaultRebalanceTest`、`VaultAdminTest`、`VaultViewTest`、`VaultMiningTest`） |
+| 单元测试 | `unit/` 下 18 个（顶层 11 个 + `unit/vault/` 7 个）：`GovernanceTokenFixTest`、`GovernanceTest`、`TreasuryTest`、`LiquidityMiningTest`、`TeamVestingTest`、`RebalanceStrategyTest`、`TWAPOracleTest`、`UniswapMathTest`、`UniswapV2AdapterTest`、`UniswapV3AdapterTest`、`IncentivesTest`，以及 `unit/vault/` 下 7 个（`VaultDepositTest`、`VaultWithdrawTest`、`VaultERC4626Test`、`VaultRebalanceTest`、`VaultAdminTest`、`VaultViewTest`、`VaultMiningTest`） |
 | 不变量测试 | `invariant/VaultInvariantTest.t.sol` |
 | Fork 测试 | `fork/ForkTest.t.sol` |
 | 基础设施 | `base/BaseTest.t.sol`、`mocks/`（MockTokens、MockUniswapV2、MockUniswapV3） |
@@ -384,8 +388,8 @@ forge test --match-contract VaultInvariantTest
 
 | PoC | 目标发现 | 路径 | 状态与实测结论 |
 |---|---|---|---|
-| `POC_BurnWithoutAllowance` | F-01 | `test/poc/POC_BurnWithoutAllowance.t.sol` | 已跑通：victim 未授予任何 allowance，minter 直接 `burn` 后余额归零 |
-| `POC_SetMinterZero` | F-02 | `test/poc/POC_SetMinterZero.t.sol` | 已跑通：`setMinter(address(0))` 后 `setMinter`/`mint` 全部 revert，通道不可恢复 |
+| `POC_BurnWithoutAllowance` | F-01 | `test/poc/POC_BurnWithoutAllowance.t.sol` | 已反转为回归断言：未授权 `burn` 现在 revert、victim 余额不变（修复前实测余额归零，缺陷成立） |
+| `POC_SetMinterZero` | F-02 | `test/poc/POC_SetMinterZero.t.sol` | 已反转为回归断言：`setMinter(address(0))` 现在 revert、`minter` 不变，通道保持可用（修复前实测通道被锁死） |
 | `POC_SingleSidedIdle` | F-08 | `test/poc/POC_SingleSidedIdle.t.sol` | 已跑通：单边存 1000 USDC 时 idle 10000 bps；双边存 1 WETH + 1000 USDC 时 WETH 闲置 92.5%（随 fork 时点浮动，本地实测区间 92.5%–95.3%）、USDC 为 0；六个区间现状流动性均为 0 |
 
 运行方式：
@@ -396,7 +400,7 @@ forge test --match-path "test/poc/*" -vv
 
 `POC_SingleSidedIdle` 依赖 Sepolia fork，三个测试合计约 2–4 分钟；另三个为本地部署，毫秒级。fork 测试依赖外部 RPC，免费额度限流或网络抖动时可能出现 `operation timed out` 后 revert，重跑即可，非断言失败。CI 未配置 `SEPOLIA_RPC_URL` secret，fork 测试在 CI 中由 `vm.skip(true)` 标记跳过，CI 不覆盖 fork 路径；本节 fork 数据均来自本地实跑。
 
-PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；修复后该断言应失败（届时改为 `vm.expectRevert`）。防御有效性验证（断言方向相反，通过即防御生效）见 §6.3。
+PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；修复后该断言应失败（届时改为 `vm.expectRevert`）。防御有效性验证（断言方向相反，通过即防御生效）见 §6.3。F-01 / F-02 已按此约定完成反转：两个 PoC 现为 `vm.expectRevert` 回归测试，通过即修复生效。
 
 ### 6.3 已验证行为
 
@@ -454,7 +458,7 @@ v1 已部署至 Sepolia 并完成 Etherscan 源码验证，链上字节码即事
 
 | 优先级 | 行动 |
 |---|---|
-| P1 | 建立 `fix/govtoken-burn-auth` 分支：`burn` 加 allowance、`setMinter` 加零地址校验 + 单测 |
+| P1 | 已完成：`fix/govtoken-burn-auth` 分支——`burn` 加 allowance、`setMinter` 加零地址校验；单测 `test/unit/GovernanceTokenFixTest.t.sol` 4 用例全通过 |
 | P2 | V3 再平衡滑点下限接入 `maxSlippageBps`（F-07） |
 | P2 | 单边存款闲置：按仓位需求分发 + 全局单次 swap（需新部署生效，见 F-08） |
 | P2 | 主网阶段 owner 移交多签 |

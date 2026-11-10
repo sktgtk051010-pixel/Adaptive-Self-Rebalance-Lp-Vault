@@ -9,6 +9,9 @@ contract GovernanceTest is BaseTest {
         super.setUp();
         // BaseTest 已将 1000 万 ALP 全部分配（= CAP），测试内 mint 会撞上限。
         // 从挖矿合约 burn 出 100 万腾出铸造空间，供各测试给用户发币。
+        // burn 需要 allowance：先让挖矿合约授权测试合约
+        vm.prank(address(mining));
+        govToken.approve(address(this), 1_000_000e18);
         govToken.burn(address(mining), 1_000_000e18);
     }
 
@@ -36,9 +39,11 @@ contract GovernanceTest is BaseTest {
         assertEq(govToken.balanceOf(bob), 100e18);
     }
 
-    // 测试burn销毁指定地址的治理代币成功
+    // 测试burn销毁指定地址的治理代币成功（需先授权）
     function test_GovToken_Burn() public {
         govToken.mint(alice, 1000e18);
+        vm.prank(alice);
+        govToken.approve(address(this), 500e18);
         govToken.burn(alice, 500e18);
         assertEq(govToken.balanceOf(alice), 500e18);
     }
