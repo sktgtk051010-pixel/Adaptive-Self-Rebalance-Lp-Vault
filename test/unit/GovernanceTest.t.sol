@@ -579,10 +579,12 @@ contract GovernanceTest is BaseTest {
                 oracle.transferOwnership(address(governance));
             }
         } else if (pType == AdaptiveGovernance.ProposalType.SET_INCENTIVE_BPS) {
+            governance.setIncentives(address(incentives));
             if (incentives.owner() != address(governance)) {
                 incentives.transferOwnership(address(governance));
             }
         } else if (pType == AdaptiveGovernance.ProposalType.SET_MAX_SLIPPAGE) {
+            governance.setVault(address(vault));
             if (vault.owner() != address(governance)) {
                 vault.transferOwnership(address(governance));
             }
@@ -613,8 +615,10 @@ contract GovernanceTest is BaseTest {
         AdaptiveGovernance.StrategyParams memory p = governance.getParams();
         if (pType == AdaptiveGovernance.ProposalType.SET_INCENTIVE_BPS) {
             assertEq(p.incentiveBps, v1);
+            assertEq(incentives.incentiveBps(), v1);
         } else if (pType == AdaptiveGovernance.ProposalType.SET_MAX_SLIPPAGE) {
             assertEq(p.maxSlippageBps, v1);
+            assertEq(vault.maxSlippageBps(), v1);
         } else if (pType == AdaptiveGovernance.ProposalType.SET_WEIGHT_CAPS) {
             assertEq(p.v2WeightCap, v1);
             assertEq(p.v3LowFeeWeightCap, v2);

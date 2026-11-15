@@ -158,6 +158,7 @@ totalAssets()  [USDC 计价]
 | F-06 | Info（设计） | ERC4626 标准接口与双币入口错配，`withdraw`/`redeem` 禁用 | `AdaptiveLPVault.sol#L395-405` | Accepted |
 | F-07 | Medium | V3 再平衡路径滑点下限为 0，存在三明治残留风险 | `UniswapV3Adapter.sol`（`addLiquidity` / `withdrawAll`） | Open |
 | F-08 | Low | 分配层按权重切币且金库无兑换能力，库存与仓位需求不匹配导致资金闲置（单边存款时达 100%） | `AdaptiveLPVault.sol#L688-710` | Accepted |
+| F-09 | Low | 治理提案 `SET_WEIGHT_CAPS` / `SET_RANGE_BPS` 只写本地 `params`，未通知下游，链上行为不变 | `AdaptiveGovernance.sol#L404-411`（`_applyParam`）、`#L12-16`（`IGovernanceSyncTarget`） | Accepted |
 
 ### F-01 `burn` 缺少授权检查
 
@@ -252,6 +253,18 @@ totalAssets()  [USDC 计价]
 - **影响**：单边存款人资金零收益；双币存款亦因配比不匹配产生残余闲置。不造成资金损失，属效率与体验缺陷，级别 Low / Design。
 - **建议（下一版可选）**：① 按当前价与区间边界算出每个仓位需要的 token0/token1 并加总；② 金库库存对比总需求，多的一侧换少的一侧，全局只 swap 一次，`amountOutMin` 复用 `maxSlippageBps`；③ 按①的数字精确分发；④ 分配层同步改为按需求切分（V2 精确 50/50，三档区间各自比例）。只换总账不改分发，残差仍会回流。
 - **状态**：Accepted / Known Limitation。
+
+### F-09 治理提案 `SET_WEIGHT_CAPS` / `SET_RANGE_BPS` 未打通下游
+
+- **位置**：`src/governance/AdaptiveGovernance.sol#L404-411`（`_applyParam` 的两个分支）；`#L12-16`（`IGovernanceSyncTarget` 接口）
+- **描述**：`_applyParam` 中 `SET_TWAP_WINDOW` → `oracle.setTWAPWindow()`、`SET_INCENTIVE_BPS` → `incentives.setIncentiveBps()`、`SET_MAX_SLIPPAGE` → `vault.setMaxSlippage()`、`SET_ALP_REWARD` → `incentives.setAlpRewardPerRebalance()` 四个分支都会调用下游；而 `SET_WEIGHT_CAPS`（L404-407）与 `SET_RANGE_BPS`（L408-411）**只写入 governance 自身的 `params`，不调用任何下游合约**。
+- **根因**：`IGovernanceSyncTarget` 只声明了 3 个方法（`setTWAPWindow` / `setIncentiveBps` / `setMaxSlippage`），设计期就没有为 range / weight 预留通道。同时 `AdaptiveRebalanceStrategy.getRangeTicks` 为 `pure` 且硬编码 `198/953/2624`，`AdaptiveLPVault._investV3MultiRange` 使用 `internal constant` 的 `4000/3500/2500`，**两处都不读取 `params`**。值得注意的是 `IRebalanceStrategy.getRangeTicks` 在接口中声明为 `view`，实现却收敛成 `pure`——接口本就预留了"读状态"的可能。
+- **影响**：提案可正常走完投票与 48h 时间锁，`ParamsUpdated` 事件正常发出，`getParams()` 也能读到新值，**但链上分配与区间行为完全不变**。属"假生效"——比"无效"更危险，链下监控会误判为已生效。
+  - `SET_WEIGHT_CAPS` 性质略不同：它是权重护栏，但 `calculateAllocation` 为 `pure` 固定返回、无 cap 校验，**护栏本身没有消费点**。
+- **证据**：`test/poc/POC_GovernanceRangeBps.t.sol` 本地实跑通过——`SET_RANGE_BPS` 提案执行后 `params.tightRangeBps` 由 200 变为 500，而 `strategy.getRangeTicks(-194000)` 的六个返回值前后完全一致（`tightLower` 均为 `-194220`）。
+- **建议**：扩展 `IGovernanceSyncTarget` 增加 range / weight 的同步方法，把 `getRangeTicks` 改为 `view` 并从 governance 读取；若不打算接，应从提案类型中删除这两项，避免误导治理参与者。
+- **状态**：Accepted（v1 不修，属下一版重构范围，见 8.2）。
+- **验证**：`test/poc/POC_GovernanceRangeBps.t.sol`
 
 ---
 
@@ -357,6 +370,7 @@ Slither 的 impact 标签与真实严重性不一致，本项目已出现三类�
 | ERC4626 兼容性 | 标准取款禁用、双币入口替代（F-06） | `SECURITY.md` §6 |
 | 滑点覆盖 | 3 条路径未启用（F-07） | `SECURITY.md` §"已知限制 1" |
 | 单币存款 | 无法参与做市（F-08） | `SECURITY.md` §"已知限制 3" |
+| 治理参数生效性 | 4 类提案有下游同步，2 类仅写本地参数（F-09） | 本文 §3 F-09 |
 
 ---
 
@@ -364,13 +378,14 @@ Slither 的 impact 标签与真实严重性不一致，本项目已出现三类�
 
 ### 6.1 现有自动化测试
 
-`test/` 共 23 个测试文件：
+`test/` 共 23 个测试文件（另有 `poc/` 下 4 个缺陷复现测试，单独统计）：
 
 | 层级 | 文件 |
 |---|---|
 | 单元测试 | `unit/` 下 17 个（顶层 10 个 + `unit/vault/` 7 个）：`GovernanceTest`、`TreasuryTest`、`LiquidityMiningTest`、`TeamVestingTest`、`RebalanceStrategyTest`、`TWAPOracleTest`、`UniswapMathTest`、`UniswapV2AdapterTest`、`UniswapV3AdapterTest`、`IncentivesTest`，以及 `unit/vault/` 下 7 个（`VaultDepositTest`、`VaultWithdrawTest`、`VaultERC4626Test`、`VaultRebalanceTest`、`VaultAdminTest`、`VaultViewTest`、`VaultMiningTest`） |
 | 不变量测试 | `invariant/VaultInvariantTest.t.sol` |
 | Fork 测试 | `fork/ForkTest.t.sol` |
+| PoC | `poc/` 下 4 个：`POC_BurnWithoutAllowance`、`POC_SetMinterZero`、`POC_SingleSidedIdle`、`POC_GovernanceRangeBps` |
 | 基础设施 | `base/BaseTest.t.sol`、`mocks/`（MockTokens、MockUniswapV2、MockUniswapV3） |
 
 复现命令：
@@ -387,6 +402,7 @@ forge test --match-contract VaultInvariantTest
 | `POC_BurnWithoutAllowance` | F-01 | `test/poc/POC_BurnWithoutAllowance.t.sol` | 已跑通：victim 未授予任何 allowance，minter 直接 `burn` 后余额归零 |
 | `POC_SetMinterZero` | F-02 | `test/poc/POC_SetMinterZero.t.sol` | 已跑通：`setMinter(address(0))` 后 `setMinter`/`mint` 全部 revert，通道不可恢复 |
 | `POC_SingleSidedIdle` | F-08 | `test/poc/POC_SingleSidedIdle.t.sol` | 已跑通：单边存 1000 USDC 时 idle 10000 bps；双边存 1 WETH + 1000 USDC 时 WETH 闲置 92.5%（随 fork 时点浮动，本地实测区间 92.5%–95.3%）、USDC 为 0；六个区间现状流动性均为 0 |
+| `POC_GovernanceRangeBps` | F-09 | `test/poc/POC_GovernanceRangeBps.t.sol` | 已跑通：`SET_RANGE_BPS` 提案走完投票与时间锁后 `params.tightRangeBps` 由 200 变为 500，而 `strategy.getRangeTicks(-194000)` 的六个返回值前后完全一致（`tightLower` 均为 `-194220`） |
 
 运行方式：
 
@@ -394,7 +410,7 @@ forge test --match-contract VaultInvariantTest
 forge test --match-path "test/poc/*" -vv
 ```
 
-`POC_SingleSidedIdle` 依赖 Sepolia fork，三个测试合计约 2–4 分钟；另三个为本地部署，毫秒级。fork 测试依赖外部 RPC，免费额度限流或网络抖动时可能出现 `operation timed out` 后 revert，重跑即可，非断言失败。CI 未配置 `SEPOLIA_RPC_URL` secret，fork 测试在 CI 中由 `vm.skip(true)` 标记跳过，CI 不覆盖 fork 路径；本节 fork 数据均来自本地实跑。
+`POC_SingleSidedIdle` 依赖 Sepolia fork，该文件合计约 2–4 分钟；其余四个为纯本地部署，毫秒级。fork 测试依赖外部 RPC，免费额度限流或网络抖动时可能出现 `operation timed out` 后 revert，重跑即可，非断言失败。CI 未配置 `SEPOLIA_RPC_URL` secret，fork 测试在 CI 中由 `vm.skip(true)` 标记跳过，CI 不覆盖 fork 路径；本节 fork 数据均来自本地实跑。
 
 PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；修复后该断言应失败（届时改为 `vm.expectRevert`）。防御有效性验证（断言方向相反，通过即防御生效）见 §6.3。
 
@@ -434,7 +450,7 @@ PoC 的断言方向为"**证明缺陷存在**"：测试通过即缺陷成立；�
 |---|---|
 | 可利用高危漏洞 | 0（Slither 9 条 High 全部收敛为误报/已缓解） |
 | 真实缺陷 | 2 项：F-01（Medium）、F-02（Low） |
-| 已知风险缺口 | 1 项：F-07（V3 再平衡滑点，Medium） |
+| 功能未闭环 | 2 项：F-07（V3 再平衡滑点，Medium）、F-09（治理参数未打通，Low） |
 | 设计取舍 | 4 项：F-03、F-04、F-06、F-08 |
 | **整体** | **中低风险**，无资金可直接被盗的路径 |
 
@@ -452,11 +468,12 @@ v1 已部署至 Sepolia 并完成 Etherscan 源码验证，链上字节码即事
 
 ### 8.3 后续行动
 
-| 优先级 | 行动 |
-|---|---|
-| P1 | 建立 `fix/govtoken-burn-auth` 分支：`burn` 加 allowance、`setMinter` 加零地址校验 + 单测 |
-| P2 | V3 再平衡滑点下限接入 `maxSlippageBps`（F-07） |
-| P2 | 单边存款闲置：按仓位需求分发 + 全局单次 swap（需新部署生效，见 F-08） |
-| P2 | 主网阶段 owner 移交多签 |
+| 优先级 | 行动 | 状态 |
+|---|---|---|
+| ~~P1~~ | 建立 `fix/govtoken-burn-auth` 分支：`burn` 加 allowance、`setMinter` 加零地址校验 + 单测 | ✅ 已完成（PR #1 Open，按 §8.2 不合并） |
+| P1 | 建立 `fix/governance-param-sync` 分支：`IGovernanceSyncTarget` 增加 `setRangeBps` / `setWeightCaps`，`getRangeTicks` 改 `view` 并读 governance，vault 权重常量改存储 + 单测 | 待做 |
+| P2 | V3 再平衡滑点下限接入 `maxSlippageBps`（F-07） | 待做 |
+| P2 | 单边存款闲置：按仓位需求分发 + 全局单次 swap（需新部署生效，见 F-08） | 待做 |
+| P2 | 主网阶段 owner 移交多签 | 待做 |
 
 ---
