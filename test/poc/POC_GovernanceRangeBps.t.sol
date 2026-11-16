@@ -33,14 +33,11 @@ contract POC_GovernanceRangeBps is Test {
     }
 
     function test_RangeBpsProposalDoesNotAffectStrategy() public {
-        (int24 tl0, int24 tu0, int24 ml0, int24 mu0, int24 wl0, int24 wu0) =
-            strategy.getRangeTicks(CURRENT_TICK);
+        (int24 tl0, int24 tu0, int24 ml0, int24 mu0, int24 wl0, int24 wu0) = strategy.getRangeTicks(CURRENT_TICK);
 
         // 走完整治理流程：propose -> 投票 -> executeProposal -> 时间锁 -> executeTimelock
         vm.prank(alice);
-        uint256 id = governance.propose(
-            AdaptiveGovernance.ProposalType.SET_RANGE_BPS, 500, 1500, 4000, "test"
-        );
+        uint256 id = governance.propose(AdaptiveGovernance.ProposalType.SET_RANGE_BPS, 500, 1500, 4000, "test");
 
         vm.roll(block.number + governance.votingDelay() + 1);
         vm.prank(bob);
@@ -57,8 +54,7 @@ contract POC_GovernanceRangeBps is Test {
         assertEq(p.wideRangeBps, 4000);
 
         // 2) 但 strategy 的区间计算完全没有变化 —— 以下断言全部"通过"即为缺陷存在
-        (int24 tl1, int24 tu1, int24 ml1, int24 mu1, int24 wl1, int24 wu1) =
-            strategy.getRangeTicks(CURRENT_TICK);
+        (int24 tl1, int24 tu1, int24 ml1, int24 mu1, int24 wl1, int24 wu1) = strategy.getRangeTicks(CURRENT_TICK);
         assertEq(tl1, tl0, "F-09: tightLower unchanged");
         assertEq(tu1, tu0, "F-09: tightUpper unchanged");
         assertEq(ml1, ml0, "F-09: mediumLower unchanged");
