@@ -193,7 +193,7 @@ contract VaultWithdrawTest is BaseTest {
         vault.withdrawDual(sharesA, 0, 0);
 
         uint256 bobAssetsAfter = vault.convertToAssets(sharesB);
-        assertApproxEqRel(bobAssetsAfter, bobAssetsBefore, 0.1e18);
+        assertApproxEqAbs(bobAssetsAfter, bobAssetsBefore, 10);
         assertEq(vault.balanceOf(bob), sharesB);
     }
 
@@ -237,8 +237,8 @@ contract VaultWithdrawTest is BaseTest {
         vm.prank(alice);
         (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(smallShares, 0, 0);
 
-        assertGe(wethOut, 0);
-        assertGe(usdcOut, 0);
+        assertGt(wethOut, 0);
+        assertGt(usdcOut, 0);
         assertEq(vault.balanceOf(alice), shares - smallShares);
     }
 }

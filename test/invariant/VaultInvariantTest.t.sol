@@ -6,9 +6,12 @@ import {BaseTest} from "../base/BaseTest.t.sol";
 import {AdaptiveLPVault} from "../../src/vault/AdaptiveLPVault.sol";
 
 contract VaultInvariantHandler is BaseTest {
-    uint256 public depositCount;
-    uint256 public withdrawCount;
-    uint256 public rebalanceCount;
+    // 检测标记：vault 执行成功但结果不符预期时置位，而不是 revert。
+    // 若在此 revert，Foundry 会把该次调用判为失败并回滚状态，错误就被"跳过"吞掉；
+    // 置位后状态保留，由 invariant_handlerAssertionsHold 统一断言。
+    bool public depositNoShareGain;
+    bool public withdrawAmountMismatch;
+    bool public withdrawShareMismatch;
 
     constructor() {
         setUp();
@@ -27,8 +30,7 @@ contract VaultInvariantHandler is BaseTest {
         _deposit(alice, wethAmt, usdcAmt);
         uint256 sharesAfter = vault.balanceOf(alice);
 
-        require(sharesAfter > sharesBefore, "deposit should increase shares");
-        depositCount++;
+        if (sharesAfter <= sharesBefore) depositNoShareGain = true;
     }
 
     // 模糊测试动作：Bob存入随机金额的WETH和USDC，验证份额增加
@@ -44,8 +46,7 @@ contract VaultInvariantHandler is BaseTest {
         _deposit(bob, wethAmt, usdcAmt);
         uint256 sharesAfter = vault.balanceOf(bob);
 
-        require(sharesAfter > sharesBefore, "deposit should increase shares");
-        depositCount++;
+        if (sharesAfter <= sharesBefore) depositNoShareGain = true;
     }
 
     // 模糊测试动作：Charlie存入随机金额的WETH和USDC，验证份额增加
@@ -61,8 +62,7 @@ contract VaultInvariantHandler is BaseTest {
         _deposit(charlie, wethAmt, usdcAmt);
         uint256 sharesAfter = vault.balanceOf(charlie);
 
-        require(sharesAfter > sharesBefore, "deposit should increase shares");
-        depositCount++;
+        if (sharesAfter <= sharesBefore) depositNoShareGain = true;
     }
 
     // 模糊测试动作：Alice赎回随机比例（1%-50%）的份额，验证代币到账和份额减少
@@ -80,11 +80,9 @@ contract VaultInvariantHandler is BaseTest {
         vm.prank(alice);
         (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(sharesToWithdraw, 0, 0);
 
-        require(weth.balanceOf(alice) == wethBefore + wethOut, "weth balance mismatch");
-        require(usdc.balanceOf(alice) == usdcBefore + usdcOut, "usdc balance mismatch");
-        require(vault.balanceOf(alice) == shares - sharesToWithdraw, "shares should decrease");
-
-        withdrawCount++;
+        if (weth.balanceOf(alice) != wethBefore + wethOut) withdrawAmountMismatch = true;
+        if (usdc.balanceOf(alice) != usdcBefore + usdcOut) withdrawAmountMismatch = true;
+        if (vault.balanceOf(alice) != shares - sharesToWithdraw) withdrawShareMismatch = true;
     }
 
     // 模糊测试动作：Bob赎回随机比例（1%-50%）的份额，验证代币到账和份额减少
@@ -102,11 +100,9 @@ contract VaultInvariantHandler is BaseTest {
         vm.prank(bob);
         (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(sharesToWithdraw, 0, 0);
 
-        require(weth.balanceOf(bob) == wethBefore + wethOut, "weth balance mismatch");
-        require(usdc.balanceOf(bob) == usdcBefore + usdcOut, "usdc balance mismatch");
-        require(vault.balanceOf(bob) == shares - sharesToWithdraw, "shares should decrease");
-
-        withdrawCount++;
+        if (weth.balanceOf(bob) != wethBefore + wethOut) withdrawAmountMismatch = true;
+        if (usdc.balanceOf(bob) != usdcBefore + usdcOut) withdrawAmountMismatch = true;
+        if (vault.balanceOf(bob) != shares - sharesToWithdraw) withdrawShareMismatch = true;
     }
 
     // 模糊测试动作：Charlie赎回随机比例（1%-50%）的份额，验证代币到账和份额减少
@@ -124,11 +120,9 @@ contract VaultInvariantHandler is BaseTest {
         vm.prank(charlie);
         (uint256 wethOut, uint256 usdcOut) = vault.withdrawDual(sharesToWithdraw, 0, 0);
 
-        require(weth.balanceOf(charlie) == wethBefore + wethOut, "weth balance mismatch");
-        require(usdc.balanceOf(charlie) == usdcBefore + usdcOut, "usdc balance mismatch");
-        require(vault.balanceOf(charlie) == shares - sharesToWithdraw, "shares should decrease");
-
-        withdrawCount++;
+        if (weth.balanceOf(charlie) != wethBefore + wethOut) withdrawAmountMismatch = true;
+        if (usdc.balanceOf(charlie) != usdcBefore + usdcOut) withdrawAmountMismatch = true;
+        if (vault.balanceOf(charlie) != shares - sharesToWithdraw) withdrawShareMismatch = true;
     }
 
     // 模糊测试动作：跳过700秒后执行再平衡（金库非空时）
@@ -137,7 +131,6 @@ contract VaultInvariantHandler is BaseTest {
 
         skip(700);
         vault.rebalance();
-        rebalanceCount++;
     }
 }
 
@@ -169,30 +162,14 @@ contract VaultInvariantTest is Test {
         uint256 charlieAssets = handler.vault().convertToAssets(handler.vault().balanceOf(handler.charlie()));
         uint256 sumOfUserAssets = aliceAssets + bobAssets + charlieAssets;
 
-        assertLe(
-            sumOfUserAssets, totalAssets + 1, "sum of user assets should not exceed totalAssets (insolvency detected)"
-        );
+        assertLe(sumOfUserAssets, totalAssets, "sum of user assets should not exceed totalAssets (insolvency detected)");
     }
 
-    // 不变量：convertToShares(totalAssets)始终约等于totalSupply（份额价格稳定，1%误差内）
-    function invariant_sharePriceStability() public view {
-        uint256 totalSupply = handler.vault().totalSupply();
-        if (totalSupply == 0) return;
-
-        uint256 totalAssets = handler.vault().totalAssets();
-        uint256 sharesFromAssets = handler.vault().convertToShares(totalAssets);
-
-        assertApproxEqRel(
-            sharesFromAssets, totalSupply, 0.01e18, "convertToShares(totalAssets) should approx equal totalSupply"
-        );
-    }
-
-    // 不变量：单个用户的份额不超过总供应量（无超额铸造）
-    function invariant_noUserExceedsTotalSupply() public view {
-        uint256 totalSupply = handler.vault().totalSupply();
-
-        assertLe(handler.vault().balanceOf(handler.alice()), totalSupply, "alice balance exceeds totalSupply");
-        assertLe(handler.vault().balanceOf(handler.bob()), totalSupply, "bob balance exceeds totalSupply");
-        assertLe(handler.vault().balanceOf(handler.charlie()), totalSupply, "charlie balance exceeds totalSupply");
+    // 不变量：handler 的检测标记全程未被置位
+    // 覆盖三个业务正确性检查：存款必须增加份额、撤资金额必须与真实余额差一致、撤资必须烧掉对应份额
+    function invariant_handlerAssertionsHold() public view {
+        assertFalse(handler.depositNoShareGain(), "deposit succeeded without increasing shares");
+        assertFalse(handler.withdrawAmountMismatch(), "withdraw returned amount mismatches balance delta");
+        assertFalse(handler.withdrawShareMismatch(), "withdraw did not burn requested shares");
     }
 }

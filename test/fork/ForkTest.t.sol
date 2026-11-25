@@ -299,13 +299,13 @@ contract ForkTest is Test {
     // 测试主网环境下多用户存款无稀释，Alice赎回不影响Bob的资产价值
     function test_Fork_MultipleUsers_NoUnaffected() public {
         uint256 sharesA = _deposit(ALICE, 10 ether, 20_000e6);
-        uint256 assetsPerShareA = vault.totalAssets() * 1e18 / sharesA;
+        uint256 perShareA = vault.totalAssets() * 1e18 / vault.totalSupply();
 
         uint256 sharesB = _deposit(BOB, 10 ether, 20_000e6);
-        uint256 assetsPerShareB = vault.totalAssets() * 1e18 / vault.totalSupply();
+        uint256 perShareB = vault.totalAssets() * 1e18 / vault.totalSupply();
 
-        assertApproxEqRel(sharesB, sharesA, 0.01e18, "same deposit = same shares");
-        assertApproxEqRel(assetsPerShareB, assetsPerShareA, 0.01e18, "no dilution");
+        assertApproxEqRel(sharesB, sharesA, 0.0001e18, "same deposit = same shares");
+        assertApproxEqRel(perShareB, perShareA, 0.0001e18, "no dilution");
 
         vault.rebalance();
 
@@ -316,7 +316,7 @@ contract ForkTest is Test {
         vault.withdrawDual(sharesA, 0, 0);
 
         uint256 bobAssetsAfter = vault.convertToAssets(sharesB);
-        assertApproxEqRel(bobAssetsAfter, bobAssetsBefore, 0.05e18, "Bob assets should not change");
+        assertApproxEqAbs(bobAssetsAfter, bobAssetsBefore, 1);
         assertEq(vault.balanceOf(BOB), bobSharesBefore, "Bob shares should not change");
     }
 
